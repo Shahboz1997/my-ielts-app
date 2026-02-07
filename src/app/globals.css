@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
+/* Базовые настройки для идеальной адаптивности */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+  scroll-behavior: smooth; /* Плавный скролл к результатам */
+  height: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Убираем синее выделение при нажатии на кнопки в мобилках */
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Кастомный скроллбар для Indigo стиля */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #4f46e5;
+  border-radius: 10px;
+}
+.essay-preview p:first-of-type {
+  font-weight: 800;
+  color: #4f46e5;
+  border-left: 4px solid #4f46e5;
+  padding-left: 12px;
+  font-style: italic;
+}
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #ef4444; border-radius: 10px; }
+
+@keyframes scan-line {
+  0% { top: 0%; }
+  100% { top: 100%; }
+}
+.animate-scan-line {
+  position: absolute;
+  animation: scan-line 2s linear infinite;
+}
+/* Фикс для текстовых полей на iOS и Android */
+textarea {
+  -webkit-appearance: none;
+  border-radius: 0; /* Сброс системных рамок iOS */
+  font-size: 16px !important; /* Важно: предотвращает авто-зум на iPhone */
+  line-height: 1.5;
+}
+
+/* Адаптивные контейнеры для изображений */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Плавный переход для Dark Mode */
+.transition-all {
+  transition-duration: 300ms;
 }
