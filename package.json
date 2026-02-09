@@ -12,6 +12,8 @@
     "@ai-sdk/react": "^3.0.70",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@heroicons/react": "^2.2.0",
+    "@stripe/react-stripe-js": "^5.6.0",
+    "@stripe/stripe-js": "^8.7.0",
     "ai": "^6.0.67",
     "axios": "^1.13.4",
     "framer-motion": "^12.31.0",

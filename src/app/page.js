@@ -288,8 +288,7 @@ import {
     e.target.reset(); // Очищаем поля формы
     setTimeout(() => setStatus('idle'), 3000);
   }, 1500);
-};
-
+  };
   // Вспомогательная переменная для текущего результата
   const scrollToEditor = () => {
     // Находим элемент ввода текста (убедитесь, что у вашего textarea или контейнера есть id="essay-input")
@@ -301,9 +300,9 @@ import {
       window.scrollTo({ top: 600, behavior: 'smooth' });
      }
      };
-const activeResult = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
-const [highlightedWord, setHighlightedWord] = useState(null);
-const editorRef = useRef(null); // Реф для текстового поля
+  const activeResult = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
+  const [highlightedWord, setHighlightedWord] = useState(null);
+  const editorRef = useRef(null); // Реф для текстового поля
   const handleAnalyze = async (mode) => {
     // Выбираем нужный сеттер в зависимости от режима
     const setCurLoading = mode === 'task1' ? setLoadingT1 : setLoadingT2;
@@ -432,51 +431,87 @@ const triggerHighlight = (word) => {
   setTimeout(() => setHighlightedWord(null), 2000);
 };
 
+const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2, '0')}`;
+const wordCount = (t) => t ? t.trim().split(/\s+/).filter(Boolean).length : 0;
+const renderHighlightedText = (text, highlights, searchState) => { // Добавили searchState в аргументы
+  if (!text) return text;
 
-  const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2, '0')}`;
-  const wordCount = (t) => t ? t.trim().split(/\s+/).filter(Boolean).length : 0;
-  const renderHighlightedText = (text, highlights) => {
-  if (!highlights || !text) return text;
-    // Сортируем фразы по длине (сначала длинные), чтобы не ломать вложенность
-    const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
-    let parts = [text];
+  const excludedWords = ['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with'];
+  
+  // 1. Сначала обрабатываем обычные хайлайты (ошибки/связки)
+  const sortedHighlights = highlights ? [...highlights].sort((a, b) => b.text.length - a.text.length) : [];
+  let parts = [text];
 
-    sortedHighlights.forEach((h) => {
-      let newParts = [];
-      parts.forEach((part) => {
-        if (typeof part !== 'string') {
-          newParts.push(part);
-          return;
-        }
-        
-        const regex = new RegExp(`(${h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        const segments = part.split(regex);
-        
-        segments.forEach((seg) => {
-          if (seg.toLowerCase() === h.text.toLowerCase()) {
-            newParts.push(
-              <span 
-                key={Math.random()} 
-                className={`px-0.5 rounded cursor-help transition-colors border-b-2 ${
-                  h.type === 'linking' 
-                  ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 text-blue-900 dark:text-blue-200' 
-                  : 'bg-red-100 dark:bg-red-900/40 border-red-400 text-red-900 dark:text-red-200'
+  sortedHighlights.forEach((h) => {
+    if (excludedWords.includes(h.text.toLowerCase().trim())) return;
+
+    let newParts = [];
+    parts.forEach((part) => {
+      if (typeof part !== 'string') {
+        newParts.push(part);
+        return;
+      }
+      
+      const regex = new RegExp(`(${h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      const segments = part.split(regex);
+      
+      segments.forEach((seg) => {
+        if (seg && seg.toLowerCase() === h.text.toLowerCase()) {
+          // ПРОВЕРКА: является ли этот хайлайт также целью поиска?
+          const isSearchMatch = searchState?.word && seg.toLowerCase().trim() === searchState.word.toLowerCase().trim();
+
+          newParts.push(
+            <span 
+              key={Math.random()} 
+              className={`px-0.5 rounded cursor-help transition-all border-b-[3px] inline-block -mb-[1px] 
+                ${isSearchMatch ? 'search-match bg-yellow-400/40 dark:bg-yellow-500/30' : ''} 
+                ${h.type === 'linking' 
+                  ? 'bg-blue-100/50 dark:bg-blue-900/40 border-blue-500 dark:border-blue-400 text-blue-900 dark:text-blue-200' 
+                  : 'bg-red-100/50 dark:bg-red-900/40 border-red-500 dark:border-red-400 text-red-900 dark:text-red-200'
                 }`}
-                title={h.suggestion}
-              >
-                {seg}
-              </span>
-            );
-          } else if (seg) {
-            newParts.push(seg);
-          }
-        });
+              title={h.suggestion}
+            >
+              {seg}
+            </span>
+          );
+        } else if (seg) {
+          newParts.push(seg);
+        }
       });
-      parts = newParts;
     });
+    parts = newParts;
+  });
 
-    return parts;
-  };
+  // 2. ВАЖНО: Если слово в поиске ЕСТЬ, но оно НЕ является ошибкой (его нет в highlights),
+  // нам все равно нужно подсветить его классом search-match, чтобы сработал скролл.
+  if (searchState?.word) {
+    let finalParts = [];
+    const searchRegex = new RegExp(`(${searchState.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+
+    parts.forEach((part) => {
+      if (typeof part !== 'string') {
+        finalParts.push(part);
+        return;
+      }
+
+      const segments = part.split(searchRegex);
+      segments.forEach((seg) => {
+        if (seg && seg.toLowerCase() === searchState.word.toLowerCase().trim()) {
+          finalParts.push(
+            <span key={Math.random()} className="search-match bg-yellow-400/40 dark:bg-yellow-500/30 border-b-[3px] border-yellow-500 inline-block -mb-[1px]">
+              {seg}
+            </span>
+          );
+        } else if (seg) {
+          finalParts.push(seg);
+        }
+      });
+    });
+    return finalParts;
+  }
+
+  return parts;
+};
   // --- СБРОС ТОЛЬКО TASK 1 ---
   const resetTask1 = () => {
     if (window.confirm("Delete all Task 1 data? Your essay, chart, and analysis will be lost.")) {
@@ -984,10 +1019,15 @@ const sharedStyles = {
   wordBreak: 'break-word',
 };
 const handleScroll = (e) => {
-if (highlightRef.current) {
-  highlightRef.current.scrollTop = e.target.scrollTop;
-  highlightRef.current.scrollLeft = e.target.scrollLeft;
-  }
+  const { scrollTop, scrollLeft } = e.target;
+
+  // Используем requestAnimationFrame для идеальной синхронизации 60fps
+  requestAnimationFrame(() => {
+    if (highlightRef.current) {
+      highlightRef.current.scrollTop = scrollTop;
+      highlightRef.current.scrollLeft = scrollLeft;
+    }
+  });
 };
 // Замени свою 810 строку на эту:
 const [essayText, setEssayText] = useState(activeResult?.text || "");
@@ -1095,7 +1135,64 @@ const progress = Math.min((currentWordCount / targetWords) * 100, 100);
 const currentEssayText = activeTab === 'Task 1' ? essayT1 : essayT2;
 
 const progressPercent = Math.min((currentWordCount / targetWords) * 100, 100);
+const handleFindClick = () => {
+  playClickSound?.();
 
+  // 1. Находим все подсвеченные поиском слова в DOM
+const matches = document.querySelectorAll('.search-match');
+  
+if (matches.length > 0) {
+    // 2. Определяем индекс следующего элемента
+    const nextIndex = (searchState.current + 1) % matches.length;
+
+    // 3. Плавно скроллим к элементу
+    matches[nextIndex].scrollIntoView({
+      behavior: 'smooth',
+      block: 'center', // Центрируем слово в области видимости
+    });
+
+    // 4. Обновляем состояние (чтобы счетчик 1/5 изменился на 2/5)
+    setSearchState(prev => ({
+      ...prev,
+      current: nextIndex
+    }));
+  }
+};
+const insertLinkingWord = (word) => {
+  if (typeof playClickSound === 'function') playClickSound();
+
+  const textarea = editorRef.current;
+  if (!textarea) return;
+
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const currentText = activeTab === 'Task 1' ? essayT1 : essayT2;
+  const setEssay = activeTab === 'Task 1' ? setEssayT1 : setEssayT2;
+
+  // Форматируем вставку: добавляем пробел до и запятую с пробелом после
+  const before = currentText.substring(0, start);
+  const after = currentText.substring(end);
+  const formattedWord = `${before.endsWith(' ') || before === '' ? '' : ' '}${word}, `;
+  
+  const newText = before + formattedWord + after;
+  
+  setEssay(newText);
+
+  // Возвращаем фокус и обновляем высоту
+  setTimeout(() => {
+    textarea.focus();
+    // Ставим курсор СРАЗУ ПОСЛЕ вставленного слова
+    const newCursorPos = start + formattedWord.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    
+    // Пересчет высоты
+    textarea.style.height = '320px';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+    if (highlightRef.current) {
+      highlightRef.current.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, 10);
+};
 return (
       <div className={`min-h-screen flex flex-col transition-all duration-500 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
         {/* NAVBAR */}
@@ -1512,9 +1609,9 @@ return (
         {currentWordCount}
       </span>
       <div className="h-[1px] w-full bg-slate-400/20 my-1" />
-      <span className="text-slate-400 font-bold text-[8px] tracking-tighter">
-        {targetWords}
-      </span>
+          <span className="text-slate-400 font-bold text-[8px] tracking-tighter">
+            {targetWords}
+          </span>
     </div>
   </div>
 </div>
@@ -1526,63 +1623,78 @@ return (
         progress < 100 ? 'bg-gradient-to-r from-red-500 to-orange-400' : 'bg-gradient-to-r from-green-500 to-emerald-400'
       }`}
       style={{ width: `${progress}%` }}
-    />
+       />
   </div>
-
   {/* --- 1. СЛОЙ ВИЗУАЛИЗАЦИИ --- */}
-   <div 
-    ref={highlightRef}
-    className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
-    style={{ 
-        ...sharedStyles, 
-        color: 'transparent',
-        // ОБНОВЛЕННЫЕ ОТСТУПЫ: точно такие же, как в вашей textarea
-        padding: '24px 64px 24px 16px', 
-        minHeight: '320px',
-        width: '100%'
-    }}
-  >
-    {((activeTab === 'Task 1' ? essayT1 : essayT2) || "")
-      .split(/(\s+)/)
-      .map((part, i) => {
-        const clean = part.toLowerCase().replace(/[.,!?;:]/g, '').trim();
-        const isError = grammarMap[clean]; 
-        const isSynonym = synonymMap?.[clean];
-        const isLinking = linkingMap[clean];
+      <div 
+  ref={highlightRef}
+  className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
+  style={{ 
+    ...sharedStyles, 
+    color: 'transparent',
+    padding: '24px 64px 24px 16px', 
+    minHeight: '320px',
+    width: '100%',
+    lineHeight: '1.8',
+    // ИСПРАВЛЕНО: Добавлены свойства для 100% совпадения переносов с textarea
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word',
+    wordBreak: 'break-word',
+    fontVariantLigatures: 'none' // Чтобы ширина букв не менялась из-за лигатур
+  }}
+>
+  {((activeTab === 'Task 1' ? essayT1 : essayT2) || "")
+    .split(/(\s+)/) // Сохраняем все пробелы и переносы для точности
+    .map((part, i) => {
+      const clean = part.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+      
+      // Используем единый список исключений
+      const EXCLUDED_WORDS = ['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but'];
+      const isExcluded = EXCLUDED_WORDS.includes(clean);
 
-        let highlightStyle = "";
-        
-        if (isError) {
-          // Зачеркивание (line-through) для ошибок
-          highlightStyle = "text-red-500/20 bg-red-500/10 line-through decoration-red-500 decoration-[1.5px]";
-        } else if (isSynonym) {
-          // Желтое подчеркивание для синонимов
-          highlightStyle = "border-b-[1.5px] border-yellow-400/70";
-        } else if (isLinking) {
-          // Синее подчеркивание для связок
-          highlightStyle = "border-b-[1.5px] border-blue-500/70";
-        }
+      const isError = !isExcluded && grammarMap[clean]; 
+      const isSynonym = !isExcluded && synonymMap?.[clean];
+      const isLinking = !isExcluded && linkingMap[clean];
+      
+      // Логика поиска (Find)
+      const isSearchMatch = searchState?.word && clean === searchState.word.toLowerCase().trim();
 
-        return (
-          <span key={i} className={`inline transition-all duration-200 ${highlightStyle}`}>
-            {part}
-          </span>
-        );
-      })}
-  </div>
+      let highlightStyle = "";
+      
+      if (isError) {
+        // ЖИРНОЕ зачеркивание (3px) + небольшой отступ, чтобы не резало текст
+        highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[3px] text-red-500/30 underline-offset-[-2px]";
+      } else if (isSynonym) {
+        // ЖИРНОЕ желтое подчеркивание (3px)
+        highlightStyle = "border-b-[3px] border-yellow-500/90 dark:border-yellow-400 -mb-[3px]";
+      } else if (isLinking) {
+        // ЖИРНОЕ синее подчеркивание (3px)
+        highlightStyle = "border-b-[3px] border-blue-600/90 dark:border-blue-400 -mb-[3px]";
+      }
+
+      return (
+        <span 
+          key={i} 
+          className={`inline transition-all duration-200 
+            ${highlightStyle} 
+            ${isSearchMatch ? 'search-match ring-2 ring-yellow-400 bg-yellow-400/20' : ''}`}
+        >
+          {part}
+        </span>
+      );
+    })}
+</div>
   {/* --- 2. ВЕРХНИЙ СЛОЙ (Textarea) --- */}
-<textarea
+      <textarea
   ref={editorRef}
   value={activeTab === 'Task 1' ? essayT1 : essayT2}
   onChange={(e) => {
-    playClickSound();
-    
-    // 1. ЛОГИКА АВТО-ВЫСОТЫ
+    playClickSound?.();
+    // Логика авто-высоты
     e.target.style.height = '320px'; 
     const nextHeight = e.target.scrollHeight;
     e.target.style.height = `${nextHeight}px`;
 
-    // 2. Синхронизация со слоем визуализации
     if (highlightRef.current) {
       highlightRef.current.style.height = `${nextHeight}px`;
     }
@@ -1596,21 +1708,25 @@ return (
     e.target.style.height = `${e.target.scrollHeight}px`;
   }}
   onBlur={() => setIsFocused(false)}
-  onScroll={(e) => {
-    if (highlightRef.current) highlightRef.current.scrollTop = e.target.scrollTop;
-  }}
+  
+  // ИСПРАВЛЕНИЕ: Передаем ссылку на нашу функцию с requestAnimationFrame
+  onScroll={handleScroll} 
+  
   spellCheck="false"
   placeholder="Begin your essay..."
-  className={`relative z-10 w-full min-h-[320px] bg-transparent outline-none resize-none overflow-hidden
-    ${darkMode ? 'text-slate-100 caret-red-500 selection:bg-red-500/20' : 'text-slate-900 caret-red-600 selection:bg-indigo-100'}`}
+  className={`relative z-10 w-full min-h-[320px] bg-transparent outline-none resize-none overflow-hidden transition-colors duration-200
+    ${darkMode 
+      ? 'text-slate-100 caret-indigo-400 selection:bg-indigo-500/30' 
+      : 'text-slate-900 caret-indigo-600 selection:bg-indigo-200/50'}`}
   style={{
     ...sharedStyles,
-    // УМЕНЬШЕННЫЕ ОТСТУПЫ: верх 24px, право 64px, низ 24px, лево 16px
-    padding: '24px 64px 24px 16px' 
+    padding: '24px 64px 24px 16px',
+    lineHeight: '1.8',
+    fontSmoothing: 'antialiased'
   }}
 />
+  </div>
 </div>
-         </div>
     {activeResult && !loading && (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
       
@@ -1638,7 +1754,6 @@ return (
           ))}
         </div>
       </section>
-
       {/* 3. Группировка детальных ошибок (Corrections) */}
       <div className="space-y-6">
   <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 ml-2">
@@ -1742,38 +1857,37 @@ return (
 
       {/* 4. Suggested Rewrite — Теперь с ярким акцентом */}
       {activeResult.suggested_rewrite && (
-      <p 
-  className="text-[19px] md:text-[22px] leading-[1.8] italic tracking-wide transition-all duration-500"
-  style={{ 
-    fontWeight: 300, // Явно задаем тонкий вес (Light)
-    color: darkMode ? '#ffffff' : '#000000' // Прямое управление цветом
-  }}
->
-  {(activeResult?.suggested_rewrite || "")
-    .split(' ')
-    .map((word, idx) => {
-      const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
-      
-      // Проверка на наличие в словаре продвинутых слов
-      const isAdvanced = activeResult?.analysis?.topic_vocabulary?.some(v => 
-        v.phrase.toLowerCase().includes(cleanWord)
-      );
+        <div className="relative p-8 md:p-10 rounded-[3rem] bg-white dark:bg-slate-900 border-2 border-green-500/30 dark:border-green-500/20 shadow-[0_20px_50px_rgba(34,197,94,0.15)] dark:shadow-none overflow-hidden">
+    
+    {/* Декоративный фоновый элемент для сочности цвета на белом */}
+    <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 blur-[40px] rounded-full -mr-10 -mt-10" />
 
-      return (
-        <span 
-          key={`${word}-${idx}`} 
-          className={`transition-all duration-300 ${
-            isAdvanced 
-              ? 'text-emerald-600 dark:text-emerald-400 font-bold underline decoration-emerald-500/40 decoration-1 underline-offset-8' 
-              : ''
-          }`}
-        >
-          {word}{' '}
+    <div className="relative z-10">
+      <h4 className="text-[12px] font-black uppercase tracking-[0.3em] text-green-700 dark:text-green-400 mb-8 flex items-center gap-3">
+        <div className="p-2 bg-green-600 rounded-xl shadow-lg shadow-green-600/30">
+          <CheckCircleIcon className="w-5 h-5 text-white" />
+        </div>
+        Suggested Academic Rewrite
+      </h4>
+
+      <div className="relative px-2">
+        {/* Крупные кавычки для акцента */}
+        <span className="absolute -left-6 -top-4 text-6xl text-green-500/20 dark:text-green-500/10 font-serif select-none">
+          “
         </span>
-      );
-    })}
-</p>
-
+        
+        <p className="text-[16px] md:text-[17px] leading-[1.9] text-slate-800 dark:text-slate-100 font-bold italic tracking-tight">
+          {activeResult.suggested_rewrite}
+        </p>
+        
+        <div className="mt-6 flex justify-end">
+          <span className="text-[10px] font-black uppercase tracking-widest text-green-600/50">
+            Perfected by AI Expert
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
 
       )}
     </div>
@@ -1849,108 +1963,141 @@ return (
         animate={{ opacity: 1, y: 0 }} 
         className="space-y-6 lg:sticky lg:top-24 max-h-[calc(100vh-120px)] overflow-y-auto pr-2 custom-scrollbar no-scrollbar"
         >
-          <div className="relative group overflow-hidden bg-slate-950 rounded-[3rem] p-1 shadow-2xl shadow-red-900/30">
-            <div className="group relative z-10 overflow-hidden rounded-[2.5rem] sm:rounded-[3.5rem] bg-slate-950 p-6 sm:p-10 text-white shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-  
-  {/* Анимированный фон (Light Glow) */}
-  <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-red-600/20 blur-[100px] transition-all duration-700 group-hover:bg-red-600/30" />
-  <div className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-rose-900/10 blur-[100px]" />
-
-  <div className="relative z-20 flex flex-col gap-8">
+          <div className="relative group overflow-hidden bg-slate-950 rounded-[3rem] p-1 shadow-2xl shadow-indigo-900/30">
+  <div className="group relative z-10 overflow-hidden rounded-[2rem] sm:rounded-[2.8rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-800 p-5 sm:p-8 text-white shadow-2xl shadow-indigo-900/20">
     
-    {/* ВЕРХНИЙ РЯД: ИНДИКАТОР И ВЕРСИЯ */}
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3 rounded-full bg-white/5 px-4 py-1.5 backdrop-blur-md border border-white/10">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600 shadow-[0_0_10px_#ef4444]"></span>
-        </span>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-100/80">
-          Neural Analysis Live
-        </p>
-      </div>
-      
-      <div className="flex flex-col items-end leading-none">
-        <span className="text-[8px] font-black uppercase text-red-500 tracking-widest">Engine</span>
-        <span className="text-[12px] font-mono font-bold text-white/40">v4.2.0</span>
-      </div>
-    </div>
+    {/* Эффект блеска при наведении */}
+    <div className="pointer-events-none absolute inset-0 translate-x-[-150%] bg-gradient-to-tr from-white/0 via-white/20 to-white/0 transition-transform duration-1000 group-hover:translate-x-[150%]" />
 
-    {/* ЦЕНТР: БАЛЛ */}
-    <div className="flex flex-col items-center justify-center py-4">
-      <div className="relative">
-        <h4 className="flex items-baseline font-black tracking-tighter text-[22vw] sm:text-8xl md:text-9xl bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/20">
-          <AnimatedScore value={activeResult.overall_band} />
-          <span className="ml-4 text-2xl font-light text-red-600/50 sm:text-4xl">/9.0</span>
-        </h4>
-        {/* Декоративная подложка балла */}
-        <div className="absolute -inset-4 -z-10 bg-white/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+    <div className="relative z-20 flex flex-col gap-6">
+      {/* ВЕРХНЯЯ ЧАСТЬ: Балл и Версия ИИ */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/70 sm:text-[9px] sm:tracking-[0.4em]">
+              Performance Index
+            </p>
+          </div>
+          <h4 className="flex items-baseline font-black leading-none tracking-tighter text-[18vw] sm:text-7xl md:text-8xl">
+            <AnimatedScore value={activeResult.overall_band} />
+            <span className="ml-2 text-lg font-light opacity-30 sm:text-xl">/ 9.0</span>
+          </h4>
+        </div>
+
+        <div className="shrink-0 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-right backdrop-blur-md sm:px-4">
+          <p className="text-[7px] font-black uppercase tracking-widest text-indigo-200 sm:text-[8px]">AI Engine</p>
+          <p className="text-[9px] font-bold sm:text-[10px]">v4.2 PRO</p>
+        </div>
       </div>
-      <p className="mt-2 text-[10px] font-black uppercase tracking-[0.5em] text-white/30">Band Score Estimated</p>
-    </div>
 
-    {/* СТРАТЕГИЯ: В стиле "Terminal Quote" */}
-    <div className="rounded-3xl bg-white/5 p-6 border border-white/5 backdrop-blur-sm relative overflow-hidden group-hover:border-red-500/20 transition-colors">
-      <div className="flex gap-4">
-        <SparklesIcon className="h-6 w-6 shrink-0 text-red-500" />
-        <p className="text-[13px] font-medium leading-relaxed text-slate-200 italic sm:text-sm">
-          <span className="text-red-500 font-black not-italic text-lg mr-1">“</span>
-          {activeResult.improvement_strategy}
-          <span className="text-red-500 font-black not-italic text-lg ml-1">”</span>
-        </p>
+      {/* СРЕДНЯЯ ЧАСТЬ: Стратегия (цитата) */}
+      <div className="relative border-t border-white/10 pt-5">
+        <div className="flex gap-3 sm:gap-4">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20 sm:h-10 sm:w-10 sm:rounded-xl">
+            <SparklesIcon className="h-4 w-4 text-cyan-300 sm:h-5 sm:w-5" />
+          </div>
+          <p className="text-[11px] font-medium italic leading-relaxed text-indigo-50/90 sm:text-[13px] md:text-sm">
+            "{activeResult.improvement_strategy}"
+          </p>
+        </div>
       </div>
-    </div>
 
-    {/* КНОПКИ: Контрастный стиль */}
-    <div className="flex items-center gap-3">
-      <button 
-        onClick={() => downloadReport()}
-        className="flex-[2] flex items-center justify-center gap-3 rounded-[1.5rem] bg-red-600 py-5 text-[11px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-red-500 hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] active:scale-95"
-      >
-        <DocumentArrowDownIcon className="h-5 w-5" />
-        <span>Download Dossier</span>
-      </button>
+      {/* НИЖНЯЯ ЧАСТЬ: Кнопки управления */}
+      <div className="flex flex-row items-stretch gap-2 mt-2">
+        <button 
+          onClick={() => downloadReport()}
+          className="group/btn flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-slate-900 hover:shadow-xl active:scale-[0.97] sm:gap-3 sm:rounded-[1.8rem] sm:py-5 sm:text-[10px] sm:tracking-[0.3em]"
+        >
+          <DocumentArrowDownIcon className="h-4 w-4 text-indigo-400 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" /> 
+          <span className="whitespace-nowrap">Official PDF</span>
+        </button>
 
-      <button 
-        onClick={() => shareReport(activeResult)} 
-        className="flex-[0.5] flex h-[64px] items-center justify-center rounded-[1.5rem] bg-white/10 text-white border border-white/10 transition-all hover:bg-white/20 active:scale-90"
-      >
-        <ShareIcon className="h-5 w-5" />
-      </button>
+        <button 
+          onClick={() => shareReport(activeResult)} 
+          className="flex aspect-square w-12 items-center justify-center rounded-2xl bg-white/10 text-white transition-all hover:bg-white/20 active:scale-90 sm:w-auto sm:px-5"
+          title="Share Analysis"
+        >
+          <ShareIcon className="h-5 w-5" /> 
+        </button>
+      </div>
     </div>
   </div>
+
+  {/* Background Decor */}
+  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-400/10 blur-[100px] rounded-full -mr-20 -mt-20 pointer-events-none" />
 </div>
-
-
-        {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-[100px] rounded-full -mr-20 -mt-20 pointer-events-none" />
-    </div>
           {/* --- 3. DEEP LINGUISTIC ANALYSIS --- */}
           <div className={`p-8 rounded-[3rem] border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
             <h5 className="text-[10px] font-black uppercase mb-6 tracking-[0.2em] text-red-600">Linguistic Insights</h5>
             <div className="space-y-6">
               
               {/* Linking Words Section */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-dashed border-slate-200 pb-2">
-                  <span className="text-[10px] font-black uppercase text-slate-400">Linking Words</span>
-                  <span className="text-[10px] font-black text-blue-600 italic">Score: {activeResult.analysis?.linking_words?.score}/9</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {activeResult.analysis?.linking_words?.found?.map((w, i) => (
-                    <span key={i} className={`text-[10px] px-2 py-1 rounded-md font-bold ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'}`}>{w}</span>
-                  ))}
-                </div>
-                <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/30">
-                  <p className="text-[9px] font-black uppercase text-blue-600 mb-2 tracking-widest underline decoration-2 underline-offset-4">Suggested Additions</p>
-                  <div className="flex flex-wrap gap-1">
-                    
-                    {activeResult.analysis?.linking_words?.suggestions?.map((s, i) => (
-                      <span key={i} className="text-[9px] bg-white dark:bg-slate-800 text-blue-600 px-2 py-1 rounded-lg font-black shadow-sm">+{s}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+                <div className="space-y-5">
+  {/* ЗАГОЛОВОК И БАЛЛ */}
+  <div className="flex justify-between items-end border-b-[3px] border-blue-500/20 pb-2">
+    <div className="flex items-center gap-2">
+      <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Linking Words</span>
+    </div>
+    <span className="text-[11px] font-black text-blue-600 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-md italic">
+      Score: {activeResult.analysis?.linking_words?.score}/9.0
+    </span>
+  </div>
+
+  {/* СПИСОК НАЙДЕННЫХ СЛОВ */}
+  <div className="flex flex-wrap gap-2">
+    {activeResult.analysis?.linking_words?.found?.map((w, i) => (
+      <button 
+        key={i}
+        onClick={() => triggerHighlight(w)}
+        className={`group flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-xl font-bold transition-all active:scale-95
+          ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+      >
+        {/* ИСПРАВЛЕНО: Теперь линия — это жирное подчеркивание текста, а не граница кнопки */}
+        <span className="underline underline-offset-[4px] decoration-transparent group-hover:decoration-blue-500 decoration-[3px] transition-all">
+          {w}
+        </span>
+        <MagnifyingGlassIcon className="w-3 h-3 opacity-0 group-hover:opacity-100 text-blue-500 transition-all transform group-hover:scale-110" />
+      </button>
+    ))}
+  </div>
+
+  {/* БЛОК ПРЕДЛОЖЕНИЙ */}
+    <div className="p-5 rounded-[2.5rem] bg-blue-50/50 dark:bg-blue-950/20 border-2 border-blue-100 dark:border-blue-900/30">
+  <p className="text-[9px] font-black uppercase text-blue-600 mb-4 tracking-[0.2em] flex items-center gap-2">
+    <SparklesIcon className="w-3.5 h-3.5 animate-pulse" />
+    <span className="underline underline-offset-[6px] decoration-blue-500/40 decoration-[3px]">
+      Suggested Additions
+    </span>
+  </p>
+    
+  <div className="flex flex-wrap gap-2">
+    {activeResult.analysis?.linking_words?.suggestions?.map((s, i) => (
+      <button 
+        key={i} 
+        onClick={() => insertLinkingWord(s)}
+        className="group relative text-[9px] bg-white dark:bg-slate-800 text-blue-600 px-3 py-2.5 rounded-xl font-black shadow-sm border border-blue-100 dark:border-blue-800 hover:border-blue-500 hover:shadow-md active:scale-95 transition-all flex items-center gap-1.5"
+        title={`Click to insert "${s}"`}
+      >
+        <span className="opacity-40 group-hover:text-blue-500 group-hover:opacity-100 transition-all font-bold">+</span>
+        <span className="underline underline-offset-[2px] decoration-transparent group-hover:decoration-blue-500/50 decoration-2 transition-all">
+          {s}
+        </span>
+      </button>
+    ))}
+
+    {/* Состояние, если подсказок нет */}
+    {(!activeResult.analysis?.linking_words?.suggestions || activeResult.analysis.linking_words.suggestions.length === 0) && (
+      <span className="text-[10px] font-bold text-slate-400 italic py-1 px-2">
+        Great flow! No extra suggestions needed.
+      </span>
+    )}
+  </div>
+</div>
+
+</div>
+
 
               {/* Repetitions List */}
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -1985,26 +2132,62 @@ return (
             </div>
 
             {/* ПОИСК ВХОЖДЕНИЙ */}
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  triggerHighlight(wordText);
-                }}
-                className="group flex items-center gap-1.5 transition-all"
-              >
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-red-600">
-                  Find 
-                  {searchState.word === wordText.toLowerCase().trim() && (
-                    <span className="ml-1 text-red-600 font-bold">
-                      {searchState.current + 1}/{searchState.count}
-                    </span>
-                  )}
-                </span>
-                {/* Используем лупу, она стандартная */}
-                <MagnifyingGlassIcon className="w-3.5 h-3.5 text-slate-400 group-hover:text-red-600" />
-              </button>
-            </div>
+              <div className="flex items-center gap-3">
+  <button 
+    onClick={(e) => {
+      e.preventDefault();
+      if (typeof playClickSound === 'function') playClickSound();
+      
+      // 1. Запускаем вашу логику поиска
+      triggerHighlight(wordText);
+
+      // 2. Добавляем плавный скролл (с небольшой задержкой, чтобы DOM успел обновиться)
+      setTimeout(() => {
+        const matches = document.querySelectorAll('.search-match');
+        if (matches.length > 0) {
+          // Скроллим к текущему индексу (current) или к первому, если только начали
+          const targetIndex = searchState.word === wordText.toLowerCase().trim() 
+            ? (searchState.current + 1) % matches.length 
+            : 0;
+
+          matches[targetIndex].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center', // Чтобы слово было в центре экрана, а не сверху
+          });
+        }
+      }, 50); 
+    }}
+    className="group relative flex items-center gap-2 cursor-pointer select-none outline-none active:scale-95 transition-all py-1"
+  >
+    <div className="flex items-baseline gap-1">
+      <span className={`
+        text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-200
+        pb-0.5 border-b-[3px] 
+        ${searchState.word === wordText.toLowerCase().trim() 
+          ? 'text-red-600 border-red-600' 
+          : 'text-slate-400 border-transparent group-hover:text-red-600 group-hover:border-red-600/50'}
+      `}>
+        Find
+      </span>
+
+      {searchState.word === wordText.toLowerCase().trim() && searchState.count > 0 && (
+        <span className="ml-1 text-[10px] font-black tabular-nums text-red-600 animate-in fade-in zoom-in duration-300">
+          {searchState.current + 1}
+          <span className="mx-0.5 opacity-40">/</span>
+          {searchState.count}
+        </span>
+      )}
+    </div>
+
+    <MagnifyingGlassIcon className={`
+      w-3.5 h-3.5 transition-colors duration-200
+      ${searchState.word === wordText.toLowerCase().trim() 
+        ? 'text-red-600' 
+        : 'text-slate-400 group-hover:text-red-600'}
+    `} />
+  </button>
+</div>
+
           </div>
 
           {/* СЕКЦИЯ СИНОНИМОВ (UPGRADES) */}

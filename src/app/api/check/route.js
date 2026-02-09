@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
 async function imageUrlToBase64(url) {
   try {
     const response = await fetch(url, {
@@ -22,9 +24,11 @@ async function imageUrlToBase64(url) {
     throw error;
   }
 }
+
 export async function DELETE(req) {
   return NextResponse.json({ message: "Archive cleared" }, { status: 200 });
 }
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -109,11 +113,12 @@ export async function POST(req) {
         1. THE "SAFE" PENALTY: If the essay is accurate but uses predictable academic clichés, CAP Lexical Resource at 7.0.
         2. BAND 8.0+ REQUIREMENT: Only award 8.0+ if the text uses "Uncommon Lexical Items".
         3. JUSTIFICATION: In every "comment", if the score is < 9.0, justify the score cap.
+
       DYNAMIC CORRECTIONS LOGIC:
       In the "corrections" array, adapt "rule" and "explanation" based on the Lexical Resource score:
       - Band 2.0-4.0: Rule: "Basic Clarity". Explanation: Focus on being understood.
       - Band 5.0-6.0: Rule: "Vocabulary Variety". Explanation: Focus on avoiding repetition of simple words.
-      - Band 7.0-7.5: Rule: "Lexical Sophistication". Explanation: Focus on breaking the Band 9.0 barrier with academic synonyms.
+      - Band 7.0-7.5: Rule: "Lexical Sophistication". Explanation: Focus on breaking the Band 7.0 barrier with academic synonyms.
       - Band 8.0-9.0: Rule: "Precise Collocation". Explanation: Focus on native-like precision and rare academic terms.
 
       Return response strictly in JSON format:
@@ -165,9 +170,6 @@ export async function POST(req) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
-
-
 
 
 // import { NextResponse } from 'next/server';
