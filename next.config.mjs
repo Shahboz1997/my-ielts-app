@@ -6,16 +6,19 @@ const withPWA = withPWAInit({
 });
 
 /** @type {import('next').NextConfig} */
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-     allowedDevOrigins: ['10.187.95.173'],
-    // Удалите старый allowedDevOrigins отсюда
+    // Исправление ошибки "Call retries were exceeded"
+    workerThreads: false, 
+    cpus: 1,
+    
+    // Исправление ошибки Turbopack
+    turbopack: {}, 
+    
     serverActions: {
-      allowedOrigins: ["10.165.239.173", "localhost:3000"],
+      allowedOrigins: ["10.165.239.173", "10.187.95.173", "localhost:3000"],
     },
   },
-  // Если вы используете изображения (например, аватарки или загрузку графиков)
   images: {
     remotePatterns: [
       {
@@ -25,7 +28,5 @@ const nextConfig = {
     ],
   },
 };
-
-
 
 export default withPWA(nextConfig);
