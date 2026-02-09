@@ -12,8 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 2. Единая настройка Metadata (Объединил оба ваших блока)
-// ... ваши импорты шрифтов
+// 2. Единая настройка Metadata (Объединил оба  блока)
 
 export const metadata = {
   // 1. Добавляем базовый URL (убирает предупреждение в консоли)
@@ -53,8 +52,6 @@ export const metadata = {
     type: "website",
   },
 };
-
-// ... остальной код (viewport и RootLayout)
 
 // 3. Настройка Viewport
 export const viewport = {
