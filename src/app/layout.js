@@ -12,19 +12,51 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// 2. Правильная настройка Metadata (без themeColor)
-// export const metadata = {
-//   title: "IELTS PEAK PRO",
-//   description: "AI-powered IELTS Writing Examiner",
-//   manifest: "/manifest.json",
-//   appleWebApp: {
-//     capable: true,
-//     statusBarStyle: "default",
-//     title: "IELTS Peak",
-//   },
-// };
+// 2. Единая настройка Metadata (Объединил оба ваших блока)
+// ... ваши импорты шрифтов
 
-// 3. Настройка Viewport (исправляет ваши предупреждения)
+export const metadata = {
+  // 1. Добавляем базовый URL (убирает предупреждение в консоли)
+  metadataBase: new URL(
+    process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000' 
+      : 'https://bandbooster.com' // замените на ваш реальный домен позже
+  ),
+  
+  title: "BandBooster | AI IELTS Writing Checker & Examiner",
+  description: "Improve your IELTS Writing score with AI...",
+  keywords: ["IELTS Writing AI", "IELTS checker", "AI essay grader"],
+  
+  // 2. Улучшенная настройка иконок
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.ico", type: "image/x-icon" }, // для старых браузеров
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+
+  openGraph: {
+    title: "BandBooster - Get Your IELTS Band Score Instantly",
+    description: "AI-powered platform to check your IELTS essays...",
+    url: "https://bandbooster.com",
+    siteName: "BandBooster AI",
+    images: [
+      {
+        url: "/og-image.png", // Теперь Next.js сам превратит это в полный URL
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+};
+
+// ... остальной код (viewport и RootLayout)
+
+// 3. Настройка Viewport
 export const viewport = {
   themeColor: "#4f46e5",
   width: "device-width",
@@ -33,7 +65,7 @@ export const viewport = {
   userScalable: false,
 };
 
-// 4. Единая функция RootLayout
+// 4. RootLayout (Экспортируется в конце)
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
@@ -45,33 +77,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-// export const metadata = {
-//   title: "BandBooster | AI IELTS Writing Checker & Examiner",
-//   description: "Improve your IELTS Writing score with AI. Instant band score, grammar check, and band 8.0+ rewriting for Task 1 and Task 2.",
-//   keywords: ["IELTS Writing AI", "IELTS checker", "AI essay grader", "IELTS practice online", "BandBooster"],
-//   openGraph: {
-//     title: "BandBooster - Get Your IELTS Band Score Instantly",
-//     description: "AI-powered platform to check your IELTS essays against official descriptors.",
-//     url: "https://your-domain.com",
-//     siteName: "BandBooster AI",
-//     images: [
-//       {
-//         url: "/og-image.png", // Загрузи картинку в папку public для превью в соцсетях
-//         width: 1200,
-//         height: 630,
-//       },
-//     ],
-//     locale: "en_US",
-//     type: "website",
-//   },
-// };
-export const metadata = {
-  metadataBase: new URL(
-    process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
-      : 'https://your-domain.com' // Замените на ваш реальный домен позже
-  ),
-  title: 'BandBooster PRO',
-  description: 'AI IELTS Writing Assistant',
-};
-
