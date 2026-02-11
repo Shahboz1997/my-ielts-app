@@ -1194,7 +1194,7 @@ const insertLinkingWord = (word) => {
   }, 10);
 };
 return (
-      <div className={`min-h-screen flex flex-col transition-all duration-500 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      <div className={`min-h-screen flex flex-col transition-all duration-500 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900 overflow-y-hidden'}`}>
         {/* NAVBAR */}
           <>
           <Navbar 

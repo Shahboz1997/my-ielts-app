@@ -118,7 +118,7 @@ export async function POST(req) {
       In the "corrections" array, adapt "rule" and "explanation" based on the Lexical Resource score:
       - Band 2.0-4.0: Rule: "Basic Clarity". Explanation: Focus on being understood.
       - Band 5.0-6.0: Rule: "Vocabulary Variety". Explanation: Focus on avoiding repetition of simple words.
-      - Band 7.0-7.5: Rule: "Lexical Sophistication". Explanation: Focus on breaking the Band 7.0 barrier with academic synonyms.
+      - Band 7.0-7.5: Rule: "Lexical Sophistication". Explanation: Focus on breaking the Band 9.0 barrier with academic synonyms.
       - Band 8.0-9.0: Rule: "Precise Collocation". Explanation: Focus on native-like precision and rare academic terms.
 
       Return response strictly in JSON format:
