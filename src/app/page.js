@@ -223,7 +223,7 @@ import {
   'good', 'bad', 'big', 'small', 'things', 'stuff', 'get', 'very', 
   'nowadays', 'money', 'people', 'think', 'believe', 'happy', 'sad'
 ];
-  const EXCLUDED_WORDS = ['a','it', 'an','not','You','you', 'that', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
+  const EXCLUDED_WORDS = ['a','it', 'an','not','You','you', 'that', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
   const [searchState, setSearchState] = useState({ word: "", index: -1, count: 0, current: 0 });
   const TASK1_ASSETS = {
     "Line graph": [
