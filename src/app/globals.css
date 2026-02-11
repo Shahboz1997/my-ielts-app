@@ -6,13 +6,20 @@
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
 }
+/* 1. Для Chrome, Safari и Edge */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
 
+/* 2. Для Firefox и старого IE */
 html, body {
-  overflow-x: hidden;
-  overflow-y: hidden;
-  width: 100%;
-  scroll-behavior: smooth; /* Плавный скролл к результатам */
-  height: 100%;
+  -ms-overflow-style: none;  /* IE и Edge */
+  scrollbar-width: none;     /* Firefox */
+  
+  /* Убедитесь, что прокрутка РАЗРЕШЕНА, но СКРЫТА */
+  overflow-y: scroll; 
+  scroll-behavior: smooth;
 }
 
 /* Убираем синее выделение при нажатии на кнопки в мобилках */

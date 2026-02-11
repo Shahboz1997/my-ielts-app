@@ -2528,13 +2528,24 @@ return (
         }`}
       >
         <svg className="absolute inset-0 w-full h-full -rotate-90 p-0.5">
-          <circle cx="50%" cy="50%" r="46%" fill="transparent" stroke="currentColor" strokeWidth="2" className={darkMode ? 'text-slate-800' : 'text-slate-100'} />
-          <motion.circle
-            cx="50%" cy="50%" r="46%" fill="transparent" stroke="#ef4444" strokeWidth="2" strokeDashcap="round"
-            style={{ pathLength: scrollProgress / 100 }}
-            transition={{ type: "spring", stiffness: 60, damping: 15 }}
-          />
-        </svg>
+  <circle 
+    cx="50%" cy="50%" r="46%" 
+    fill="transparent" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    className={darkMode ? 'text-slate-800' : 'text-slate-100'} 
+  />
+  <motion.circle
+    cx="50%" cy="50%" r="46%" 
+    fill="transparent" 
+    stroke="#ef4444" 
+    strokeWidth="2" 
+    // ИСПРАВЛЕНО: strokeLinecap вместо strokeDashcap
+    strokeLinecap="round" 
+    style={{ pathLength: scrollProgress / 100 }}
+    transition={{ type: "spring", stiffness: 60, damping: 15 }}
+  />
+</svg>
         <ChevronUpIcon className="w-6 h-6 relative z-10 group-hover:-translate-y-1 transition-transform" />
       </button>
     </motion.div>
