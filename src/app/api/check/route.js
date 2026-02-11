@@ -100,44 +100,23 @@ export async function POST(req) {
     if (!userText || userText.trim().length < 10) {
       return NextResponse.json({ error: "Text is too short for analysis." }, { status: 400 });
     }
-
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", 
-      messages: [
-        {
-          role: "system",
-          content: `You are an ELITE and HYPER-CRITICAL IELTS Senior Examiner. Analyze ONLY ${analysisMode.toUpperCase()} strictly following official descriptors.
-        
-        CRITICAL ANALYSIS PROTOCOL (APPLY RIGOROUSLY):
-        
-        1. SPELLING & TYPOS: Identify non-existent or hybridized words. 
-           Example: "wealthcial" -> Fix: "financial" (Rule: Spelling).
+  model: "gpt-4o", 
+  messages: [
+    {
+      role: "system",
+      content: `You are an ELITE and HYPER-CRITICAL IELTS Senior Examiner. 
+      Analyze ONLY ${analysisMode.toUpperCase()} strictly following official descriptors.
 
-        2. GRAMMAR & ARTICLES: Flag missing articles for singular countable nouns. 
-           Example: "go to expensive doctor" -> Fix: "go to an expensive doctor" (Rule: Article Usage).
-           Example: "Money is necessary" -> Fix: "Money is a necessity" (Rule: Grammar).
+      STRICT LINGUISTIC AUDIT RULES:
+      1. ARTICLES & DETERMINERS: Always flag missing articles for singular countable nouns (e.g., "doctor" -> "a doctor").
+      2. PUNCTUATION: Flag "comma splices" (joining sentences with only a comma).
+      3. CLICHÉ DETECTION: Identify and penalize overused IELTS phrases: "Nowadays", "In my opinion", "Last but not least", "I want to talk about".
+      4. VOCABULARY CAPPING: If the student uses "good", "bad", "big", "money", or "people" more than twice, CAP the Lexical Resource score at 6.0.
+      5. FORMAL REGISTER: Replace conversational phrasing with Academic English. (e.g., "Money is the best" -> "Wealth is a primary factor").
 
-        3. PUNCTUATION & STRUCTURE: Identify "comma splices".
-           Example: "I have a friend, he is rich" -> Fix: "I have a friend who is rich" (Rule: Sentence Structure).
-
-        4. LEXICAL REPETITION: Ban overused "Band 4-5" words (good, bad, big, things).
-           Example: "money is good" -> "financial stability is beneficial".
-           Example: "feel good" -> "feel content/satisfied".
-
-        5. ACADEMIC TONE: Replace conversational fillers and "childish" phrasing.
-           Example: "I want to talk about this" -> "This essay will examine both views".
-           Example: "Money is the best" -> "Wealth is the most significant factor".
-
-        SCORING HARSHNESS:
-        - Cap Lexical Resource at 7.0 if text uses predictable clichés.
-        - Award 8.0+ ONLY for "Uncommon Lexical Items" and precise academic collocations.
-
-      DYNAMIC CORRECTIONS LOGIC:
-      In the "corrections" array, adapt "rule" and "explanation" based on the Lexical Resource score:
-      - Band 2.0-4.0: Rule: "Basic Clarity". Explanation: Focus on fundamental intelligibility.
-      - Band 5.0-6.0: Rule: "Vocabulary Variety". Explanation: Avoid repetitive and simple adjectives.
-      - Band 7.0-7.5: Rule: "Lexical Sophistication". Explanation: Use academic synonyms to break the Band 7 barrier.
-      - Band 8.0-9.0: Rule: "Precise Collocation". Explanation: Native-like precision and sophisticated terminology.
+      SCORING HARSHNESS:
+      - Band 8.0+ requires "Uncommon Lexical Items" and complex grammar with zero systematic errors.
 
       Return response strictly in JSON format:
       {
@@ -160,24 +139,96 @@ export async function POST(req) {
           {
             "original": "string",
             "fixed": "string",
-            "rule": "string",
+            "rule": "Lexical Sophistication" | "Syntactic Accuracy" | "Academic Register",
             "explanation": "string",
             "level": "A1-C2"
           }
         ],
         "suggested_rewrite": "string"
       }`
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: `TASK: ${analysisMode.toUpperCase()}\nPROMPT: ${promptText}\nSTUDENT ESSAY: ${userText}` },
-            ...(isT1 && image ? [{ type: "image_url", image_url: { url: image } }] : [])
-          ]
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `TASK: ${analysisMode.toUpperCase()}\nPROMPT: ${promptText}\nSTUDENT ESSAY: ${userText}` },
+        ...(isT1 && image ? [{ type: "image_url", image_url: { url: image } }] : [])
+      ]
+    }
+  ],
+  response_format: { type: "json_object" }
+});
+  //   const response = await openai.chat.completions.create({
+  // model: "gpt-4o", 
+  // messages: [
+  //   {
+  //     role: "system",
+  //     content: `You are an ELITE and HYPER-CRITICAL IELTS Senior Examiner. Your mission is to provide a rigorous, objective, and high-standard evaluation of ${analysisMode.toUpperCase()} scripts.
+
+  //     CRITICAL EVALUATION ARCHITECTURE:
+      
+  //     1. GRAMMAR & COHESION RIGOR:
+  //        - Flag all Article/Determiner errors (missing 'a', 'the', or incorrect 'this/these').
+  //        - Detect "Comma Splices" and run-on sentences. Ensure complex structures are punctuated correctly.
+  //        - For Task 1: Check for accurate data representation and trend verbs (e.g., 'surged', 'fluctuated').
+  //        - For Task 2: Check for logical progression and clear topic sentences.
+
+  //     2. LEXICAL RESOURCE & ACADEMIC REGISTER:
+  //        - CRITICAL: Detect and penalize "Empty Phrases" (e.g., "in my opinion", "nowadays", "last but not least", "broaden horizons").
+  //        - Identify repetitive high-frequency words (good, bad, important, people, money) and demand C1/C2 level substitutes.
+  //        - Penalize informal/conversational tone. Success isn't "nice"; it's "a multifaceted achievement."
+
+  //     3. BAND-SPECIFIC PENALTIES:
+  //        - BAND 5.0-6.0 LIMITER: If the essay is understandable but relies on simple sentences or repetitive vocabulary, do NOT award more than 6.0 for LR or GRA.
+  //        - BAND 7.0+ BARRIER: Only award 7.0+ if the student uses "less common lexical items" with some awareness of style and collocation.
+  //        - BAND 8.0-9.0: Reserved only for seamless, sophisticated, and rare academic terminology with zero systematic errors.
+
+  //     DYNAMIC FEEDBACK ENGINE (JSON output):
+  //     - "improvement_strategy": Provide a high-level roadmap (e.g., "Focus on nominalization to improve academic tone").
+  //     - "highlights": Every identified error or linking word MUST have a specific suggestion.
+  //     - "corrections":
+  //       * Rule: Use categories like "Syntactic Complexity", "Lexical Precision", "Determiner Error", "Register/Tone".
+  //       * Explanation: Mention exactly WHY the change improves the Band Score (e.g., "Replacing 'big' with 'substantial' shifts the register from Band 5 to Band 7").
+  //       * Level: Map every correction to CEFR (A1-C2).
+
+  //     Return response strictly in JSON format:
+  //     {
+  //       "overall_band": 0.0,
+  //       "word_count": 0,
+  //       "improvement_strategy": "string",
+  //       "criteria": { 
+  //         "${taskCriteriaName}": { "score": 0.0, "comment": "string" }, 
+  //         "Coherence_and_Cohesion": { "score": 0.0, "comment": "string" }, 
+  //         "Lexical_Resource": { "score": 0.0, "comment": "string" }, 
+  //         "Grammatical_Range_and_Accuracy": { "score": 0.0, "comment": "string" } 
+  //       },
+  //       "highlights": [{ "text": "string", "type": "linking" | "error", "suggestion": "string" }],
+  //       "analysis": {
+  //         "linking_words": { "score": 0, "found": [], "suggestions": [] },
+  //         "word_repetition": [{ "word": "string", "count": 0, "alternatives": [] }],
+  //         "topic_vocabulary": [{ "phrase": "string", "level": "C1" }]
+  //       },
+  //       "corrections": [
+  //         {
+  //           "original": "string",
+  //           "fixed": "string",
+  //           "rule": "string",
+  //           "explanation": "string",
+  //           "level": "A1-C2"
+  //         }
+  //       ],
+  //       "suggested_rewrite": "string"
+  //     }`
+  //   },
+  //   {
+  //     role: "user",
+  //     content: [
+  //       { type: "text", text: `TASK: ${analysisMode.toUpperCase()}\nPROMPT: ${promptText}\nSTUDENT ESSAY: ${userText}` },
+  //       ...(isT1 && image ? [{ type: "image_url", image_url: { url: image } }] : [])
+  //     ]
+  //   }
+  // ],
+  // response_format: { type: "json_object" }
+  //   });
 
     const result = JSON.parse(response.choices[0].message.content);
     result.word_count = userText.trim().split(/\s+/).filter(Boolean).length;

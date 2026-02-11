@@ -219,7 +219,11 @@ import {
   const [lastSearchIndex, setLastSearchIndex] = useState(0);
   const [lastSearchWord, setLastSearchWord] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const EXCLUDED_WORDS = ['a','it', 'an','not', 'that', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
+  const WEAK_WORDS = [
+  'good', 'bad', 'big', 'small', 'things', 'stuff', 'get', 'very', 
+  'nowadays', 'money', 'people', 'think', 'believe', 'happy', 'sad'
+];
+  const EXCLUDED_WORDS = ['a','it', 'an','not','You','you', 'that', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
   const [searchState, setSearchState] = useState({ word: "", index: -1, count: 0, current: 0 });
   const TASK1_ASSETS = {
     "Line graph": [
@@ -1660,44 +1664,51 @@ return (
   {((activeTab === 'Task 1' ? essayT1 : essayT2) || "")
     .split(/(\s+|[.,!?;:()])/) // Сохраняем пробелы и пунктуацию
     .map((part, i) => {
-      // 1. Выводим пробелы и знаки препинания без стилей
-      if (/^(\s+|[.,!?;:()])$/.test(part)) {
-        return <span key={i}>{part}</span>;
-      }
+  // 1. Выводим пробелы и знаки препинания без стилей
+  if (/^(\s+|[.,!?;:()])$/.test(part)) {
+    return <span key={i}>{part}</span>;
+  }
 
-      const clean = part.toLowerCase().trim();
-      if (!clean) return <span key={i}>{part}</span>;
+  const clean = part.toLowerCase().trim().replace(/[.,!?;:]/g, '');
+  if (!clean) return <span key={i}>{part}</span>;
 
-      // 2. Ваша логика проверок
-      const isExcluded = EXCLUDED_WORDS.includes(clean);
-      const grammarData = !isExcluded && grammarMap[clean];
-      const isLinking = !isExcluded && linkingMap[clean];
-      const isSearchMatch = searchState?.word && clean === searchState.word.toLowerCase().trim();
+  // 2. Логика проверок
+  const isExcluded = EXCLUDED_WORDS.includes(clean);
+  const isWeak = !isExcluded && WEAK_WORDS.includes(clean); // Проверка на слабые слова
+  const grammarData = !isExcluded && grammarMap[clean];
+  const isLinking = !isExcluded && linkingMap[clean];
+  const isSearchMatch = searchState?.word && clean === searchState.word.toLowerCase().trim();
 
-      let highlightStyle = "";
-      let tooltip = "";
+  let highlightStyle = "";
+  let tooltip = "";
 
-      if (grammarData) {
-        // Красное зачеркивание ТОЛЬКО для слова
-        highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[2px] text-red-500/40 decoration-skip-ink-none";
-        tooltip = `Fix: ${grammarData.fixed} (${grammarData.rule})`;
-      } else if (isLinking) {
-        // Синее подчеркивание для связок
-        highlightStyle = "border-b-[3px] border-blue-600/90 dark:border-blue-400 -mb-[3px]";
-      }
+  if (grammarData) {
+    // Красное зачеркивание (Приоритет 1)
+    highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[2px] text-red-500/40 decoration-skip-ink-none";
+    tooltip = `Fix: ${grammarData.fixed} (${grammarData.rule})`;
+  } else if (isLinking) {
+    // Синее подчеркивание (Приоритет 2)
+    highlightStyle = "border-b-[3px] border-blue-600/90 dark:border-blue-400 -mb-[3px]";
+  } else if (isWeak) {
+    // Желтый пунктир для слабых слов (Приоритет 3)
+    // Используем opacity, чтобы не отвлекать слишком сильно
+    highlightStyle = "border-b-2 border-dashed border-yellow-500/50 dark:border-yellow-400/40 text-orange-400/80";
+    tooltip = "Weak Word: Consider using a more academic synonym for a higher score.";
+  }
 
-      return (
-        <span 
-          key={i} 
-          title={tooltip || undefined}
-          className={`inline transition-all duration-200 cursor-help ${highlightStyle} ${
-            isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-400/20 rounded-sm' : ''
-          }`}
-        >
-          {part}
-        </span>
-      );
-    })}
+  return (
+    <span 
+      key={i} 
+      title={tooltip || undefined}
+      className={`inline transition-all duration-200 cursor-help ${highlightStyle} ${
+        isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-400/20 rounded-sm' : ''
+      }`}
+    >
+      {part}
+    </span>
+  );
+})}
+
 </div>
   {/* --- 2. ВЕРХНИЙ СЛОЙ (Textarea) --- */}
     <textarea
@@ -2005,7 +2016,7 @@ return (
         className="space-y-6 lg:sticky lg:top-24 max-h-[calc(100vh-120px)] pr-2 custom-scrollbar no-scrollbar"
         >
           <div className="relative group overflow-hidden bg-slate-950 rounded-[3rem] p-1 shadow-2xl shadow-indigo-900/30">
-  <div className="group relative z-10 overflow-hidden rounded-[2rem] sm:rounded-[2.8rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-800 p-5 sm:p-8 text-white shadow-2xl shadow-indigo-900/20">
+  <div className="group relative z-10 rounded-[2rem] sm:rounded-[2.8rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-800 p-5 sm:p-8 text-white shadow-2xl shadow-indigo-900/20">
     
     {/* Эффект блеска при наведении */}
     <div className="pointer-events-none absolute inset-0 translate-x-[-150%] bg-gradient-to-tr from-white/0 via-white/20 to-white/0 transition-transform duration-1000 group-hover:translate-x-[150%]" />
@@ -2031,19 +2042,6 @@ return (
           <p className="text-[9px] font-bold sm:text-[10px]">v4.2 PRO</p>
         </div>
       </div>
-
-      {/* СРЕДНЯЯ ЧАСТЬ: Стратегия (цитата) */}
-      <div className="relative border-t border-white/10 pt-5">
-        <div className="flex gap-3 sm:gap-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/20 sm:h-10 sm:w-10 sm:rounded-xl">
-            <SparklesIcon className="h-4 w-4 text-cyan-300 sm:h-5 sm:w-5" />
-          </div>
-          <p className="text-[11px] font-medium italic leading-relaxed text-indigo-50/90 sm:text-[13px] md:text-sm">
-            "{activeResult.improvement_strategy}"
-          </p>
-        </div>
-      </div>
-
       {/* НИЖНЯЯ ЧАСТЬ: Кнопки управления */}
       <div className="flex flex-row items-stretch gap-2 mt-2">
         <button 
@@ -2069,8 +2067,11 @@ return (
   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-400/10 blur-[100px] rounded-full -mr-20 -mt-20 pointer-events-none" />
 </div>
           {/* --- 3. DEEP LINGUISTIC ANALYSIS --- */}
-          <div className={`p-8 rounded-[3rem] border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <h5 className="text-[10px] font-black uppercase mb-6 tracking-[0.2em] text-red-600">Linguistic Insights</h5>
+          <div className={`p-8 rounded-[3rem] border shadow-sm max-h-[600px] overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
+ ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+    <h5 className="text-[10px] font-black uppercase mb-6 tracking-[0.2em] text-red-600 sticky top-0 bg-inherit z-10 pb-2">
+        Linguistic Insights
+    </h5>
             <div className="space-y-6">
               
               {/* Linking Words Section */}
@@ -2111,8 +2112,7 @@ return (
     <span className="underline underline-offset-[6px] decoration-blue-500/40 decoration-[3px]">
       Suggested Additions
     </span>
-  </p>
-    
+  </p>  
   <div className="flex flex-wrap gap-2">
     {activeResult.analysis?.linking_words?.suggestions?.map((s, i) => (
       <button 
