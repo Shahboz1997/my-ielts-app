@@ -1,7 +1,6 @@
 "use client"; 
 import React, {useEffect, useRef, useState } from 'react';
 import AnimatedScore from './components/AnimatedScore';
-
 import Navbar from './components/Navbar';
 import AuthModal from './components/AuthModal';
 import axios from 'axios';
@@ -11,7 +10,6 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import Zoom from 'react-medium-image-zoom';
 import 'react-medium-image-zoom/dist/styles.css';
-
 import { DocumentArrowDownIcon, MagnifyingGlassIcon, CheckIcon} from '@heroicons/react/24/solid';
 import { 
   SparklesIcon,ShareIcon, ClockIcon, TrashIcon, ArrowPathIcon, DocumentTextIcon, CheckCircleIcon,
@@ -163,7 +161,6 @@ import {
   };
   export default function BandBoosterPro() {
   const [status, setStatus] = useState('idle'); 
-  
     const CRITERIA_TIPS = {
     TR: { // Task Response
       low: "Focus on addressing all parts of the prompt. Ensure your position is clear throughout.",
@@ -192,6 +189,7 @@ import {
   const [currentTopic, setCurrentTopic] = useState(null);
   const [essayT1, setEssayT1] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [appliedCorrections, setAppliedCorrections] = useState([]);
   const [customKeyword, setCustomKeyword] = useState('');
   const [credits, setCredits] = useState(10);           // Новое
   const [image, setImage] = useState(null);
@@ -208,6 +206,7 @@ import {
   const highlightRef = useRef(null);
   const [promptT1, setPromptT1] = useState('');
   const [promptT2, setPromptT2] = useState('');
+  const [appliedIndices, setAppliedIndices] = useState([]);
   const [timerActive, setTimerActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDescribing, setIsDescribing] = useState(false);
@@ -220,8 +219,8 @@ import {
   const [lastSearchIndex, setLastSearchIndex] = useState(0);
   const [lastSearchWord, setLastSearchWord] = useState("");
   const [isFocused, setIsFocused] = useState(false);
+  const EXCLUDED_WORDS = ['a','it', 'an','not', 'that', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
   const [searchState, setSearchState] = useState({ word: "", index: -1, count: 0, current: 0 });
-
   const TASK1_ASSETS = {
     "Line graph": [
       "https://ieltsmaterial.com/wp-content/uploads/2017/01/ieltsmaterial.com-bar-charts.png",
@@ -556,6 +555,9 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     }
     }, []);
   useEffect(() => {
+  setAppliedCorrections([]);
+}, [activeResult]);
+  useEffect(() => {
       localStorage.setItem('ielts_draft', JSON.stringify({ t1: essayT1, t2: essayT2 }));
     }, [essayT1, essayT2]);
     useEffect(() => {
@@ -676,16 +678,39 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     };
 
     // Мапы для подсветки
-    const grammarMap = {};
-    result.corrections?.forEach(c => {
+  const grammarMap = useMemo(() => {
+  const map = {};
+  const activeResult = activeTab === 'Task 1' ? resultT1 : resultT2;
+  const EXCLUDED = ['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
+
+  if (activeResult?.corrections) {
+    activeResult.corrections.forEach(c => {
       const words = c.original?.toLowerCase().split(/\s+/) || [];
       words.forEach(word => {
         const clean = word.replace(/[.,!?;:]/g, '').trim();
-        if (clean) grammarMap[clean] = true;
+        // ДОБАВЛЕНО: Проверяем, не является ли слово "общим"
+        if (clean && !EXCLUDED.includes(clean) && clean.length > 1) { 
+          map[clean] = { fixed: c.fixed, rule: c.rule };
+        }
       });
     });
+  }
+  return map;
+}, [activeResultT1, activeResultT2, activeTab]);
 
-    const linkingMap = {};
+const linkingMap = useMemo(() => {
+  const map = {};
+  const activeResult = activeTab === 'Task 1' ? result : result;
+  
+  if (activeResult?.analysis?.linking_words?.found) {
+    activeResult.analysis.linking_words.found.forEach(word => {
+      const clean = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+      if (clean) map[clean] = true;
+    });
+  }
+  return map;
+}, [activeResultT1, activeResultT2, activeTab]);
+
     result.analysis?.linking_words?.found?.forEach(word => {
       const clean = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
       if (clean) linkingMap[clean] = true;
@@ -1010,18 +1035,19 @@ if (activeResult) {
     if (clean) linkingMap[clean] = true;
   });
 }
-const sharedStyles = {
-  lineHeight: '1.5',
+  const sharedStyles = {
   fontFamily: 'inherit',
-  fontSize: 'inherit',
-  padding: '12px 20px', // Должно совпадать в обоих слоях
+  fontSize: '16px',
+  lineHeight: '1.8',
+  padding: '24px 10px 24px 10px', // Единый паддинг для обоих слоев
   whiteSpace: 'pre-wrap',
+  overflowWrap: 'break-word',
   wordBreak: 'break-word',
+  fontVariantLigatures: 'none',
+  boxSizing: 'border-box',
 };
 const handleScroll = (e) => {
   const { scrollTop, scrollLeft } = e.target;
-
-  // Используем requestAnimationFrame для идеальной синхронизации 60fps
   requestAnimationFrame(() => {
     if (highlightRef.current) {
       highlightRef.current.scrollTop = scrollTop;
@@ -1032,17 +1058,15 @@ const handleScroll = (e) => {
 // Замени свою 810 строку на эту:
 const [essayText, setEssayText] = useState(activeResult?.text || "");
 // Находим место, где у тебя стейты promptT1 и promptT2
-// Добавь эту функцию прямо под ними:
 const handleReplaceWord = (oldWord, newWord) => {
-  // 1. Выбираем, какое эссе сейчас активно (Task 1 или Task 2)
-  const currentEssay = activeTab === 'Task 1' ? essayT1 : essayT2;
+  const isT1 = activeTab === 'Task 1';
+  const currentEssay = isT1 ? essayT1 : essayT2;
   
-  if (!currentEssay) return;
+  if (!currentEssay || !oldWord) return;
 
-  // 2. Логика замены (целое слово, игнорируя регистр)
+  // 1. ЛОГИКА ЗАМЕНЫ ТЕКСТА (ваша текущая)
   const escaped = oldWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`\\b${escaped}\\b`, 'gi');
-
   const updatedText = currentEssay.replace(regex, (match) => {
     const isCapitalized = match.charAt(0) === match.charAt(0).toUpperCase();
     return isCapitalized 
@@ -1050,12 +1074,36 @@ const handleReplaceWord = (oldWord, newWord) => {
       : newWord.toLowerCase();
   });
 
-  // 3. Обновляем стейт САМОГО ЭССЕ (не промпта!)
-  if (activeTab === 'Task 1') {
-    setEssayT1(updatedText); 
-  } else {
-    setEssayT2(updatedText);
+  // Обновляем текст эссе
+  if (isT1) setEssayT1(updatedText); 
+  else setEssayT2(updatedText);
+
+  // 2. !!! КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: УДАЛЯЕМ ОШИБКУ ИЗ ОБЪЕКТА RESULT !!!
+  // Это заставит grammarMap пересчитаться и уберет красную линию
+  const setResult = isT1 ? setResultT1 : setResultT2;
+  const currentResult = isT1 ? activeResultT1 : activeResultT2;
+
+  if (currentResult?.corrections) {
+    const updatedCorrections = currentResult.corrections.filter(
+      c => c.original.toLowerCase() !== oldWord.toLowerCase()
+    );
+    
+    // Сохраняем обновленный результат без этой ошибки
+    setResult({
+      ...currentResult,
+      corrections: updatedCorrections
+    });
   }
+
+  // 3. Синхронизация интерфейса (высота и скролл)
+  setTimeout(() => {
+    if (editorRef.current) {
+      editorRef.current.style.height = 'auto';
+      const nextHeight = Math.max(320, editorRef.current.scrollHeight);
+      editorRef.current.style.height = `${nextHeight}px`;
+      if (highlightRef.current) highlightRef.current.style.height = `${nextHeight}px`;
+    }
+  }, 50);
 };
 // --- ЛОГИКА СКРОЛЛА И ЭФФЕКТОВ ---
 const [showScrollTop, setShowScrollTop] = useState(false);
@@ -1111,7 +1159,7 @@ const shareReport = async (entry) => {
   }
 };
 const playClickSound = () => {
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const audioCtx = new (window.AudioContext || window.AudioContext)();
   const oscillator = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
 
@@ -1587,97 +1635,64 @@ return (
 
     </div>
     {/* Контейнер редактора (без изменений, но с привязкой к активной вкладке) */}
-    <div className={`relative w-full group overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
+   <div className={`relative w-full group overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
   darkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'
 }`}>
 
-  {/* --- ПАНЕЛЬ СЧЕТЧИКА (Фиксированная) --- */}
-  {/* --- ПАНЕЛЬ СЧЕТЧИКА (Адаптирована под отступ 64px) --- */}
-<div className="absolute top-3 right-3 z-40 pointer-events-none select-none">
-  <div className={`flex flex-col items-center justify-center min-w-[50px] px-2 py-1.5 rounded-xl border backdrop-blur-md transition-all duration-300 ${
-    darkMode 
-      ? 'bg-slate-900/60 border-slate-700/50 shadow-lg shadow-black/20' 
-      : 'bg-white/70 border-slate-200/60 shadow-sm'
-  }`}>
-    {/* Иконка или точка статуса */}
-    <div className={`w-1.5 h-1.5 rounded-full mb-1 ${
-      progress < 100 ? 'bg-orange-400' : 'bg-green-500 animate-pulse'
-    }`} />
-    
-    <div className="flex flex-col items-center leading-none">
-      <span className={`text-[12px] font-black tabular-nums ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
-        {currentWordCount}
-      </span>
-      <div className="h-[1px] w-full bg-slate-400/20 my-1" />
-          <span className="text-slate-400 font-bold text-[8px] tracking-tighter">
-            {targetWords}
-          </span>
-    </div>
-  </div>
-</div>
-
-  {/* --- ШКАЛА ПРОГРЕССА --- */}
-  <div className="absolute top-0 left-0 w-full h-[3px] bg-slate-200 dark:bg-slate-800 z-50">
-    <div 
-      className={`h-full transition-all duration-700 ease-out ${
-        progress < 100 ? 'bg-gradient-to-r from-red-500 to-orange-400' : 'bg-gradient-to-r from-green-500 to-emerald-400'
-      }`}
-      style={{ width: `${progress}%` }}
-       />
-  </div>
-  {/* --- 1. СЛОЙ ВИЗУАЛИЗАЦИИ --- */}
-      <div 
+  {/* --- 1. СЛОЙ ВИЗУАЛИЗАЦИИ (Подложка) --- */}
+  <div 
   ref={highlightRef}
   className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
   style={{ 
     ...sharedStyles, 
     color: 'transparent',
-    padding: '24px 64px 24px 16px', 
-    minHeight: '320px',
     width: '100%',
-    lineHeight: '1.8',
-    // ИСПРАВЛЕНО: Добавлены свойства для 100% совпадения переносов с textarea
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'break-word',
-    wordBreak: 'break-word',
-    fontVariantLigatures: 'none' // Чтобы ширина букв не менялась из-за лигатур
+    minHeight: '320px',
+    // КРИТИЧЕСКИЕ ПРАВКИ ДЛЯ СИНХРОНИЗАЦИИ:
+    display: 'block',
+     // Должно быть 1:1 как в textarea
+    border: '1px solid transparent', // Имитирует невидимую рамку textarea
+    fontVariantLigatures: 'none',    // Отключает слияние букв (fi, fl)
+    letterSpacing: 'normal',        // Убирает микро-сдвиги шрифта
+    WebkitFontSmoothing: 'antialiased',
   }}
 >
   {((activeTab === 'Task 1' ? essayT1 : essayT2) || "")
-    .split(/(\s+)/) // Сохраняем все пробелы и переносы для точности
+    .split(/(\s+|[.,!?;:()])/) // Сохраняем пробелы и пунктуацию
     .map((part, i) => {
-      const clean = part.toLowerCase().replace(/[.,!?;:]/g, '').trim();
-      
-      // Используем единый список исключений
-      const EXCLUDED_WORDS = ['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but'];
-      const isExcluded = EXCLUDED_WORDS.includes(clean);
+      // 1. Выводим пробелы и знаки препинания без стилей
+      if (/^(\s+|[.,!?;:()])$/.test(part)) {
+        return <span key={i}>{part}</span>;
+      }
 
-      const isError = !isExcluded && grammarMap[clean]; 
-      const isSynonym = !isExcluded && synonymMap?.[clean];
+      const clean = part.toLowerCase().trim();
+      if (!clean) return <span key={i}>{part}</span>;
+
+      // 2. Ваша логика проверок
+      const isExcluded = EXCLUDED_WORDS.includes(clean);
+      const grammarData = !isExcluded && grammarMap[clean];
       const isLinking = !isExcluded && linkingMap[clean];
-      
-      // Логика поиска (Find)
       const isSearchMatch = searchState?.word && clean === searchState.word.toLowerCase().trim();
 
       let highlightStyle = "";
-      
-      if (isError) {
-        // ЖИРНОЕ зачеркивание (3px) + небольшой отступ, чтобы не резало текст
-        highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[3px] text-red-500/30 underline-offset-[-2px]";
-      } else if (isSynonym) {
-        // ЖИРНОЕ желтое подчеркивание (3px)
-        highlightStyle = "border-b-[3px] border-yellow-500/90 dark:border-yellow-400 -mb-[3px]";
+      let tooltip = "";
+
+      if (grammarData) {
+        // Красное зачеркивание ТОЛЬКО для слова
+        highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[2px] text-red-500/40 decoration-skip-ink-none";
+        tooltip = `Fix: ${grammarData.fixed} (${grammarData.rule})`;
       } else if (isLinking) {
-        // ЖИРНОЕ синее подчеркивание (3px)
+        // Синее подчеркивание для связок
         highlightStyle = "border-b-[3px] border-blue-600/90 dark:border-blue-400 -mb-[3px]";
       }
 
       return (
         <span 
           key={i} 
-          className={`inline transition-all duration-200 
-            ${highlightStyle} 
-            ${isSearchMatch ? 'search-match ring-2 ring-yellow-400 bg-yellow-400/20' : ''}`}
+          title={tooltip || undefined}
+          className={`inline transition-all duration-200 cursor-help ${highlightStyle} ${
+            isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-400/20 rounded-sm' : ''
+          }`}
         >
           {part}
         </span>
@@ -1685,47 +1700,52 @@ return (
     })}
 </div>
   {/* --- 2. ВЕРХНИЙ СЛОЙ (Textarea) --- */}
-      <textarea
-  ref={editorRef}
-  value={activeTab === 'Task 1' ? essayT1 : essayT2}
-  onChange={(e) => {
-    playClickSound?.();
-    // Логика авто-высоты
-    e.target.style.height = '320px'; 
-    const nextHeight = e.target.scrollHeight;
-    e.target.style.height = `${nextHeight}px`;
+    <textarea
+    ref={editorRef}
+    // Логика значения сохранена
+    value={activeTab === 'Task 1' ? essayT1 : essayT2}
+    onChange={(e) => {
+      playClickSound?.();
+      
+      // Логика авто-высоты (сохранена)
+      e.target.style.height = 'auto'; 
+      const nextHeight = Math.max(320, e.target.scrollHeight);
+      e.target.style.height = `${nextHeight}px`;
 
-    if (highlightRef.current) {
-      highlightRef.current.style.height = `${nextHeight}px`;
-    }
+      // Синхронизация высоты подложки
+      if (highlightRef.current) {
+        highlightRef.current.style.height = `${nextHeight}px`;
+      }
 
-    if (activeTab === 'Task 1') setEssayT1(e.target.value);
-    else setEssayT2(e.target.value);
-  }}
-  onFocus={(e) => {
-    setIsFocused(true);
-    e.target.style.height = '320px';
-    e.target.style.height = `${e.target.scrollHeight}px`;
-  }}
-  onBlur={() => setIsFocused(false)}
-  
-  // ИСПРАВЛЕНИЕ: Передаем ссылку на нашу функцию с requestAnimationFrame
-  onScroll={handleScroll} 
-  
-  spellCheck="false"
-  placeholder="Begin your essay..."
-  className={`relative z-10 w-full min-h-[320px] bg-transparent outline-none resize-none overflow-hidden transition-colors duration-200
-    ${darkMode 
-      ? 'text-slate-100 caret-indigo-400 selection:bg-indigo-500/30' 
-      : 'text-slate-900 caret-indigo-600 selection:bg-indigo-200/50'}`}
-  style={{
-    ...sharedStyles,
-    padding: '24px 64px 24px 16px',
-    lineHeight: '1.8',
-    fontSmoothing: 'antialiased'
-  }}
-/>
-  </div>
+      if (activeTab === 'Task 1') setEssayT1(e.target.value);
+      else setEssayT2(e.target.value);
+    }}
+    onFocus={(e) => {
+      setIsFocused(true);
+      e.target.style.height = 'auto';
+      e.target.style.height = `${Math.max(320, e.target.scrollHeight)}px`;
+    }}
+    onBlur={() => setIsFocused(false)}
+    
+    // Плавная синхронизация скролла через вашу функцию handleScroll
+    onScroll={handleScroll} 
+    
+    spellCheck="false"
+    placeholder="Begin your essay..."
+    className={`relative z-10 w-full min-h-[320px] bg-transparent outline-none resize-none overflow-hidden transition-colors duration-200
+      ${darkMode 
+        ? 'text-slate-100 caret-indigo-400 selection:bg-indigo-500/30' 
+        : 'text-slate-900 caret-indigo-600 selection:bg-indigo-200/50'}`}
+    style={{
+      ...sharedStyles,
+      // ВАЖНО: Эти отступы должны быть в точности как в highlightRef слое
+      padding: '24px 10px 24px 10px',
+      lineHeight: '1.8',
+      WebkitFontSmoothing: 'antialiased',
+      border: '1px solid transparent', // Чтобы не было сдвига относительно подложки
+    }}
+  />
+</div>
 </div>
     {activeResult && !loading && (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
@@ -1759,102 +1779,123 @@ return (
   <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 ml-2">
     Detailed Corrections
   </h3>
-  
-  <div className="grid grid-cols-1 gap-8">
+     <div className="grid grid-cols-1 gap-8">
+  <AnimatePresence mode="popLayout">
     {activeResult.corrections && activeResult.corrections.length > 0 ? (
-      activeResult.corrections.map((err, i) => (
-        <div key={i} className="group p-8 sm:p-10 rounded-[3.5rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl transition-all duration-500 hover:border-red-500/30">
-          <div className="flex flex-col lg:flex-row gap-10">
-            
-            {/* ЛЕВАЯ ЧАСТЬ: Оригинал и Исправление */}
-            <div className="flex-1 space-y-8">
-              {/* Блок Оригинала */}
-              <div className="space-y-3">
-                <span className="text-[10px] font-black text-red-600 uppercase px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-100 dark:border-red-800/30">
-                  Original Text
-                </span>
-                <p className="text-[15px] sm:text-base font-bold text-slate-400 dark:text-slate-500 line-through italic decoration-red-500/40 leading-[1.8]">
-                  {err.original}
-                </p>
-              </div>
+      activeResult.corrections.map((err, i) => {
+        // Пропускаем рендер, если этот блок уже был применен
+        if (appliedCorrections.includes(i)) return null;
 
-              {/* Блок Исправления */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-[10px] font-black text-green-600 uppercase px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-100 dark:border-green-800/30">
-                    Recommended Correction
+        return (
+          <motion.div 
+            key={err.original + i}
+            initial={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, x: 50, scale: 0.9, height: 0, marginBottom: 0 }}
+            transition={{ duration: 0.4, ease: "circOut" }}
+            layout
+            className="group p-8 sm:p-10 rounded-[3.5rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl transition-all duration-500 hover:border-red-500/30 overflow-hidden"
+          >
+            <div className="flex flex-col lg:flex-row gap-10">
+              {/* ЛЕВАЯ ЧАСТЬ: Оригинал и Исправление */}
+              <div className="flex-1 space-y-8">
+                <div className="space-y-3">
+                  <span className="text-[10px] font-black text-red-600 uppercase px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-100 dark:border-red-800/30">
+                    Original Text
                   </span>
-                  
-                  {/* КНОПКА ОЗВУЧКИ */}
+                  <p className="text-[15px] sm:text-base font-bold text-slate-400 dark:text-slate-500 line-through italic decoration-red-500/40 leading-[1.8]">
+                    {err.original}
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-[10px] font-black text-green-600 uppercase px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-100 dark:border-green-800/30">
+                      Recommended Correction
+                    </span>
+                    <button 
+                      onClick={() => speak(err.fixed)} 
+                      className="group/btn p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-green-500 transition-all active:scale-90 shadow-sm"
+                    >
+                      <svg xmlns="http://www.w3.org" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors">
+                        <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
+                        <path d="M15.932 7.757a.75.75 0 011.061 0 4.5 4.5 0 010 6.364.75.75 0 01-1.06-1.06 3 3 0 000-4.242.75.75 0 010-1.062z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-[1.6]">
+                    {err.fixed}
+                  </p> 
+
+                  {/* КНОПКА ЗАМЕНЫ С ФУНКЦИЕЙ СКРЫТИЯ */}
                   <button 
-                    onClick={() => speak(err.fixed)} 
-                    className="group/btn p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-green-500 transition-all active:scale-90 shadow-sm"
-                    title="Listen"
+                    onClick={() => {
+                      handleReplaceWord(err.original, err.fixed);
+                      setAppliedCorrections(prev => [...prev, i]); // Скрываем блок
+                    }}
+                    className={`mt-4 group/apply flex items-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-lg
+                      ${darkMode 
+                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20' 
+                        : 'bg-slate-900 hover:bg-indigo-600 text-white shadow-slate-300'
+                      }`}
                   >
-                    <svg xmlns="http://www.w3.org" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors">
-                      <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
-                      <path d="M15.932 7.757a.75.75 0 011.061 0 4.5 4.5 0 010 6.364.75.75 0 01-1.06-1.06 3 3 0 000-4.242.75.75 0 010-1.062z" />
-                    </svg>
+                    <span className="w-5 h-5 flex items-center justify-center bg-white/20 rounded-lg group-hover/apply:rotate-12 transition-transform">
+                      <svg xmlns="http://www.w3.org" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                        <path fillRule="evenodd" d="M15.312 11.424a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 13.586V4a1 1 0 012 0v9.586l1.899-1.899a1 1 0 011.413 0z" clipRule="evenodd" />
+                      </svg>
+                    </span>
+                    Apply & Dismiss
                   </button>
                 </div>
-                <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-[1.6]">
-                  {err.fixed}
-                </p> 
               </div>
-            </div>
 
-            {/* ПРАВАЯ ЧАСТЬ: Правило и Сложность */}
-            <div className="lg:w-[40%] flex flex-col justify-between p-7 sm:p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[280px]">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                    <span className="font-black uppercase text-[10px] text-red-600 tracking-widest">
-                      Rule: {err.rule}
+              {/* ПРАВАЯ ЧАСТЬ (Оставляем без изменений) */}
+              <div className="lg:w-[40%] flex flex-col justify-between p-7 sm:p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[280px]">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-4 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                      <span className="font-black uppercase text-[10px] text-red-600 tracking-widest">
+                        Rule: {err.rule}
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-black border border-purple-200 dark:border-purple-800">
+                      {err.level || 'B2'}
                     </span>
                   </div>
-                  {/* Бейдж уровня */}
-                  <span className="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-black border border-purple-200 dark:border-purple-800">
-                    {err.level || 'B2'}
-                  </span>
+                  <p className="font-semibold italic text-slate-800 dark:text-slate-200 leading-[1.7] text-[13px] sm:text-[14px]">
+                    {err.explanation}
+                  </p>
                 </div>
-                
-                <p className="font-semibold italic text-slate-800 dark:text-slate-200 leading-[1.7] text-[13px] sm:text-[14px]">
-                  {err.explanation}
-                </p>
-              </div>
 
-              {/* Шкала сложности */}
-              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic text-[8px]">Complexity Scale</span>
-                  <span className="text-[9px] font-bold text-slate-500 uppercase italic text-[8px]">Mastery: {err.level === 'C2' ? 'Native' : 'Advanced'}</span>
-                </div>
-                <div className="flex gap-1 h-1">
-                  {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
-                    <div 
-                      key={lvl} 
-                      className={`flex-1 rounded-full transition-all duration-500 ${
-                        err.level === lvl || (lvl === 'B2' && !err.level) 
-                          ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)] scale-y-150' 
-                          : 'bg-slate-200 dark:bg-slate-800 opacity-30'
-                      }`} 
-                    />
-                  ))}
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Complexity Scale</span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase italic">Mastery: {err.level === 'C2' ? 'Native' : 'Advanced'}</span>
+                  </div>
+                  <div className="flex gap-1 h-1">
+                    {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
+                      <div 
+                        key={lvl} 
+                        className={`flex-1 rounded-full transition-all duration-500 ${
+                          err.level === lvl || (lvl === 'B2' && !err.level) 
+                            ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)] scale-y-150' 
+                            : 'bg-slate-200 dark:bg-slate-800 opacity-30'
+                        }`} 
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-            {/* Конец правой части */}
-
-          </div>
-        </div>
-      ))
+          </motion.div>
+        );
+      })
     ) : (
       <p className="text-center text-slate-400 py-10 italic">No corrections found.</p>
     )}
-  </div>
+  </AnimatePresence>
 </div>
-
+     </div>
       {/* 4. Suggested Rewrite — Теперь с ярким акцентом */}
       {activeResult.suggested_rewrite && (
         <div className="relative p-8 md:p-10 rounded-[3rem] bg-white dark:bg-slate-900 border-2 border-green-500/30 dark:border-green-500/20 shadow-[0_20px_50px_rgba(34,197,94,0.15)] dark:shadow-none overflow-hidden">
@@ -1897,7 +1938,8 @@ return (
       <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
 
       {/* Контейнер кнопок: на мобилках в колонку (или ряд), на десктопе по краям */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
+    </div>
+     <div className="flex flex-col sm:flex-row justify-between items-center gap-4 w-full">
         
         {/* ЛЕВАЯ КНОПКА: SAVE */}
         <div className="w-full sm:w-auto">
@@ -1941,11 +1983,10 @@ return (
         </div>
 
       </div>
-    </div>
         </div>
 
         {/* Aside: Здесь также стоит добавить очистку или разделение баллов */}
-      <aside className="lg:col-span-4 space-y-6" ref={activeResultsRef}>
+         <aside className="lg:col-span-4 space-y-6" ref={activeResultsRef}>
       {!activeResult ? (
       // <div className="..."> Analysis Pending for {activeTab} </div>
         <div className={`h-80 border-2 border-dashed rounded-[3rem] flex flex-col items-center justify-center p-10 text-center transition-all ${darkMode ? 'border-slate-800 bg-slate-900/20 text-slate-600' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
@@ -1958,10 +1999,10 @@ return (
     //       </p>
     //     </div>
       ) : (
-        <motion.div
+             <motion.div
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="space-y-6 lg:sticky lg:top-24 max-h-[calc(100vh-120px)] overflow-y-auto pr-2 custom-scrollbar no-scrollbar"
+        className="space-y-6 lg:sticky lg:top-24 max-h-[calc(100vh-120px)] pr-2 custom-scrollbar no-scrollbar"
         >
           <div className="relative group overflow-hidden bg-slate-950 rounded-[3rem] p-1 shadow-2xl shadow-indigo-900/30">
   <div className="group relative z-10 overflow-hidden rounded-[2rem] sm:rounded-[2.8rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-800 p-5 sm:p-8 text-white shadow-2xl shadow-indigo-900/20">
@@ -2094,7 +2135,7 @@ return (
       </span>
     )}
   </div>
-</div>
+    </div>
 
 </div>
 
@@ -2220,7 +2261,6 @@ return (
   </AnimatePresence>
 </div>
   </div>
-
               {/* Integrity Badge */}
               {activeResult.plagiarism && (
                 <div className={`mt-6 p-4 rounded-2xl border-l-4 ${activeResult.plagiarism.score > 30 ? 'bg-red-50 border-red-500' : 'bg-emerald-50 border-emerald-500'}`}>
@@ -2237,7 +2277,8 @@ return (
 
         </motion.div>
       )}
-    </aside>
+      </aside>
+     
       </div>
     )}
       {activeTab === 'Archive' && (
@@ -2377,11 +2418,15 @@ return (
         <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-600">Improvement Hub</h5>
         <div className="h-px flex-1 bg-red-600/10 ml-4"></div>
       </div>
-      <form className="space-y-4 max-w-lg mx-auto" action="mailto:sashabilov@gmail.com" method="post" encType="text/plain">
+     <form 
+  onSubmit={handleSubmit} // 1. ПРИВЯЗКА ФУНКЦИИ
+  className="space-y-4 max-w-lg mx-auto"
+>
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
     {/* ИМЯ */}
     <div className="relative group">
       <input 
+        name="name" // 2. ДОБАВЛЕН NAME
         type="text" 
         placeholder="NAME*" 
         required 
@@ -2396,6 +2441,7 @@ return (
     {/* EMAIL */}
     <div className="relative group">
       <input 
+        name="email" // 2. ДОБАВЛЕН NAME
         type="email" 
         placeholder="EMAIL*" 
         required 
@@ -2411,6 +2457,7 @@ return (
   {/* СООБЩЕНИЕ */}
   <div className="relative group">
     <textarea 
+      name="message" // 2. ДОБАВЛЕН NAME
       placeholder="HOW CAN WE MAKE BANDBOOSTER BETTER?*" 
       required 
       className={`w-full px-4 py-4 text-[11px] font-bold rounded-xl border-2 outline-none resize-none h-32 transition-all
@@ -2421,29 +2468,42 @@ return (
     ></textarea>
   </div>
 
-  {/* КНОПКА ОТПРАВКИ */}
+  {/* ОШИБКИ И СТАТУС */}
   <AnimatePresence>
-  {error && (
-    <motion.div 
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      className="p-3 mb-2 bg-red-600/10 border border-red-600/20 rounded-xl text-red-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2"
-    >
-      <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-ping" />
-      {error}
-    </motion.div>
-  )}
-</AnimatePresence>
+    {error && (
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0 }}
+        className="p-3 mb-2 bg-red-600/10 border border-red-600/20 rounded-xl text-red-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2"
+      >
+        <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-ping" />
+        {error}
+      </motion.div>
+    )}
+    
+    {status === 'success' && (
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="p-3 mb-2 bg-green-500/10 border border-green-500/20 rounded-xl text-green-500 text-[10px] font-bold uppercase tracking-wider text-center"
+      >
+        ✓ Suggestion Sent Successfully!
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  {/* КНОПКА */}
   <button 
     type="submit" 
-    className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-2xl active:scale-[0.98]
+    disabled={status === 'sending'}
+    className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-2xl active:scale-[0.98] disabled:opacity-50
       ${darkMode 
         ? 'bg-red-600 text-white hover:bg-red-500 shadow-red-900/20' 
         : 'bg-slate-950 text-white hover:bg-red-600 shadow-slate-300'
       }`}
   >
-    Send Suggestion
+    {status === 'sending' ? 'Sending...' : 'Send Suggestion'}
   </button>
 </form>
 <AnimatePresence>
@@ -2528,24 +2588,24 @@ return (
         }`}
       >
         <svg className="absolute inset-0 w-full h-full -rotate-90 p-0.5">
-  <circle 
-    cx="50%" cy="50%" r="46%" 
-    fill="transparent" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    className={darkMode ? 'text-slate-800' : 'text-slate-100'} 
-  />
-  <motion.circle
-    cx="50%" cy="50%" r="46%" 
-    fill="transparent" 
-    stroke="#ef4444" 
-    strokeWidth="2" 
-    // ИСПРАВЛЕНО: strokeLinecap вместо strokeDashcap
-    strokeLinecap="round" 
-    style={{ pathLength: scrollProgress / 100 }}
-    transition={{ type: "spring", stiffness: 60, damping: 15 }}
-  />
-</svg>
+            <circle 
+              cx="50%" cy="50%" r="46%" 
+              fill="transparent" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              className={darkMode ? 'text-slate-800' : 'text-slate-100'} 
+            />
+            <motion.circle
+              cx="50%" cy="50%" r="46%" 
+              fill="transparent" 
+              stroke="#ef4444" 
+              strokeWidth="2" 
+              // ИСПРАВЛЕНО: strokeLinecap вместо strokeDashcap
+              strokeLinecap="round" 
+              style={{ pathLength: scrollProgress / 100 }}
+              transition={{ type: "spring", stiffness: 60, damping: 15 }}
+            />
+          </svg>
         <ChevronUpIcon className="w-6 h-6 relative z-10 group-hover:-translate-y-1 transition-transform" />
       </button>
     </motion.div>

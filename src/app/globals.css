@@ -71,3 +71,29 @@ img {
 .transition-all {
   transition-duration: 300ms;
 }
+/* Анимация зачеркивания (слева направо) */
+.line-through-animated {
+  display: inline;
+  position: relative;
+  background-size: 0% 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              color 0.3s ease;
+  /* Улучшаем вид линии */
+  text-decoration-thickness: 2px;
+  text-underline-offset: -2px;
+  text-decoration-skip-ink: none;
+}
+
+/* Эффект при появлении ошибки */
+.error-highlight {
+  background-color: rgba(239, 68, 68, 0.1); /* bg-red-500/10 */
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+  border-radius: 4px;
+}
+
+/* Плавное подчеркивание для Linking Words */
+.linking-underline {
+  border-bottom-width: 0px;
+  transition: border-bottom-width 0.3s ease;
+}
