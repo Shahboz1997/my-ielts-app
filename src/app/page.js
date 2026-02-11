@@ -682,19 +682,25 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     };
 
     // Мапы для подсветки
-  const grammarMap = useMemo(() => {
+ const grammarMap = useMemo(() => {
   const map = {};
   const activeResult = activeTab === 'Task 1' ? resultT1 : resultT2;
-  const EXCLUDED = ['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
-
+  
   if (activeResult?.corrections) {
     activeResult.corrections.forEach(c => {
-      const words = c.original?.toLowerCase().split(/\s+/) || [];
+      // 1. Очищаем оригинал от лишних знаков
+      const cleanOriginal = c.original.toLowerCase().trim().replace(/[.,!?;:]/g, '');
+      
+      // 2. Если это фраза, разбиваем её на отдельные слова
+      const words = cleanOriginal.split(/\s+/);
+      
       words.forEach(word => {
-        const clean = word.replace(/[.,!?;:]/g, '').trim();
-        // ДОБАВЛЕНО: Проверяем, не является ли слово "общим"
-        if (clean && !EXCLUDED.includes(clean) && clean.length > 1) { 
-          map[clean] = { fixed: c.fixed, rule: c.rule };
+        if (word.length > 0) {
+          // Записываем каждое слово из ошибочной фразы в мапу
+          map[word] = { 
+            fixed: c.fixed, 
+            rule: c.rule || "Grammar" 
+          };
         }
       });
     });
@@ -716,7 +722,8 @@ const linkingMap = useMemo(() => {
 }, [activeResultT1, activeResultT2, activeTab]);
 
     result.analysis?.linking_words?.found?.forEach(word => {
-      const clean = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+      //const clean = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+      const clean = part.toLowerCase().trim().replace(/[.,!?;:()]/g, '');
       if (clean) linkingMap[clean] = true;
     });
 
@@ -1664,7 +1671,7 @@ return (
   {((activeTab === 'Task 1' ? essayT1 : essayT2) || "")
     .split(/(\s+|[.,!?;:()])/) // Сохраняем пробелы и пунктуацию
     .map((part, i) => {
-  // 1. Выводим пробелы и знаки препинания без стилей
+  // 1. Выводим пробелы и знаки препинания без стилей (сохраняем структуру)
   if (/^(\s+|[.,!?;:()])$/.test(part)) {
     return <span key={i}>{part}</span>;
   }
@@ -1672,9 +1679,9 @@ return (
   const clean = part.toLowerCase().trim().replace(/[.,!?;:]/g, '');
   if (!clean) return <span key={i}>{part}</span>;
 
-  // 2. Логика проверок
+  // 2. Логика проверок (согласно вашим последним изменениям)
   const isExcluded = EXCLUDED_WORDS.includes(clean);
-  const isWeak = !isExcluded && WEAK_WORDS.includes(clean); // Проверка на слабые слова
+  const isWeak = !isExcluded && WEAK_WORDS.includes(clean);
   const grammarData = !isExcluded && grammarMap[clean];
   const isLinking = !isExcluded && linkingMap[clean];
   const isSearchMatch = searchState?.word && clean === searchState.word.toLowerCase().trim();
@@ -1682,17 +1689,18 @@ return (
   let highlightStyle = "";
   let tooltip = "";
 
+  // 3. ПРИОРИТЕТНОСТЬ СТИЛЕЙ (Не меняя логику)
   if (grammarData) {
-    // Красное зачеркивание (Приоритет 1)
+    // Приоритет 1: Ошибки (Красное зачеркивание)
     highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[2px] text-red-500/40 decoration-skip-ink-none";
     tooltip = `Fix: ${grammarData.fixed} (${grammarData.rule})`;
   } else if (isLinking) {
-    // Синее подчеркивание (Приоритет 2)
+    // Приоритет 2: Связки (Синее подчеркивание)
     highlightStyle = "border-b-[3px] border-blue-600/90 dark:border-blue-400 -mb-[3px]";
   } else if (isWeak) {
-    // Желтый пунктир для слабых слов (Приоритет 3)
-    // Используем opacity, чтобы не отвлекать слишком сильно
-    highlightStyle = "border-b-2 border-dashed border-yellow-500/50 dark:border-yellow-400/40 text-orange-400/80";
+    // Приоритет 3: Слабые слова (Желтый пунктир по вашему CSS классу)
+    // Добавлены Tailwind-аналоги вашего CSS для надежности
+    highlightStyle = "weak-word-hint border-b-2 border-dashed border-yellow-500/50 text-orange-400/80";
     tooltip = "Weak Word: Consider using a more academic synonym for a higher score.";
   }
 

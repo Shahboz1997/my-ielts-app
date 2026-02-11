@@ -97,3 +97,27 @@ img {
   border-bottom-width: 0px;
   transition: border-bottom-width 0.3s ease;
 }
+.weak-word-hint {
+  position: relative;
+  display: inline-block;
+  background-color: rgba(245, 158, 11, 0.08); /* Очень светлый оранжевый фон */
+  border-bottom: 2px dashed rgba(245, 158, 11, 0.5); /* Пунктир */
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  cursor: help;
+  /* Чтобы не слипалось с текстом снизу */
+  margin-bottom: -2px; 
+}
+
+/* Эффект при наведении на слабое слово */
+.weak-word-hint:hover {
+  background-color: rgba(245, 158, 11, 0.15);
+  border-bottom-color: rgba(245, 158, 11, 0.8);
+  transform: translateY(-1px);
+}
+
+/* Темная тема (если используете класс .dark) */
+.dark .weak-word-hint {
+  background-color: rgba(251, 191, 36, 0.1);
+  border-bottom-color: rgba(251, 191, 36, 0.4);
+}
