@@ -191,9 +191,19 @@ import {
   const [isSaved, setIsSaved] = useState(false);
   const [appliedCorrections, setAppliedCorrections] = useState([]);
   const [customKeyword, setCustomKeyword] = useState('');
+  const UPGRADE_MAP = {
+  'good': ['beneficial', 'advantageous', 'exemplary', 'vital'],
+  'bad': ['detrimental', 'harmful', 'adverse', 'unfavorable'],
+  'big': ['substantial', 'significant', 'considerable', 'vast'],
+  'things': ['elements', 'aspects', 'factors', 'commodities'],
+  'nowadays': ['in the contemporary era', 'currently', 'presently'],
+  'money': ['financial resources', 'capital', 'revenue'],
+  'think': ['maintain', 'argue', 'assert', 'postulate']
+};
   const [credits, setCredits] = useState(10);           // Новое
   const [image, setImage] = useState(null);
   const [isImageCollapsed, setIsImageCollapsed] = useState(false);
+  const [tooltipData, setTooltipData] = useState(null);
   const [loadingT1, setLoadingT1] = useState(false);
   const [loadingT2, setLoadingT2] = useState(false);
   const [isGenLoadingT1, setIsGenLoadingT1] = useState(false);
@@ -202,6 +212,9 @@ import {
   const [genLoading, setGenLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [archive, setArchive] = useState([]);
+  // Инициализируем пустые объекты (чтобы не было ошибки "not defined")
+  const grammarMap = {};
+  const linkingMap = {};
   const [timeLeft, setTimeLeft] = useState(3600);
   const highlightRef = useRef(null);
   const [promptT1, setPromptT1] = useState('');
@@ -223,7 +236,9 @@ import {
   'good', 'bad', 'big', 'small', 'things', 'stuff', 'get', 'very', 
   'nowadays', 'money', 'people', 'think', 'believe', 'happy', 'sad'
 ];
-  const EXCLUDED_WORDS = ['a','it', 'an','not','You','you', 'that', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
+  const EXCLUDED_WORDS = ['a','it', 'an','not','You','you', 'that', 
+    'to', 'of', 'in', 'on', 'at', 'also', 'they', '', 
+    'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
   const [searchState, setSearchState] = useState({ word: "", index: -1, count: 0, current: 0 });
   const TASK1_ASSETS = {
     "Line graph": [
@@ -620,6 +635,11 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
       setTimeout(() => alert("Time is up! Please submit your task."), 100);
     }
   }, [timeLeft, timerActive]);
+  useEffect(() => {
+  const close = () => setTooltipData(null);
+  window.addEventListener('click', close);
+  return () => window.removeEventListener('click', close);
+}, []);
   const clearArchive = async () => {
     if (!window.confirm("Are you sure you want to clear the entire archive?")) return;
     try {
@@ -658,7 +678,7 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     // 1. ПОДГОТОВКА ДАННЫХ
     const entry = archiveEntry || null;
     const isT1 = entry ? (entry.taskType === 'Task 1') : (activeTab === 'Task 1');
-    const result = entry ? entry.fullData : (isT1 ? activeResultT1 : activeResultT2);
+    const result = entry ? entry.fullData : (isT1 ? resultT1 : resultT2); // Исправлено: используем resultT1/T2
     const essay = entry ? entry.essay : (isT1 ? essayT1 : essayT2);
     const chartImage = entry ? entry.image : (isT1 ? image : null);
     const promptText = entry ? entry.promptText : (isT1 ? promptT1 : promptT2);
@@ -681,51 +701,27 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
       pdf.restoreGraphicsState();
     };
 
-    // Мапы для подсветки
- const grammarMap = useMemo(() => {
-  const map = {};
-  const activeResult = activeTab === 'Task 1' ? resultT1 : resultT2;
-  
-  if (activeResult?.corrections) {
-    activeResult.corrections.forEach(c => {
-      // 1. Очищаем оригинал от лишних знаков
-      const cleanOriginal = c.original.toLowerCase().trim().replace(/[.,!?;:]/g, '');
-      
-      // 2. Если это фраза, разбиваем её на отдельные слова
-      const words = cleanOriginal.split(/\s+/);
-      
-      words.forEach(word => {
-        if (word.length > 0) {
-          // Записываем каждое слово из ошибочной фразы в мапу
-          map[word] = { 
-            fixed: c.fixed, 
-            rule: c.rule || "Grammar" 
-          };
-        }
+    // --- ИСПРАВЛЕНО: Мапы создаются как обычные объекты (без useMemo) ---
+    const grammarMap = {};
+    if (result?.corrections) {
+      result.corrections.forEach(c => {
+        const cleanOriginal = c.original.toLowerCase().trim().replace(/[.,!?;:]/g, '');
+        const words = cleanOriginal.split(/\s+/);
+        words.forEach(word => {
+          if (word.length > 0) {
+            grammarMap[word] = { fixed: c.fixed, rule: c.rule || "Grammar" };
+          }
+        });
       });
-    });
-  }
-  return map;
-}, [activeResultT1, activeResultT2, activeTab]);
+    }
 
-const linkingMap = useMemo(() => {
-  const map = {};
-  const activeResult = activeTab === 'Task 1' ? result : result;
-  
-  if (activeResult?.analysis?.linking_words?.found) {
-    activeResult.analysis.linking_words.found.forEach(word => {
-      const clean = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
-      if (clean) map[clean] = true;
-    });
-  }
-  return map;
-}, [activeResultT1, activeResultT2, activeTab]);
-
-    result.analysis?.linking_words?.found?.forEach(word => {
-      //const clean = word.toLowerCase().replace(/[.,!?;:]/g, '').trim();
-      const clean = part.toLowerCase().trim().replace(/[.,!?;:()]/g, '');
-      if (clean) linkingMap[clean] = true;
-    });
+    const linkingMap = {};
+    if (result?.analysis?.linking_words?.found) {
+      result.analysis.linking_words.found.forEach(word => {
+        const clean = word.toLowerCase().trim().replace(/[.,!?;:()]/g, '');
+        if (clean) linkingMap[clean] = true;
+      });
+    }
 
     // --- СТРАНИЦА 1: ШАПКА И БАЛЛЫ ---
     addWatermark(doc);
@@ -764,7 +760,7 @@ const linkingMap = useMemo(() => {
 
     let currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 150) + 15;
 
-    // Изображение (Защита f3)
+    // Изображение
     if (isT1 && chartImage && typeof chartImage === 'string' && chartImage.startsWith('data:image')) {
       try {
         doc.setTextColor(...themeRed);
@@ -785,10 +781,10 @@ const linkingMap = useMemo(() => {
 
     doc.setFontSize(10);
     let currentX = 20;
-    const words = safeEssay.split(/(\s+)/);
+    const wordsInEssay = safeEssay.split(/(\s+)/); // Исправлено имя переменной во избежание конфликта
 
-    words.forEach(part => {
-      const clean = part.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+    wordsInEssay.forEach(part => {
+      const clean = part.toLowerCase().trim().replace(/[.,!?;:()]/g, '');
       const isError = grammarMap[clean];
       const isLink = linkingMap[clean];
       const wordWidth = doc.getTextWidth(part);
@@ -866,59 +862,23 @@ const linkingMap = useMemo(() => {
     });
 
     // --- МОДЕЛЬНЫЙ ОТВЕТ ---
-        // --- МОДЕЛЬНЫЙ ОТВЕТ ---
     let modelY = doc.lastAutoTable.finalY + 15;
     if (modelY > 210) { doc.addPage(); addWatermark(doc); modelY = 25; }
     
-    doc.setTextColor(15, 118, 110); // themeGreen
+    doc.setTextColor(15, 118, 110);
     doc.setFontSize(14);
     doc.text("Expert Model Answer:", 20, modelY);
     
     doc.setTextColor(40, 40, 40);
-    doc.setFontSize(9);
-    const modelText = result.suggested_rewrite || "Not available.";
-    const splitModel = doc.splitTextToSize(modelText, 170);
+    doc.setFontSize(10);
+    const splitModel = doc.splitTextToSize(result.suggested_rewrite || "Not available", 170);
     doc.text(splitModel, 20, modelY + 10);
 
-    // ВАЖНО: Рассчитываем новую координату Y на основе длины текста модельного ответа
-    // Длина текста * межстрочный интервал (примерно 5 единиц) + текущий Y
-    let currentYAfterModel = modelY + 10 + (splitModel.length * 5);
+    doc.save(`IELTS_Report_${isT1 ? 'T1' : 'T2'}_${new Date().getTime()}.pdf`);
 
-    // --- ФИНАЛЬНЫЙ ВЕРДИКТ ---
-    const vText = result.improvement_strategy 
-      ? result.improvement_strategy.split('.')[0] + '.' 
-      : `Band ${result.overall_band}. Focus on complex structures.`;
-
-    // Теперь vY зависит от currentYAfterModel, а не от таблицы
-    let vY = currentYAfterModel + 15;
-
-    // Если места на странице не хватает для плашки вердикта (35 единиц высоты)
-    if (vY > 250) { 
-      doc.addPage(); 
-      addWatermark(doc); 
-      vY = 25; 
-    }
-
-    doc.setFillColor(15, 23, 42); // themeDark
-    doc.rect(20, vY, 170, 30, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(10);
-    doc.text("OFFICIAL EXAMINER'S VERDICT", 25, vY + 10);
-    
-    doc.setDrawColor(220, 38, 38); // themeRed
-    doc.setLineWidth(0.5);
-    doc.line(25, vY + 12, 65, vY + 12);
-    
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "italic");
-    const splitVerdict = doc.splitTextToSize(vText, 160);
-    doc.text(splitVerdict, 25, vY + 20);
-
-    doc.save(`IELTS_Report_Band${result.overall_band}.pdf`);
-  } catch (error) {
-    console.error("PDF Export Error:", error);
-    alert("Error generating PDF. Please try again.");
+  } catch (err) {
+    console.error("PDF Error:", err);
+    alert("Error generating PDF");
   }
 };
   const handleImageUpload = async (fileOrUrl) => {
@@ -1024,11 +984,6 @@ try {
 };
   // Определяем, какой результат сейчас активен
 //const activeResult = activeTab === 'Task 1' ? resultT1 : resultT2;
-
-// Инициализируем пустые объекты (чтобы не было ошибки "not defined")
-const grammarMap = {};
-const linkingMap = {};
-
 // Заполняем карты, только если есть данные анализа
 if (activeResult) {
   // Grammar Corrections
@@ -1228,23 +1183,41 @@ const insertLinkingWord = (word) => {
   const currentText = activeTab === 'Task 1' ? essayT1 : essayT2;
   const setEssay = activeTab === 'Task 1' ? setEssayT1 : setEssayT2;
 
-  // Форматируем вставку: добавляем пробел до и запятую с пробелом после
   const before = currentText.substring(0, start);
   const after = currentText.substring(end);
-  const formattedWord = `${before.endsWith(' ') || before === '' ? '' : ' '}${word}, `;
+
+  // 1. Проверка на начало предложения (для заглавной буквы)
+  const isStartOfSentence = /(^|[.!?])\s*$/.test(before);
+  let processedWord = isStartOfSentence 
+    ? word.charAt(0).toUpperCase() + word.slice(1) 
+    : word.toLowerCase();
+
+  // 2. Логика пунктуации:
+  // Проверяем, есть ли запятая СЛЕВА и СПРАВА от места вставки
+  const hasCommaBefore = /,\s*$/.test(before);
+  const hasCommaAfter = /^\s*,/.test(after);
+
+  // Чистим слово от лишних запятых, если они пришли из API/списка
+  processedWord = processedWord.replace(/,/g, '').trim();
+
+  // Формируем вставку:
+  // - Пробел перед, если нужно
+  // - Само слово
+  // - Запятая, если её еще нет после слова
+  const prefix = (before !== '' && !/\s$/.test(before) && !hasCommaBefore) ? ' ' : '';
+  const suffix = hasCommaAfter ? '' : ', ';
   
-  const newText = before + formattedWord + after;
+  const formattedWord = `${prefix}${processedWord}${suffix}`;
+  
+  const newText = before + formattedWord + after.replace(/^\s+/, ''); // Убираем лишние пробелы впереди 'after'
   
   setEssay(newText);
 
-  // Возвращаем фокус и обновляем высоту
   setTimeout(() => {
     textarea.focus();
-    // Ставим курсор СРАЗУ ПОСЛЕ вставленного слова
     const newCursorPos = start + formattedWord.length;
     textarea.setSelectionRange(newCursorPos, newCursorPos);
     
-    // Пересчет высоты
     textarea.style.height = '320px';
     textarea.style.height = `${textarea.scrollHeight}px`;
     if (highlightRef.current) {
@@ -1252,6 +1225,44 @@ const insertLinkingWord = (word) => {
     }
   }, 10);
 };
+<AnimatePresence>
+  {tooltipData && (
+    <motion.div
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: -45, scale: 1 }} // Всплывает чуть выше слова
+      exit={{ opacity: 0, scale: 0.95 }}
+      style={{ 
+        position: 'fixed', 
+        left: tooltipData.x, 
+        top: tooltipData.y, 
+        zIndex: 100 
+      }}
+      className={`flex flex-wrap gap-1 p-2 rounded-2xl border shadow-2xl backdrop-blur-xl ${
+        darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'
+      }`}
+    >
+      <div className="absolute -bottom-1 left-4 w-2 h-2 rotate-45 border-r border-b bg-inherit border-inherit" />
+      {tooltipData.synonyms.length > 0 ? (
+        tooltipData.synonyms.map(syn => (
+          <button
+            key={syn}
+            onClick={() => {
+              handleReplaceWord(tooltipData.word, syn);
+              setTooltipData(null);
+            }}
+            className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all active:scale-90"
+          >
+            {syn}
+          </button>
+        ))
+      ) : (
+        <span className="text-[9px] px-2 text-slate-500 font-bold">No upgrades found</span>
+      )}
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
 return (
       <div className={`min-h-screen flex flex-col transition-all duration-500 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900 overflow-y-hidden'}`}>
         {/* NAVBAR */}
@@ -1646,9 +1657,46 @@ return (
 
     </div>
     {/* Контейнер редактора (без изменений, но с привязкой к активной вкладке) */}
-   <div className={`relative w-full group overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
+   <div  className={`relative w-full group overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
   darkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'
-}`}>
+   }`}>
+
+   {/* --- ПАНЕЛЬ СЧЕТЧИКА (Fixed Float) --- */}
+  {/* z-40 и pointer-events-none позволяют печатать прямо "под" ним */}
+  <div className="absolute top-4 right-4 z-40 pointer-events-none select-none p-[10px]">
+  <div className={`flex flex-col items-center justify-center w-[50px] h-[55px] rounded-2xl border backdrop-blur-md transition-all duration-300 ${
+    darkMode 
+      ? 'bg-slate-900/80 border-slate-700/50 shadow-2xl shadow-black/40' 
+      : 'bg-white/80 border-slate-200/60 shadow-lg shadow-slate-200/50'
+  }`}>
+    {/* Индикатор прогресса (точка) */}
+    <div className={`w-1.5 h-1.5 rounded-full mb-1.5 transition-colors duration-300 ${
+      currentWordCount < targetWords ? 'bg-orange-500' : 'bg-green-500 animate-pulse'
+    }`} />
+    
+    <div className="flex flex-col items-center leading-none">
+      <span className={`text-[14px] font-black tabular-nums tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+        {currentWordCount}
+      </span>
+      {/* Разделительная линия */}
+      <div className="h-[1px] w-6 bg-slate-400/20 my-1" />
+      <span className="text-slate-400 font-bold text-[9px] tracking-tighter">
+        {targetWords}
+      </span>
+    </div>
+  </div>
+</div>
+
+
+  {/* --- ШКАЛА ПРОГРЕССА (Верхняя линия) --- */}
+  <div className="absolute top-0 left-0 w-full h-[3px] bg-slate-200 dark:bg-slate-800 z-50">
+    <div 
+      className={`h-full transition-all duration-700 ease-out ${
+        currentWordCount < targetWords ? 'bg-gradient-to-r from-red-500 to-orange-400' : 'bg-gradient-to-r from-green-500 to-emerald-400'
+      }`}
+      style={{ width: `${Math.min(100, (currentWordCount / targetWords) * 100)}%` }}
+    />
+  </div>
 
   {/* --- 1. СЛОЙ ВИЗУАЛИЗАЦИИ (Подложка) --- */}
   <div 
@@ -1703,19 +1751,35 @@ return (
     highlightStyle = "weak-word-hint border-b-2 border-dashed border-yellow-500/50 text-orange-400/80";
     tooltip = "Weak Word: Consider using a more academic synonym for a higher score.";
   }
-
+  if (isWeak && !grammarData) {
+  highlightStyle = "weak-word-hint border-b-2 border-dashed border-yellow-500/50 cursor-pointer pointer-events-auto";
+  tooltip = "Click to see academic upgrades";
+}
   return (
-    <span 
-      key={i} 
-      title={tooltip || undefined}
-      className={`inline transition-all duration-200 cursor-help ${highlightStyle} ${
-        isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-400/20 rounded-sm' : ''
-      }`}
-    >
-      {part}
-    </span>
-  );
-})}
+  <span 
+    key={i} 
+    title={tooltip || undefined}
+    onClick={(e) => {
+      if (isWeak) {
+        e.stopPropagation();
+        const rect = e.target.getBoundingClientRect();
+        setTooltipData({
+          word: clean,
+          x: rect.left,
+          y: rect.top,
+          synonyms: UPGRADE_MAP[clean] || []
+        });
+      }
+    }}
+    className={`inline transition-all duration-200 ${highlightStyle} ${
+      isSearchMatch ? 'ring-2 ring-yellow-400 bg-yellow-400/20 rounded-sm' : ''
+    }`}
+  >
+    {part}
+  </span>
+);
+    }
+    )}
 
 </div>
   {/* --- 2. ВЕРХНИЙ СЛОЙ (Textarea) --- */}
@@ -2122,7 +2186,19 @@ return (
     </span>
   </p>  
   <div className="flex flex-wrap gap-2">
-    {activeResult.analysis?.linking_words?.suggestions?.map((s, i) => (
+  {(() => {
+    const suggestions = activeResult.analysis?.linking_words?.suggestions;
+    const hasSuggestions = suggestions && suggestions.length > 0;
+
+    if (!hasSuggestions) {
+      return (
+        <span className="text-[10px] font-bold text-slate-400 italic py-1 px-2">
+          Great flow! No extra suggestions needed.
+        </span>
+      );
+    }
+
+    return suggestions.map((s, i) => (
       <button 
         key={i} 
         onClick={() => insertLinkingWord(s)}
@@ -2134,15 +2210,10 @@ return (
           {s}
         </span>
       </button>
-    ))}
+    ));
+  })()}
+</div>
 
-    {/* Состояние, если подсказок нет */}
-    {(!activeResult.analysis?.linking_words?.suggestions || activeResult.analysis.linking_words.suggestions.length === 0) && (
-      <span className="text-[10px] font-bold text-slate-400 italic py-1 px-2">
-        Great flow! No extra suggestions needed.
-      </span>
-    )}
-  </div>
     </div>
 
 </div>
