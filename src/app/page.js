@@ -236,7 +236,7 @@ import {
   'good', 'bad', 'big', 'small', 'things', 'stuff', 'get', 'very', 
   'nowadays', 'money', 'people', 'think', 'believe', 'happy', 'sad'
 ];
-  const EXCLUDED_WORDS = ['a','it', 'an','not','You','you', 'that', 
+  const EXCLUDED_WORDS = ['a','it','the','The','have', 'like', 'or','an','not','You','you', 'that', 
     'to', 'of', 'in', 'on', 'at', 'also', 'they', '', 
     'by', 'for', 'with', 'and', 'but', 'is', 'are', 'was', 'were'];
   const [searchState, setSearchState] = useState({ word: "", index: -1, count: 0, current: 0 });
@@ -402,7 +402,7 @@ const triggerHighlight = (word) => {
   const lowerText = text.toLowerCase();
   const lowerWord = word.toLowerCase().trim();
 
-  // 1. Находим все индексы вхождений этого слова в тексте
+  // 1. Находим все индексы вхождений
   const indices = [];
   let idx = lowerText.indexOf(lowerWord);
   while (idx !== -1) {
@@ -415,7 +415,6 @@ const triggerHighlight = (word) => {
     return;
   }
 
-  // 2. Определяем, какой индекс выбрать (следующий или первый)
   let nextOccurrence = 0;
   if (searchState.word === lowerWord) {
     nextOccurrence = (searchState.current + 1) % indices.length;
@@ -423,7 +422,19 @@ const triggerHighlight = (word) => {
 
   const targetIndex = indices[nextOccurrence];
 
-  // 3. Обновляем состояние для индикатора
+  // --- ЛОГИКА ПРОВЕРКИ РЕГИСТРА ---
+  // Смотрим на текст перед найденным словом
+  const textBefore = text.substring(0, targetIndex).trimEnd();
+  const lastChar = textBefore.slice(-1);
+  
+  // Если это начало текста или перед словом стоит знак конца предложения (. ! ?)
+  const isStartOfSentence = targetIndex === 0 || [".", "!", "?"].includes(lastChar);
+  
+  const finalWord = isStartOfSentence 
+    ? lowerWord.charAt(0).toUpperCase() + lowerWord.slice(1) 
+    : lowerWord;
+  // --------------------------------
+
   setSearchState({
     word: lowerWord,
     index: targetIndex,
@@ -431,11 +442,9 @@ const triggerHighlight = (word) => {
     current: nextOccurrence
   });
 
-  // 4. Выделяем слово в редакторе
   editor.focus();
   editor.setSelectionRange(targetIndex, targetIndex + lowerWord.length);
 
-  // 5. Рассчитываем скролл (учитываем переносы строк)
   const linesBefore = text.substring(0, targetIndex).split('\n').length;
   const lineHeight = parseInt(window.getComputedStyle(editor).lineHeight) || 24;
 
@@ -444,8 +453,8 @@ const triggerHighlight = (word) => {
     behavior: 'smooth'
   });
 
-  // 6. Твоя визуальная подсветка (если используется)
-  setHighlightedWord(word);
+  // Передаем обработанное слово (с большой или маленькой буквы) в визуальную подсветку
+  setHighlightedWord(finalWord);
   setTimeout(() => setHighlightedWord(null), 2000);
 };
 
@@ -678,7 +687,7 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     // 1. ПОДГОТОВКА ДАННЫХ
     const entry = archiveEntry || null;
     const isT1 = entry ? (entry.taskType === 'Task 1') : (activeTab === 'Task 1');
-    const result = entry ? entry.fullData : (isT1 ? resultT1 : resultT2); // Исправлено: используем resultT1/T2
+    const result = entry ? entry.fullData : (isT1 ? activeResultT1 : activeResultT2); // Исправлено: используем resultT1/T2
     const essay = entry ? entry.essay : (isT1 ? essayT1 : essayT2);
     const chartImage = entry ? entry.image : (isT1 ? image : null);
     const promptText = entry ? entry.promptText : (isT1 ? promptT1 : promptT2);
@@ -1225,44 +1234,6 @@ const insertLinkingWord = (word) => {
     }
   }, 10);
 };
-<AnimatePresence>
-  {tooltipData && (
-    <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: -45, scale: 1 }} // Всплывает чуть выше слова
-      exit={{ opacity: 0, scale: 0.95 }}
-      style={{ 
-        position: 'fixed', 
-        left: tooltipData.x, 
-        top: tooltipData.y, 
-        zIndex: 100 
-      }}
-      className={`flex flex-wrap gap-1 p-2 rounded-2xl border shadow-2xl backdrop-blur-xl ${
-        darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'
-      }`}
-    >
-      <div className="absolute -bottom-1 left-4 w-2 h-2 rotate-45 border-r border-b bg-inherit border-inherit" />
-      {tooltipData.synonyms.length > 0 ? (
-        tooltipData.synonyms.map(syn => (
-          <button
-            key={syn}
-            onClick={() => {
-              handleReplaceWord(tooltipData.word, syn);
-              setTooltipData(null);
-            }}
-            className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 transition-all active:scale-90"
-          >
-            {syn}
-          </button>
-        ))
-      ) : (
-        <span className="text-[9px] px-2 text-slate-500 font-bold">No upgrades found</span>
-      )}
-    </motion.div>
-  )}
-</AnimatePresence>
-
-
 return (
       <div className={`min-h-screen flex flex-col transition-all duration-500 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900 overflow-y-hidden'}`}>
         {/* NAVBAR */}
@@ -1303,7 +1274,6 @@ return (
       <p className="text-slate-500 max-w-xl mx-auto uppercase text-[10px] font-bold tracking-widest italic">
         Challenge your limits with AI-powered task generation
       </p>
-
       {/* Секция выбора пути */}
       <div className="pt-6 flex flex-col items-center gap-3">
         <div className="flex items-center gap-4 w-full max-w-md px-6">
@@ -1325,7 +1295,7 @@ return (
       </div>
     </header>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 items-stretch">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 items-stretch">
       {/* --- 2. ACADEMIC TASK 1 LAB --- */}
       <motion.section
         initial={{ opacity: 0, x: -30 }}
@@ -1595,10 +1565,8 @@ return (
       </div>
       {/* 2. Блок Вопроса (Нижний элемент) */}
       <div className="animate-in fade-in slide-in-from-top-2 duration-500">
-        {/* Сюда можно вставить ваш textarea для вопроса */}
       </div>
     </div>
-
     )}
       {activeTab === 'Task 2' && currentTopic && (
               <div className="mb-6 p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20 italic">
@@ -1653,14 +1621,12 @@ return (
       Grade depends on this prompt
     </p>
   </div>
-</div>
-
+      </div>
     </div>
     {/* Контейнер редактора (без изменений, но с привязкой к активной вкладке) */}
    <div  className={`relative w-full group overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
   darkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'
    }`}>
-
    {/* --- ПАНЕЛЬ СЧЕТЧИКА (Fixed Float) --- */}
   {/* z-40 и pointer-events-none позволяют печатать прямо "под" ним */}
   <div className="absolute top-4 right-4 z-40 pointer-events-none select-none p-[10px]">
@@ -1686,18 +1652,13 @@ return (
     </div>
   </div>
 </div>
-
-
   {/* --- ШКАЛА ПРОГРЕССА (Верхняя линия) --- */}
   <div className="absolute top-0 left-0 w-full h-[3px] bg-slate-200 dark:bg-slate-800 z-50">
-    <div 
-      className={`h-full transition-all duration-700 ease-out ${
+    <div className={`h-full transition-all duration-700 ease-out ${
         currentWordCount < targetWords ? 'bg-gradient-to-r from-red-500 to-orange-400' : 'bg-gradient-to-r from-green-500 to-emerald-400'
-      }`}
-      style={{ width: `${Math.min(100, (currentWordCount / targetWords) * 100)}%` }}
+      }`}style={{ width: `${Math.min(100, (currentWordCount / targetWords) * 100)}%` }}
     />
   </div>
-
   {/* --- 1. СЛОЙ ВИЗУАЛИЗАЦИИ (Подложка) --- */}
   <div 
   ref={highlightRef}
@@ -1740,11 +1701,11 @@ return (
   // 3. ПРИОРИТЕТНОСТЬ СТИЛЕЙ (Не меняя логику)
   if (grammarData) {
     // Приоритет 1: Ошибки (Красное зачеркивание)
-    highlightStyle = "bg-red-500/10 line-through decoration-red-500/80 decoration-[2px] text-red-500/40 decoration-skip-ink-none";
+    highlightStyle = "bg-red-400 decoration-skip-ink-none";
     tooltip = `Fix: ${grammarData.fixed} (${grammarData.rule})`;
   } else if (isLinking) {
     // Приоритет 2: Связки (Синее подчеркивание)
-    highlightStyle = "border-b-[3px] border-blue-600/90 dark:border-blue-400 -mb-[3px]";
+    highlightStyle = "border-b-[3px] border-blue-800/90 dark:border-blue-800 -mb-[3px]";
   } else if (isWeak) {
     // Приоритет 3: Слабые слова (Желтый пунктир по вашему CSS классу)
     // Добавлены Tailwind-аналоги вашего CSS для надежности
@@ -1780,7 +1741,6 @@ return (
 );
     }
     )}
-
 </div>
   {/* --- 2. ВЕРХНИЙ СЛОЙ (Textarea) --- */}
     <textarea
@@ -1828,6 +1788,7 @@ return (
       border: '1px solid transparent', // Чтобы не было сдвига относительно подложки
     }}
   />
+
 </div>
 </div>
     {activeResult && !loading && (
