@@ -14,15 +14,18 @@
     "@heroicons/react": "^2.2.0",
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.7.0",
+    "@vercel/blob": "^2.2.0",
     "ai": "^6.0.67",
     "axios": "^1.13.4",
+    "bcryptjs": "^3.0.3",
     "framer-motion": "^12.31.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "next": "16.1.6",
-    "nodemailer": "^8.0.1",
+    "next-auth": "^5.0.0-beta.30",
+    "nodemailer": "^7.0.7",
     "openai": "^6.17.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -31,8 +34,12 @@
     "swr": "^2.4.0"
   },
   "devDependencies": {
+    "@prisma/client": "^7.4.0",
+    "@prisma/config": "^7.4.0",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "babel-plugin-react-compiler": "1.0.0",
+    "prisma": "^7.4.0",
     "tailwindcss": "^4"
   }
 }
