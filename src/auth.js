@@ -1,62 +1,45 @@
-// auth.js
+// src/auth.js
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import { prisma } from "@/lib/prisma"; // Проверь, что импорт именно отсюда!
 import bcrypt from "bcryptjs";
-import { db } from "./lib/db"; // Проверь путь! Если папка lib в корне, то "@/lib/db"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
     Credentials({
-      name: "Credentials",
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        try {
+          if (!credentials?.email || !credentials?.password) return null;
 
-        // Ищем в Neon через Prisma
-        const user = await db.user.findUnique({
-          where: { 
-            username: credentials.email // Мы договорились, что логин = email
+          // Лог для отладки — увидишь в терминале, доходит ли запрос до базы
+          console.log("Checking user:", credentials.email);
+
+          const user = await prisma.user.findUnique({
+            where: { username: credentials.email },
+          });
+
+          if (!user || !user.password) {
+            console.log("User not found");
+            return null;
           }
-        });
 
-        if (!user) return null;
+          const isPasswordCorrect = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
 
-        // Сравниваем пароли
-        const isPasswordCorrect = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+          if (!isPasswordCorrect) {
+            console.log("Invalid password");
+            return null;
+          }
 
-        if (isPasswordCorrect) {
-          return { 
-            id: user.id.toString(), 
-            name: user.username, 
-            email: user.username 
-          };
+          return { id: user.id, email: user.username, name: user.name };
+        } catch (error) {
+          console.error("DATABASE ERROR:", error); // ТУТ БУДЕТ РЕАЛЬНАЯ ПРИЧИНА
+          return null;
         }
-        
-        return null;
-      }
-    })
+      },
+    }),
   ],
-  session: {
-    strategy: "jwt",
-  },
-  pages: {
-    signIn: '/', 
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) session.user.id = token.id;
-      return session;
-    },
-  },
+  session: { strategy: "jwt" },
 });

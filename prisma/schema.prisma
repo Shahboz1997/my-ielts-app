@@ -5,8 +5,9 @@ generator client {
 }
 datasource db {
   provider = "postgresql"
-  // Убираем отсюда url и directUrl, так как они теперь в prisma.config.ts
+  // Удалите строку url = env(...) отсюда!
 }
+
 
 
 // Модель пользователя для авторизации

@@ -1,10 +1,11 @@
-import "dotenv/config";
+import "dotenv/config"; // Обязательно добавьте эту строку первой
 import { defineConfig } from "@prisma/config";
 
 export default defineConfig({
   schema: "./prisma/schema.prisma",
   datasource: {
-    // Prisma 7 ожидает эти ключи здесь
     url: process.env.POSTGRES_PRISMA_URL,
+    directUrl: process.env.POSTGRES_URL_NON_POOLING,
   },
 });
+

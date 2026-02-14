@@ -1,4 +1,4 @@
-import { handlers } from "@/auth"
+import { handlers } from "@/auth" // Импортируем обработчики из нашего конфига
 export const { GET, POST } = handlers
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -6,7 +6,9 @@ import Google from "next-auth/providers/google"; // Добавляем Google
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+
+
+export const { signIn, signOut, auth } = NextAuth({
   providers: [
     // Настройка входа через Google
     Google({
