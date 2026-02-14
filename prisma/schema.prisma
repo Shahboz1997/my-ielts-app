@@ -5,11 +5,8 @@ generator client {
 }
 datasource db {
   provider = "postgresql"
-  // Удалите строку url = env(...) отсюда!
+  // Строку url удаляем!
 }
-
-
-
 // Модель пользователя для авторизации
 model User {
   id        Int      @id @default(autoincrement())

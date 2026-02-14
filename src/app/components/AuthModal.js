@@ -57,10 +57,15 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       // ЛОГИКА РЕГИСТРАЦИИ
       try {
         const res = await fetch('/api/register', {
-          method: 'POST',
-          body: JSON.stringify(formData),
-          headers: { 'Content-Type': 'application/json' }
-        });
+  method: 'POST',
+  body: JSON.stringify({ 
+    email: formData.email, 
+    password: formData.password, 
+    name: formData.name 
+  }),
+  headers: { 'Content-Type': 'application/json' }
+});
+
 
         if (res.ok) {
           // После регистрации сразу входим
