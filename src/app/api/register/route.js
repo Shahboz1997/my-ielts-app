@@ -1,55 +1,39 @@
-// app/api/register/route.js
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-import { prisma as db } from "@/lib/prisma"; 
-
 
 export async function POST(req) {
   try {
     const { email, password, name } = await req.json();
 
-    // 1. Валидация на стороне сервера
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400 });
     }
 
-    // 2. Проверка, существует ли уже такой пользователь
-    const existingUser = await db.user.findUnique({
+    // Проверяем, существует ли пользователь (username в схеме — это email)
+    const existingUser = await prisma.user.findUnique({
       where: { username: email },
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "User with this email already exists" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Пользователь уже существует" }, { status: 400 });
     }
 
-    // 3. Хеширование пароля (никогда не храним пароль в чистом виде!)
+    // Хешируем пароль
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 4. Создание записи в базе данных Neon
-    const newUser = await db.user.create({
+    // Сохраняем в базу Neon
+    await prisma.user.create({
       data: {
-        username: email, // Используем email как логин
+        username: email,
         password: hashedPassword,
-        // Если в схеме Prisma есть поле name, раскомментируй ниже:
-        // name: name 
+        name: name || null,
       },
     });
 
-    return NextResponse.json(
-      { message: "User registered successfully", userId: newUser.id },
-      { status: 201 }
-    );
+    return NextResponse.json({ message: "Успешная регистрация" }, { status: 201 });
   } catch (error) {
-    console.error("REGISTRATION_ERROR:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    console.error("Registration Error:", error);
+    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 });
   }
 }
