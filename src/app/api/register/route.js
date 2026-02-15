@@ -5,16 +5,11 @@ import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
-    // 1. Проверяем, что тело запроса вообще пришло
-    const body = await req.json().catch(() => null);
+    const body = await req.json().catch(() => ({})); // Возвращаем пустой объект вместо null
     
-    if (!body) {
-      return NextResponse.json({ error: "Пустой запрос" }, { status: 400 });
-    }
-
-    // 2. Извлекаем данные с жесткой проверкой типов
-    const email = typeof body.email === 'string' ? body.email.trim() : null;
-    const password = typeof body.password === 'string' ? body.password : null;
+    const email = body.email?.toString().trim() || null;
+    const password = body.password?.toString() || null;
+    // ... остальной код
     const name = typeof body.name === 'string' ? body.name.trim() : "";
 
     if (!email || !password) {
