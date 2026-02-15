@@ -1,5 +1,4 @@
-// Импортируем из вашего кастомного пути
-import { PrismaClient } from '../src/generated'; 
+import { PrismaClient } from '@prisma/client';
 
 const prisma = global.prisma || new PrismaClient();
 
