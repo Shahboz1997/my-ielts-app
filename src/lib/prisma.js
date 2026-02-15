@@ -1,18 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
-// Используем globalThis для хранения экземпляра в глобальной области видимости
-const prisma = globalThis.prisma || new PrismaClient({
-  datasources: {
-    db: {
-      url: connectionString,
-    },
-  },
-});
+let prisma;
 
-// В режиме разработки сохраняем клиент глобально, чтобы не плодить 
-// новые подключения при каждом сохранении файла
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = prisma;
+if (process.env.NODE_ENV === 'production') {
+  prisma = new PrismaClient();
+} else {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient();
+  }
+  prisma = global.prisma;
 }
 
 export { prisma };

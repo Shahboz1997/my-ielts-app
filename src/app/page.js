@@ -251,14 +251,14 @@ import {
       // Ваша исправленная ссылка
     ],
     "Bar chart": [
-      "https://ieltsmaterial.com/wp-content/uploads/2017/01/ieltsmaterial.com-bar-charts.png",
-      "https://exam-english.ru/assets/uploads/152/Cambridge_ielts_1.png",
-      "https://goltc.in/wp-content/uploads/2024/01/IELTS_Writing_Task_1_BarChart_Table-198-2-1024x971.png",
-      "https://i0.wp.com/ieltscharlie.com/wp-content/uploads/2017/01/Test-3-task-1-graphs.jpg?ssl=1",
-      "https://tse4.mm.bing.net/th/id/OIP.kybq8c-qxHhfIYnFmyUDcQHaGL?rs=1&pid=ImgDetMain&o=7&rm=3"
+    "https://ieltsmaterial.com/wp-content/uploads/2017/01/ieltsmaterial.com-bar-charts.png",
+    "https://exam-english.ru/assets/uploads/152/Cambridge_ielts_1.png",
+    "https://goltc.in/wp-content/uploads/2024/01/IELTS_Writing_Task_1_BarChart_Table-198-2-1024x971.png",
+    "https://i0.wp.com/ieltscharlie.com/wp-content/uploads/2017/01/Test-3-task-1-graphs.jpg?ssl=1",
+    "https://tse4.mm.bing.net/th/id/OIP.kybq8c-qxHhfIYnFmyUDcQHaGL?rs=1&pid=ImgDetMain&o=7&rm=3"
       
     ],
-      "Line graph": [
+    "Line graph": [
       "https://th.bing.com/th/id/OIP.yTM3_a_ewLIbOM4mSEEAHgHaFS?o=7rm=3&rs=1&pid=ImgDetMain&o=7&rm=3",
       "https://tse1.mm.bing.net/th/id/OIP._XrgZIPq6eSEqmXh0GsFOgHaEK?w=1920&h=1080&rs=1&pid=ImgDetMain&o=7&rm=3",
       "https://tse3.mm.bing.net/th/id/OIP.trPw7UYbV2nNwu2n6hQ6sgHaEM?w=1024&h=579&rs=1&pid=ImgDetMain&o=7&rm=3",
