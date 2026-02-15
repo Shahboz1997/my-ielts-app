@@ -1,4 +1,7 @@
-import { prisma } from "../../../lib/prisma";
+
+// Стало (убрали фигурные скобки):
+import prisma from "../../../lib/prisma";
+
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
