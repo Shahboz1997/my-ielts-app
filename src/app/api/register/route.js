@@ -1,11 +1,7 @@
-
-// Стало (убрали фигурные скобки):
-import prisma from "../../../lib/prisma";
-
+// Обязательно в фигурных скобках!
+import { prisma } from "../../../lib/prisma"; 
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-
-// УДАЛИЛИ: import "dotenv/config" — Next.js делает это сам!
 
 export async function POST(req) {
   try {
