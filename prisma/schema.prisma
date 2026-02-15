@@ -1,13 +1,15 @@
 // prisma/schema.prisma
 
+// 1. Блок генератора — ЗДЕСЬ должен быть output
 generator client {
   provider = "prisma-client-js"
-}
-datasource db {
-  provider = "postgresql"
-  // СТРОКУ url УДАЛЯЕМ ПОЛНОСТЬЮ
+  output   = "../src/generated" // Теперь это в правильном месте
 }
 
+// 2. Блок базы данных — здесь только провайдер и ссылки
+datasource db {
+  provider  = "postgresql"
+}
 // Модель пользователя для авторизации
 model User {
   id        Int      @id @default(autoincrement())
