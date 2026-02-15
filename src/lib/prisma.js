@@ -1,11 +1,19 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global;
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ['error'], // Минимум логов для скорости
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL, // Строка с pooler для запросов
+      },
+    },
   });
+};
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+const prisma = global.prisma || prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+export { prisma };
