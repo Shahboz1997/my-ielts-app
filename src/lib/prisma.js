@@ -1,12 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global;
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    // В Prisma 7 логи помогают отловить ошибки подключения при билде
-    log: ['error', 'warn'],
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL, // Строка с pooler для запросо
+      },
+    },
   });
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+};
