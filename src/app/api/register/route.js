@@ -3,7 +3,6 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
-import { prisma } from "/src/@/lib/prisma"; // Проверьте, что путь верный
 
 
 export async function POST(req) {
