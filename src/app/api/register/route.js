@@ -1,58 +1,70 @@
-// Обязательно в фигурных скобках!
-
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
-export const dynamic = 'force-dynamic';
-
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db"; // Убедись, что здесь именованный импорт в { }
 
 export async function POST(req) {
   try {
-    const body = await req.json().catch(() => ({})); // Возвращаем пустой объект вместо null
-    
-    const email = body.email?.toString().trim() || null;
-    const password = body.password?.toString() || null;
-    // ... остальной код
-    const name = typeof body.name === 'string' ? body.name.trim() : "";
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email и пароль должны быть корректными строками" }, 
-        { status: 400 }
-      );
+    // 1. Проверка на пустой запрос
+    const body = await req.json();
+    if (!body) {
+      return NextResponse.json({ error: "Empty request body" }, { status: 400 });
     }
 
-    // 3. Проверяем существующего пользователя в Neon
-    const existingUser = await prisma.user.findUnique({
-      where: { username: email.toLowerCase() },
+    const { email, password, name } = body;
+
+    // 2. Валидация входных данных (защита от TypeError)
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    }
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json({ error: "Password must be a string" }, { status: 400 });
+    }
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Password too short" }, { status: 400 });
+    }
+
+    // 3. Проверка существующего пользователя
+    // Используем findFirst или findUnique для Neon
+    const exists = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
     });
 
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "Пользователь с таким Email уже существует" }, 
-        { status: 400 }
-      );
+    if (exists) {
+      return NextResponse.json({ error: "User already exists" }, { status: 400 });
     }
 
-    // 4. Хешируем пароль (теперь bcrypt точно получит строку)
+    // 4. Хеширование пароля (теперь точно строка)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 5. Создаем запись
-    await prisma.user.create({
+    // 5. Создание пользователя в Neon
+    const user = await prisma.user.create({
       data: {
-        username: email.toLowerCase(),
+        email: email.toLowerCase(),
+        name: name || email.split('@')[0], // Если имя не пришло, берем часть email
         password: hashedPassword,
-        name: name || null,
+        credits: 3, // Начальный баланс
       },
     });
 
-    return NextResponse.json({ message: "Успешная регистрация" }, { status: 201 });
-
-  } catch (error) {
-    // Детальный лог в терминале поможет нам поймать проблемы со связью
-    console.error("ОШИБКА РЕГИСТРАЦИИ:", error.message);
-    
     return NextResponse.json(
-      { error: "Ошибка на стороне сервера", details: error.message }, 
+      { message: "User registered successfully", userId: user.id },
+      { status: 201 }
+    );
+
+  } catch (err) {
+    // Логируем конкретную ошибку в терминал для отладки
+    console.error("REGISTRATION_API_ERROR:", err);
+
+    // Если ошибка базы (например, таймаут Neon)
+    if (err.message.includes("Connection terminated")) {
+      return NextResponse.json(
+        { error: "Database is waking up. Please try again in 5 seconds." },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSession, signOut } from "next-auth/react";
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { 
@@ -55,23 +56,35 @@ const CheckoutForm = ({ plan, darkMode, onClose }) => {
 };
 
 // --- ОСНОВНОЙ NAVBAR ---
+// const Navbar = ({ 
+//   activeTab, setActiveTab, darkMode, setDarkMode, 
+//   isMenuOpen, setIsMenuOpen, onLoginClick, 
+//   isLoggedIn = false, credits = 0         
+// }) => {
+//   const [isPricingOpen, setIsPricingOpen] = useState(false);
+//   const [selectedPlan, setSelectedPlan] = useState(null);
 const Navbar = ({ 
   activeTab, setActiveTab, darkMode, setDarkMode, 
-  isMenuOpen, setIsMenuOpen, onLoginClick, 
-  isLoggedIn = false, credits = 0         
+  isMenuOpen, setIsMenuOpen, onLoginClick 
 }) => {
+  const { data: session, status } = useSession();
+   const isLoggedIn = status === "authenticated";
+  const credits = session?.user?.credits || 0;
+
   const [isPricingOpen, setIsPricingOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  
+  // ДОБАВЬТЕ ЭТУ СТРОКУ, ЕСЛИ ЕЕ НЕТ:
+  const [selectedPlan, setSelectedPlan] = useState(null); 
 
   const menuItems = ['Topics', 'Task 1', 'Task 2', 'Archive'];
   
-  // ОБЪЕДИНЕННЫЕ УСЛОВИЯ: 3 дня бесплатно -> 3.99$ за 5 дней
   const plans = [
     { name: 'Trial', price: '3.99$', desc: '3 Days FREE, then 3.99$ per 5 days' },
     { name: 'Monthly', price: '14.99$', desc: 'Full access for 30 days' },
     { name: 'Yearly', price: '39.99$', desc: 'Best value - Save 70% yearly' },
   ];
 
+  // ... остальной код
   return (
     <>
       <nav className={`sticky top-0 z-50 p-4 border-b backdrop-blur-md transition-colors duration-300 ${
@@ -113,15 +126,31 @@ const Navbar = ({
                   )}
                 </AnimatePresence>
               </div>
-
-              {isLoggedIn ? (
-                <div className="flex items-center gap-1 font-black text-xs text-red-600">
-                  {credits} <BoltIcon className="w-3 h-3" />
-                </div>
+            {isLoggedIn ? (
+        <div className="flex items-center gap-3">
+          {/* Кредиты */}
+          <div className="flex items-center gap-1 font-black text-xs text-red-600 bg-red-600/10 px-2 py-1 rounded-lg">
+            {credits} <BoltIcon className="w-3 h-3" />
+          </div>
+          
+          {/* Аватарка или Кнопка выхода */}
+          <button 
+            onClick={() => signOut()} 
+            className="flex items-center gap-2 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
+            title="Logout"
+          >
+            {session.user.image ? (
+              <img src={session.user.image} className="w-7 h-7 rounded-full border border-red-600" alt="profile" />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-[10px] text-white font-black">
+                {session.user.name?.charAt(0) || 'U'}
+              </div>
+            )}
+          </button>
+        </div>
               ) : (
                 <button onClick={onLoginClick} className="text-[10px] font-black uppercase px-4 py-2 bg-red-600 text-white rounded-xl">Login</button>
               )}
-
               <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
                 {darkMode ? <SunIcon className="w-5 h-5 text-amber-400" /> : <MoonIcon className="w-5 h-5 text-red-600" />}
               </button>
