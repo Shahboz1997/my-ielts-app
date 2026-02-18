@@ -8,7 +8,7 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 1. ПЕРЕНОСИМ СЮДА (для подавления ошибки Turbopack)
+  serverExternalPackages: ['@prisma/client', 'prisma', 'pg'],
   turbopack: {}, 
 
   experimental: {

@@ -68,5 +68,11 @@ function buildAuthOptions() {
   };
 }
 
-const { handlers } = NextAuth(buildAuthOptions());
-export const { GET, POST } = handlers;
+// Lazy init so buildAuthOptions() runs at request time, not at build (avoids "Failed to collect page data")
+let handlers;
+function getHandlers() {
+  if (!handlers) handlers = NextAuth(buildAuthOptions());
+  return handlers;
+}
+export const GET = (req, ctx) => getHandlers().GET(req, ctx);
+export const POST = (req, ctx) => getHandlers().POST(req, ctx);
