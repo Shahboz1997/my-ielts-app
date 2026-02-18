@@ -74,5 +74,5 @@ function getHandlers() {
   if (!handlers) handlers = NextAuth(buildAuthOptions());
   return handlers;
 }
-export const GET = (req, ctx) => getHandlers().GET(req, ctx);
-export const POST = (req, ctx) => getHandlers().POST(req, ctx);
+export const GET = (req, ctx) => getHandlers().handlers.GET(req, ctx);
+export const POST = (req, ctx) => getHandlers().handlers.POST(req, ctx);
