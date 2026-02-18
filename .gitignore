@@ -42,13 +42,7 @@ next-env.d.ts
 .env.local (чтобы не украли твой ключ OpenAI)
 .next
 
-/src/generated/prisma
+/generated
 
 .vercel
 .env*.local
-
-/src/generated/prisma
-
-/src/generated/prisma
-
-/src/generated/prisma
