@@ -1,8 +1,8 @@
 "use client"; 
 import React, {useEffect, useRef, useState } from 'react';
-import AnimatedScore from './components/AnimatedScore';
-import Navbar from './components/Navbar';
-import AuthModal from './components/AuthModal';
+import AnimatedScore from '../components/AnimatedScore';
+import Navbar from '../components/Navbar';
+import AuthModal from '../components/AuthModal';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUpIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
@@ -1270,36 +1270,35 @@ return (
           
     <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
     {activeTab === 'Topics' && (
-              <div className="space-y-12 animate-in fade-in duration-700">
-                {/* 1. Header */}
-                  <header className="text-center space-y-4 mb-12">
-      <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">
-        Focus On <span className="text-red-600">Excellence</span>
-      </h1>
-      <p className="text-slate-500 max-w-xl mx-auto uppercase text-[10px] font-bold tracking-widest italic">
-        Challenge your limits with AI-powered task generation
-      </p>
-      {/* Секция выбора пути */}
-      <div className="pt-6 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-4 w-full max-w-md px-6">
-          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
-          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">OR</span>
-          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
-        </div>
-        
-        <p className="text-sm md:text-base font-medium text-slate-600 dark:text-slate-400 px-4">
-          Already have a draft?{" "}
-          <button 
-            onClick={scrollToEditor}
-            className="text-red-600 font-black hover:text-red-700 transition-colors cursor-pointer underline underline-offset-4 decoration-red-600/30 hover:decoration-red-600"
-          >
-            Proceed directly to Evaluation
-          </button>
-          {" "}or start writing below.
-        </p>
-      </div>
-    </header>
+    <div className="space-y-12 animate-in fade-in duration-700">
+      {/* 1. Header */}
+        <header className="text-center space-y-4 mb-12">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">
+            Focus On <span className="text-red-600">Excellence</span>
+          </h1>
+          <p className="text-slate-500 max-w-xl mx-auto uppercase text-[10px] font-bold tracking-widest italic">
+            Challenge your limits with AI-powered task generation
+          </p>
+          {/* Секция выбора пути */}
+          <div className="pt-6 flex flex-col items-center gap-3">
+<div className="flex items-center gap-4 w-full max-w-md px-6">
+<div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
+<span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">OR</span>
+<div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
+</div>
 
+<p className="text-sm md:text-base font-medium text-slate-600 dark:text-slate-400 px-4">
+Already have a draft?{" "}
+<button 
+  onClick={scrollToEditor}
+  className="text-red-600 font-black hover:text-red-700 transition-colors cursor-pointer underline underline-offset-4 decoration-red-600/30 hover:decoration-red-600"
+>
+  Proceed directly to Evaluation
+</button>
+{" "}or start writing below.
+</p>
+            </div>
+          </header>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 items-stretch">
       {/* --- 2. ACADEMIC TASK 1 LAB --- */}
       <motion.section

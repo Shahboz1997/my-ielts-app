@@ -54,15 +54,6 @@ const CheckoutForm = ({ plan, darkMode, onClose }) => {
     </form>
   );
 };
-
-// --- ОСНОВНОЙ NAVBAR ---
-// const Navbar = ({ 
-//   activeTab, setActiveTab, darkMode, setDarkMode, 
-//   isMenuOpen, setIsMenuOpen, onLoginClick, 
-//   isLoggedIn = false, credits = 0         
-// }) => {
-//   const [isPricingOpen, setIsPricingOpen] = useState(false);
-//   const [selectedPlan, setSelectedPlan] = useState(null);
 const Navbar = ({ 
   activeTab, setActiveTab, darkMode, setDarkMode, 
   isMenuOpen, setIsMenuOpen, onLoginClick 
