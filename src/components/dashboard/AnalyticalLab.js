@@ -106,39 +106,39 @@ export default function AnalyticalLab({ check }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 max-w-7xl mx-auto">
         {/* Top bar: back + download */}
-        <div className="flex flex-wrap items-center justify-between gap-4 lg:col-span-full">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 lg:col-span-full">
           <Link
             href="/history"
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-medium text-sm tracking-tight transition-colors"
+            className="inline-flex items-center justify-center min-h-[44px] gap-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 font-medium text-sm tracking-tight transition-colors rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 shrink-0" />
             My Archive
           </Link>
           <button
             type="button"
             onClick={() => downloadCheckReport(check)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-100 shadow-sm text-slate-700 hover:border-indigo-200 hover:text-indigo-600 font-medium text-sm transition-colors"
+            className="inline-flex items-center justify-center min-h-[44px] gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm text-slate-700 dark:text-slate-300 hover:border-indigo-200 hover:text-indigo-600 font-medium text-sm transition-colors"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 shrink-0" />
             Download PDF Report
           </button>
         </div>
 
         {/* Left ~60%: Document + underlines */}
         <div className="flex-1 min-w-0 lg:min-w-[60%]">
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-8">
-            <div className="mb-6 flex items-center justify-between">
-              <span className={`inline-block px-3 py-1 rounded-xl text-xs font-medium ${check.type === 'TASK_1' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-600'}`}>
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-4 sm:p-6 md:p-8">
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className={`inline-block px-3 py-1 rounded-xl text-xs font-medium shrink-0 ${check.type === 'TASK_1' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}`}>
                 {check.type === 'TASK_1' ? 'Task 1' : 'Task 2'}
               </span>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400 break-words">
                 Red wavy = Grammar · Blue wavy = Vocabulary — Click to focus
               </p>
             </div>
-            <div className="text-slate-800 leading-relaxed whitespace-pre-wrap break-words font-[var(--font-geist-sans)] text-[15px]">
+            <div className="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap break-words font-[var(--font-geist-sans)] text-sm sm:text-[15px]">
               {segments.map((seg, i) =>
                 seg.type ? (
                   <span
@@ -157,21 +157,21 @@ export default function AnalyticalLab({ check }) {
           </div>
 
           {lexicalUpgrade.length > 0 && (
-            <section className="mt-6 rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
-              <h2 className="text-sm font-semibold text-slate-800 tracking-tight mb-4">Lexical upgrade — Band 5–6 → 8–9</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+            <section className="mt-4 sm:mt-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-tight mb-4">Lexical upgrade — Band 5–6 → 8–9</h2>
+              <div className="overflow-x-auto -mx-2 sm:mx-0">
+                <table className="w-full min-w-[280px] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs font-medium text-slate-500">
+                    <tr className="border-b border-slate-100 dark:border-slate-700 text-left text-xs font-medium text-slate-500 dark:text-slate-400">
                       <th className="pb-2 pr-4">Current (B5–6)</th>
                       <th className="pb-2">Academic alternatives (B8–9)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {lexicalUpgrade.map((row, i) => (
-                      <tr key={i} className="border-b border-slate-50">
-                        <td className="py-2 pr-4 text-slate-600 italic">{row.band_56_word}</td>
-                        <td className="py-2 text-slate-800">{Array.isArray(row.band_89_synonyms) ? row.band_89_synonyms.join(', ') : row.band_89_synonyms}</td>
+                      <tr key={i} className="border-b border-slate-50 dark:border-slate-800">
+                        <td className="py-2 pr-4 text-slate-600 dark:text-slate-400 italic break-words">{row.band_56_word}</td>
+                        <td className="py-2 text-slate-800 dark:text-slate-200 break-words">{Array.isArray(row.band_89_synonyms) ? row.band_89_synonyms.join(', ') : row.band_89_synonyms}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -181,19 +181,19 @@ export default function AnalyticalLab({ check }) {
           )}
 
           {suggestedRewrite && (
-            <section className="mt-6 rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
-              <h2 className="text-sm font-semibold text-slate-800 tracking-tight mb-3">Suggested rewrite</h2>
-              <div className="text-slate-600 leading-relaxed whitespace-pre-wrap border-l-2 border-indigo-200 pl-4">{suggestedRewrite}</div>
+            <section className="mt-4 sm:mt-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-tight mb-3">Suggested rewrite</h2>
+              <div className="text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-wrap break-words border-l-2 border-indigo-200 dark:border-indigo-800 pl-4">{suggestedRewrite}</div>
             </section>
           )}
         </div>
 
         {/* Right ~40%: Score + criteria + feed */}
-        <div className="lg:w-[40%] lg:max-w-md space-y-6">
+        <div className="lg:w-[40%] lg:max-w-md space-y-4 sm:space-y-6">
           {/* Band score circle + 4-grid */}
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
-            <div className="flex items-center justify-between gap-4 mb-6">
-              <h2 className="text-sm font-semibold text-slate-800 tracking-tight">Band score</h2>
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-tight">Band score</h2>
               <div className="relative h-16 w-16 shrink-0">
                 <svg className="h-16 w-16 -rotate-90" viewBox="0 0 36 36">
                   <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e2e8f0" strokeWidth="2.5" />
@@ -207,38 +207,38 @@ export default function AnalyticalLab({ check }) {
                     className="transition-all duration-700"
                   />
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-slate-800">
+                <span className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-slate-800 dark:text-slate-200">
                   {band != null ? band.toFixed(1) : '—'}
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               {[
                 { key: 'TA', value: ta, label: taskKey === 'Task_Achievement' ? 'TA' : 'TR' },
                 { key: 'CC', value: cc, label: 'CC' },
                 { key: 'LR', value: lr, label: 'LR' },
                 { key: 'GRA', value: gra, label: 'GRA' },
               ].map(({ key, value, label }) => (
-                <div key={key} className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-center">
-                  <div className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">{label}</div>
-                  <div className="mt-1 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                <div key={key} className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 p-3 text-center">
+                  <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-tight">{label}</div>
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                     <div className="h-full rounded-full bg-indigo-500 transition-all duration-500" style={{ width: `${((value ?? 0) / 9) * 100}%` }} />
                   </div>
-                  <div className="text-sm font-semibold text-slate-800 mt-1">{value != null ? value.toFixed(1) : '—'}</div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-200 mt-1">{value != null ? value.toFixed(1) : '—'}</div>
                 </div>
               ))}
             </div>
             {feedback.improvement_strategy && (
-              <p className="mt-4 text-slate-600 text-sm leading-relaxed">{feedback.improvement_strategy}</p>
+              <p className="mt-4 text-slate-600 dark:text-slate-400 text-sm leading-relaxed break-words">{feedback.improvement_strategy}</p>
             )}
           </div>
 
           {/* Feed of slim cards */}
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
-            <h2 className="text-sm font-semibold text-slate-800 tracking-tight mb-4">Feedback</h2>
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm p-4">
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 tracking-tight mb-4">Feedback</h2>
             <div className="space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar">
               {feedItems.length === 0 ? (
-                <p className="text-slate-500 text-sm">No corrections or highlights for this essay.</p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">No corrections or highlights for this essay.</p>
               ) : (
                 feedItems.map((item) => {
                   const isFocused = focusedId === item.id;
@@ -246,15 +246,15 @@ export default function AnalyticalLab({ check }) {
                     <div
                       key={item.id}
                       ref={(el) => { cardRefs.current[item.id] = el; }}
-                      className={`p-3 rounded-xl border transition-all duration-200 ${isFocused ? 'border-indigo-300 bg-indigo-50/80 shadow-md ring-1 ring-indigo-100' : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'}`}
+                      className={`p-3 rounded-xl border transition-all duration-200 ${isFocused ? 'border-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/30 dark:border-indigo-700 shadow-md ring-1 ring-indigo-100 dark:ring-indigo-900' : 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 hover:border-slate-200 dark:hover:border-slate-600'}`}
                     >
                       <span className={`text-[10px] font-medium uppercase tracking-tight ${item.type === 'grammar' ? 'text-red-600' : item.type === 'lexical' ? 'text-blue-600' : 'text-violet-600'}`}>
                         {item.label}
                       </span>
-                      <p className="mt-1 text-slate-700 text-sm italic">&quot;{item.text}&quot;</p>
-                      {item.fixed && <p className="text-xs text-slate-500 mt-0.5">→ &quot;{item.fixed}&quot;</p>}
-                      {item.impact && <p className="text-[10px] text-slate-500 mt-0.5">Impact: {item.impact}</p>}
-                      <p className="mt-1 text-slate-800 text-sm">{item.suggestion}</p>
+                      <p className="mt-1 text-slate-700 dark:text-slate-300 text-sm italic break-words">&quot;{item.text}&quot;</p>
+                      {item.fixed && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 break-words">→ &quot;{item.fixed}&quot;</p>}
+                      {item.impact && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 break-words">Impact: {item.impact}</p>}
+                      <p className="mt-1 text-slate-800 dark:text-slate-200 text-sm break-words">{item.suggestion}</p>
                     </div>
                   );
                 })

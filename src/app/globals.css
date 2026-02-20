@@ -1,8 +1,7 @@
 @import "tailwindcss";
-/* @tailwind base;
-@tailwind components;
-@tailwind utilities; */
 
+/* Классовая тёмная тема (next-themes вешает .dark на <html>) — без этого dark: не работает */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Базовые настройки для идеальной адаптивности */
 :root {
@@ -45,14 +44,25 @@ html, body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
 .essay-preview p:first-of-type {
   font-weight: 600;
   color: #2563eb;
   border-left: 4px solid #2563eb;
   padding-left: 12px;
 }
+.dark .essay-preview p:first-of-type {
+  color: #60a5fa;
+  border-left-color: #60a5fa;
+}
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
 
 /* Error underlines: Grammar = red wavy, Vocab = blue wavy */
 .underline-grammar {

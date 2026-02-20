@@ -97,26 +97,26 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm min-h-full"
       />
 
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800"
+        className="relative z-10 w-full max-w-md max-h-[100dvh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 my-auto"
       >
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+        <button type="button" onClick={onClose} className="absolute top-4 right-4 flex items-center justify-center min-h-[44px] min-w-[44px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors rounded-lg" aria-label="Close">
           <XMarkIcon className="w-5 h-5" />
         </button>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
               {isLogin ? 'Welcome back' : 'Create account'}
@@ -141,38 +141,38 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
           <form className="space-y-4" onSubmit={handleSubmit}>
             {!isLogin && (
               <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   placeholder="Full name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:text-white transition-all font-medium text-sm"
+                  className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:text-white transition-all font-medium text-sm"
                   required={!isLogin}
                 />
               </div>
             )}
 
             <div className="relative">
-              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <EnvelopeIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
               <input
                 type="email"
                 placeholder="Email address"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:text-white transition-all font-medium text-sm"
+                className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:text-white transition-all font-medium text-sm"
                 required
               />
             </div>
 
             <div className="relative">
-              <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <LockClosedIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
               <input
                 type="password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:text-white transition-all font-medium text-sm"
+                className="w-full min-h-[44px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 pl-12 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:text-white transition-all font-medium text-sm"
                 required
               />
             </div>
@@ -180,7 +180,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-semibold py-4 rounded-xl shadow-sm transition-all active:scale-[0.99]"
+              className="w-full min-h-[44px] bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-semibold py-4 rounded-xl shadow-sm transition-all active:scale-[0.99]"
             >
               {isLoading ? 'Processing...' : isLogin ? 'Sign in' : 'Get started'}
             </button>
@@ -196,7 +196,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl: '/' })}
-            className="w-full flex items-center justify-center gap-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-white font-medium py-4 rounded-xl transition-all"
+            className="w-full min-h-[44px] flex items-center justify-center gap-3 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 text-slate-800 dark:text-white font-medium py-4 rounded-xl transition-all"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -215,7 +215,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
                 setError('');
                 setMessage('');
               }}
-              className="text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors"
+              className="min-h-[44px] flex items-center justify-center w-full sm:w-auto text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors"
             >
               {isLogin ? "Don't have an account? Register" : 'Already have an account? Sign in'}
             </button>

@@ -54,15 +54,15 @@ const CheckoutForm = ({ plan, darkMode, onClose, isAgreed }) => {
         }} />
       </div>
       {error && <div className="text-red-500 text-[10px] font-black uppercase text-center">{error}</div>}
-      <button
-        type="submit"
-        disabled={!canSubmit}
-        className={`w-full py-4 rounded-2xl font-semibold tracking-tight text-xs shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
-          canSubmit
-            ? 'bg-indigo-600 text-white shadow-indigo-600/30 hover:bg-indigo-700'
-            : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 opacity-50 cursor-not-allowed'
-        }`}
-      >
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className={`w-full min-h-[44px] py-4 rounded-2xl font-semibold tracking-tight text-xs shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
+            canSubmit
+              ? 'bg-indigo-600 text-white shadow-indigo-600/30 hover:bg-indigo-700'
+              : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 opacity-50 cursor-not-allowed'
+          }`}
+        >
         {processing ? 'Processing...' : plan.price === '3.99$' ? 'Start 3-Day Free Trial' : `Pay ${plan?.price} Now`}
       </button>
     </form>
@@ -136,7 +136,7 @@ const Navbar = ({
 
             <div className="flex items-center gap-4 border-l pl-6 border-slate-700/30">
               <div className="relative">
-                <button onClick={() => setIsPricingOpen(!isPricingOpen)} className="flex items-center gap-2 px-3 py-2 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-xl transition-all">
+                <button type="button" onClick={() => setIsPricingOpen(!isPricingOpen)} className="flex items-center gap-2 min-h-[44px] px-3 py-2 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-xl transition-all">
                   <CreditCardIcon className="w-4 h-4" /> Pricing
                 </button>
                 <AnimatePresence>
@@ -190,21 +190,14 @@ const Navbar = ({
                     <Link
                       href="/settings"
                       onClick={() => setIsUserMenuOpen(false)}
-                      className="block px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
+                      className="flex items-center min-h-[44px] px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
                     >
                       Profile
                     </Link>
                     <button
                       type="button"
-                      onClick={() => { setIsPricingOpen(true); setIsUserMenuOpen(false); }}
-                      className="w-full text-left px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
-                    >
-                      Billing
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => { signOut(); setIsUserMenuOpen(false); }}
-                      className="w-full text-left px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 border-t border-slate-100 dark:border-slate-800"
+                      className="w-full text-left flex items-center min-h-[44px] px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 border-t border-slate-100 dark:border-slate-800"
                     >
                       Logout
                     </button>
@@ -215,13 +208,13 @@ const Navbar = ({
           </div>
         </div>
               ) : (
-                <button onClick={() => onLoginClick()} className="font-semibold tracking-tight px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">Login</button>
+                <button type="button" onClick={() => onLoginClick()} className="min-h-[44px] font-semibold tracking-tight px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">Login</button>
               )}
               <button
                 type="button"
                 onClick={handleThemeToggle}
                 disabled={!themeMounted}
-                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
+                className="flex items-center justify-center min-h-[44px] min-w-[44px] p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
                 aria-label={themeMounted && resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               >
                 {themeMounted && resolvedTheme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
@@ -229,10 +222,16 @@ const Navbar = ({
             </div>
           </div>
 
-          {/* КНОПКА БУРГЕРА (Только мобильные) */}
+          {/* КНОПКА БУРГЕРА (Только мобильные, <768px) */}
           <div className="md:hidden flex items-center">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-600 dark:text-slate-400 hover:text-indigo-600 p-2 transition-transform active:scale-90">
-              {isMenuOpen ? <XMarkIcon className="w-8 h-8" /> : <Bars3Icon className="w-8 h-8" />}
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="flex items-center justify-center min-h-[44px] min-w-[44px] text-slate-600 dark:text-slate-400 hover:text-indigo-600 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-90"
+              aria-expanded={isMenuOpen}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            >
+              {isMenuOpen ? <XMarkIcon className="w-6 h-6" /> : <Bars3Icon className="w-6 h-6" />}
             </button>
           </div>
         </div>
@@ -246,11 +245,11 @@ const Navbar = ({
                 {/* 1. Навигация */}
                 <div className="grid grid-cols-2 gap-2">
                   {menuItems.map((item) =>
-item === 'Archive' ? (
-                    <Link key={item} href="/history" onClick={() => setIsMenuOpen(false)} className={`p-4 rounded-xl font-semibold tracking-tight text-center block text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</Link>
-                  ) : (
-                    <button key={item} type="button" onClick={() => { setActiveTab(item); setIsMenuOpen(false); }} className={`p-4 rounded-xl font-semibold tracking-tight text-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</button>
-                  )
+                    item === 'Archive' ? (
+                      <Link key={item} href="/history" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-center min-h-[44px] p-4 rounded-xl font-semibold tracking-tight text-center block text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</Link>
+                    ) : (
+                      <button key={item} type="button" onClick={() => { setActiveTab(item); setIsMenuOpen(false); }} className={`flex items-center justify-center min-h-[44px] p-4 rounded-xl font-semibold tracking-tight text-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</button>
+                    )
                   )}
                 </div>
 
@@ -259,7 +258,7 @@ item === 'Archive' ? (
                   <h4 className="text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-2"><CreditCardIcon className="w-4 h-4" /> Subscription Plans</h4>
                   <div className="space-y-2">
                     {plans.map(p => (
-                      <button key={p.name} onClick={() => { setSelectedPlan(p); setIsMenuOpen(false); }} className="w-full flex justify-between items-center p-4 rounded-xl bg-white dark:bg-slate-900 border dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform">
+                      <button key={p.name} type="button" onClick={() => { setSelectedPlan(p); setIsMenuOpen(false); }} className="w-full flex justify-between items-center min-h-[44px] p-4 rounded-xl bg-white dark:bg-slate-900 border dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform">
                         <div className="text-left leading-tight">
                           <div className="text-[10px] font-black uppercase dark:text-white">{p.name}</div>
                           <div className="text-[8px] text-slate-500 font-bold uppercase">{p.desc}</div>
@@ -276,12 +275,12 @@ item === 'Archive' ? (
                      type="button"
                      onClick={handleThemeToggle}
                      disabled={!themeMounted}
-                     className="flex-1 p-4 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-3 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors"
+                     className="flex-1 min-h-[44px] p-4 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-3 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors"
                    >
                      {themeMounted && resolvedTheme === 'dark' ? <><SunIcon className="w-5 h-5" /> Day</> : <><MoonIcon className="w-5 h-5" /> Night</>}
                    </button>
                    {!isLoggedIn && (
-                     <button onClick={() => onLoginClick()} className="flex-1 p-4 bg-indigo-600 text-white rounded-xl font-semibold tracking-tight shadow-lg hover:bg-indigo-700 transition-colors">Login</button>
+                     <button type="button" onClick={() => onLoginClick()} className="flex-1 min-h-[44px] p-4 bg-indigo-600 text-white rounded-xl font-semibold tracking-tight shadow-lg hover:bg-indigo-700 transition-colors">Login</button>
                    )}
                 </div>
 
@@ -294,14 +293,14 @@ item === 'Archive' ? (
       {/* STRIPE PAYMENT MODAL */}
       <AnimatePresence>
         {selectedPlan && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedPlan(null)} className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className={`relative w-full max-w-md p-8 rounded-[32px] shadow-2xl ${darkMode ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-white text-slate-900'}`}>
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedPlan(null)} className="absolute inset-0 z-[100] bg-slate-900/90 backdrop-blur-md" aria-hidden="true" />
+            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className={`relative z-[101] w-full max-w-md p-4 sm:p-8 rounded-[32px] shadow-2xl my-auto max-h-[100dvh] overflow-y-auto ${darkMode ? 'bg-slate-900 border border-slate-800 text-white' : 'bg-white text-slate-900'}`}>
               <div className="flex justify-between items-center mb-8">
                 <div className="italic font-black uppercase text-2xl tracking-tighter">
                   <h3>{selectedPlan.price === '0$' ? 'Start Trial' : 'Checkout'}</h3>
                 </div>
-                <button onClick={() => setSelectedPlan(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-full transition-colors"><XMarkIcon className="w-6 h-6" /></button>
+                <button type="button" onClick={() => setSelectedPlan(null)} className="flex items-center justify-center min-h-[44px] min-w-[44px] p-2 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-full transition-colors" aria-label="Close"><XMarkIcon className="w-6 h-6" /></button>
               </div>
 
               <div className={`mb-8 p-5 rounded-2xl border-2 border-dashed ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-100 bg-slate-50'}`}>

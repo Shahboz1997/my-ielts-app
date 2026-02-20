@@ -1288,7 +1288,7 @@ const insertLinkingWord = (word) => {
   // Render landing when unauthenticated (after all hooks to avoid "fewer hooks" error)
   if (sessionStatus === 'unauthenticated') {
     return (
-      <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300">
+      <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300">
         <LandingPage
           onLoginClick={() => setIsAuthOpen(true)}
           onFullAnalysisClick={() => {
@@ -1312,7 +1312,7 @@ const insertLinkingWord = (word) => {
   }
 
   return (
-      <div className="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto transition-colors duration-300">
+      <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto transition-colors duration-300">
         <Navbar 
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -1338,36 +1338,7 @@ const insertLinkingWord = (word) => {
         </AnimatePresence>
 
         <div className="flex flex-1">
-          {/* Left sidebar — Cathoven-style */}
-          <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <nav className="p-4 space-y-1">
-              <button
-                onClick={() => setActiveTab('Topics')}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium tracking-tight transition-colors ${
-                  activeTab === 'Topics' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400'
-                }`}
-              >
-                New Analysis
-              </button>
-              <Link
-                href="/history"
-                className="block px-4 py-2.5 rounded-xl text-sm font-medium tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                Archive
-              </Link>
-              <div className="px-4 py-2.5 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                Credits: {credits}
-              </div>
-              <Link
-                href="/settings"
-                className="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                Settings
-              </Link>
-            </nav>
-          </aside>
-
-    <main className="flex-1 min-w-0 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+    <main className="flex-1 min-w-0 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8 bg-white dark:bg-slate-950 transition-colors duration-300">
     {activeTab === 'Topics' && (
     <div className="space-y-12 animate-in fade-in duration-700">
       <header className="text-center space-y-4 mb-12">

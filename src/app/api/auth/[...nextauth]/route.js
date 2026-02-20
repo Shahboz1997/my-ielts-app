@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import { NextResponse } from "next/server";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -8,9 +9,15 @@ import bcrypt from "bcryptjs";
 // AUTH_URL в .env: для продакшена https://xn----8sbe2ac0axdh.com (без /api/auth — путь по умолчанию)
 const isDev = process.env.NODE_ENV === "development";
 
+// Секрет строго из process.env.AUTH_SECRET (без запасного и без захардкоженных строк)
+const authSecret = process.env.AUTH_SECRET;
+if (!authSecret && process.env.NODE_ENV !== "development") {
+  console.warn("[auth] AUTH_SECRET is not set; session encryption may fail.");
+}
+
 export const authOptions = {
   trustHost: true,
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  secret: authSecret,
   adapter: PrismaAdapter(getPrisma()),
   providers: [
     GoogleProvider({
@@ -138,5 +145,51 @@ export const authOptions = {
 // NextAuth v5: returns { handlers, auth, signIn, signOut }
 const nextAuth = NextAuth(authOptions);
 export const { handlers, auth } = nextAuth;
-export const { GET, POST } = handlers;
+
+/** Ошибка расшифровки JWT сессии (сменился секрет или битый cookie) — не отдаём 500, а завершаем сессию */
+function isSessionDecryptionError(err) {
+  if (!err) return false;
+  const name = err?.name || "";
+  const msg = (err?.message || "").toLowerCase();
+  return (
+    name === "JWTSessionError" ||
+    name === "JWEDecryptionFailed" ||
+    msg.includes("decryption secret") ||
+    msg.includes("decryption failed") ||
+    msg.includes("no matching")
+  );
+}
+
+/** Очищает cookie сессии и перенаправляет на главную (вместо 500 при невалидном токене) */
+function clearSessionAndRedirect(request) {
+  const homeUrl = new URL("/", request.url);
+  const response = NextResponse.redirect(homeUrl, 302);
+  response.cookies.set("authjs.session-token", "", { maxAge: 0, path: "/" });
+  response.cookies.set("__Secure-authjs.session-token", "", { maxAge: 0, path: "/" });
+  return response;
+}
+
+export async function GET(request) {
+  try {
+    return await handlers.GET(request);
+  } catch (err) {
+    if (isSessionDecryptionError(err)) {
+      if (isDev) console.warn("[auth] Session decryption failed, clearing session:", err?.message);
+      return clearSessionAndRedirect(request);
+    }
+    throw err;
+  }
+}
+
+export async function POST(request) {
+  try {
+    return await handlers.POST(request);
+  } catch (err) {
+    if (isSessionDecryptionError(err)) {
+      if (isDev) console.warn("[auth] Session decryption failed, clearing session:", err?.message);
+      return clearSessionAndRedirect(request);
+    }
+    throw err;
+  }
+}
 

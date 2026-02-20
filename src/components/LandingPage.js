@@ -24,7 +24,7 @@ const fadeInUp = {
 
 export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
       {/* Hero */}
       <section className="relative bg-[#f8fafc] dark:bg-slate-950 px-4 py-20 sm:py-28 lg:py-32">
         <div className="max-w-5xl mx-auto text-center">
@@ -245,20 +245,21 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
         <div className="max-w-3xl mx-auto px-4 text-center">
           <motion.h2
             {...fadeInUp}
-            className="text-3xl sm:text-4xl font-extrabold text-white mb-4"
+            className="text-3xl sm:text-4xl font-extrabold text-white dark:text-slate-100 mb-4"
           >
             Ready to Reach Band 7.5+?
           </motion.h2>
           <motion.p
             {...fadeInUp}
-            className="text-lg text-slate-400 mb-8"
+            className="text-lg text-slate-400 dark:text-slate-400 mb-8"
           >
             Stop wasting time on ineffective practice. Get the precision you need to succeed. First 5 checks are on us.
           </motion.p>
           <motion.div {...fadeInUp}>
             <button
+              type="button"
               onClick={onFullAnalysisClick}
-              className="px-8 py-4 rounded-xl font-semibold text-slate-900 bg-white hover:bg-slate-100 transition-colors shadow-sm"
+              className="px-8 py-4 rounded-xl font-semibold text-slate-900 dark:text-slate-900 bg-white dark:bg-slate-100 hover:bg-slate-100 dark:hover:bg-slate-200 transition-colors shadow-sm"
             >
               Get Your Free Credits Now
             </button>
