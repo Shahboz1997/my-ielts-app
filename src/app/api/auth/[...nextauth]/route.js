@@ -120,10 +120,10 @@ export const authOptions = {
     },
     // Передаем данные из токена в объект сессии (доступен через useSession)
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id;
-        session.user.credits = token.credits;
-        session.user.language = token.language || 'en';
+      if (session?.user) {
+        session.user.id = token?.id ?? session.user.email;
+        session.user.credits = token?.credits ?? 0;
+        session.user.language = token?.language ?? 'en';
       }
       return session;
     },
