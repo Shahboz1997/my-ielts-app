@@ -5,16 +5,18 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { getPrisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// Конфигурация AuthOptions
+// AUTH_URL в .env: для продакшена https://xn----8sbe2ac0axdh.com (без /api/auth — путь по умолчанию)
+const isDev = process.env.NODE_ENV === "development";
+
 export const authOptions = {
-  trustHost: true, // нужен для OAuth callback на localhost и Vercel
+  trustHost: true,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(getPrisma()),
   providers: [
-    // 1. Вход через Google
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountMerging: true, // Позволяет объединять вход Google и Email
+      allowDangerousEmailAccountMerging: true,
     }),
     // 2. Вход через Email/Пароль
     CredentialsProvider({
@@ -54,20 +56,18 @@ export const authOptions = {
     strategy: "jwt", // Обязательно для Credentials и Middleware
   },
   callbacks: {
-    // Отладка + связывание аккаунта Google с существующим пользователем по email
+    // Связывание Google с существующим пользователем по email + логирование ошибок (в т.ч. продакшен)
     async signIn({ user, account, profile }) {
-      console.log("DEBUG SIGNIN:", {
-        email: user?.email,
-        provider: account?.provider,
-        profileEmail: profile?.email,
-      });
-      if (account?.provider === "google" && user?.email) {
-        const prisma = getPrisma();
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-        });
-        if (existingUser) {
-          try {
+      try {
+        if (isDev) {
+          console.log("[auth] signIn:", { email: user?.email, provider: account?.provider });
+        }
+        if (account?.provider === "google" && user?.email) {
+          const prisma = getPrisma();
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+          });
+          if (existingUser) {
             await prisma.account.upsert({
               where: {
                 provider_providerAccountId: {
@@ -86,15 +86,15 @@ export const authOptions = {
               },
               update: {},
             });
-            console.log("DEBUG SIGNIN: Account linked for", user.email, "providerAccountId", account.providerAccountId);
-          } catch (err) {
-            console.error("DEBUG SIGNIN: upsert Account failed", err);
+            if (isDev) console.log("[auth] Account linked for", user.email);
           }
-        } else {
-          console.log("DEBUG SIGNIN: No existing user for email", user.email, "- adapter will create new user");
         }
+        return true;
+      } catch (err) {
+        console.error("[auth] signIn error:", err?.message ?? err);
+        if (err?.code) console.error("[auth] signIn error code:", err.code);
+        throw err;
       }
-      return true;
     },
     // Сохраняем ID и Кредиты пользователя в JWT токене
     async jwt({ token, user, trigger, session }) {
@@ -128,12 +128,11 @@ export const authOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: "/", // Твоя главная страница с модальным окном
-    error: "/",  // Перенаправление при ошибках
+    signIn: "/",
+    error: "/",
   },
-  debug: process.env.NODE_ENV === "development",
+  debug: isDev,
 };
 
 // NextAuth v5: returns { handlers, auth, signIn, signOut }
@@ -141,85 +140,3 @@ const nextAuth = NextAuth(authOptions);
 export const { handlers, auth } = nextAuth;
 export const { GET, POST } = handlers;
 
-// import NextAuth from "next-auth";
-// import CredentialsProvider from "next-auth/providers/credentials";
-// import GoogleProvider from "next-auth/providers/google";
-// import { PrismaAdapter } from "@auth/prisma-adapter";
-// import { getPrisma } from "@/lib/prisma";
-// import bcrypt from "bcryptjs";
-
-// function buildAuthOptions() {
-//   if (!process.env.NEXTAUTH_SECRET) {
-//     throw new Error("NEXTAUTH_SECRET is not set. Add it to .env or .env.local");
-//   }
-//   const prisma = getPrisma();
-
-//   return {
-//     adapter: PrismaAdapter(prisma),
-//     providers: [
-//       GoogleProvider({
-//         clientId: process.env.GOOGLE_CLIENT_ID,
-//         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//       }),
-//       CredentialsProvider({
-//         name: "credentials",
-//         credentials: {
-//           email: { label: "Email", type: "email" },
-//           password: { label: "Password", type: "password" },
-//         },
-//         async authorize(credentials) {
-//           const email = credentials?.email?.trim();
-//           const password = credentials?.password;
-
-//           if (!email || !password) return null;
-
-//           const user = await prisma.user.findUnique({
-//             where: { email },
-//           });
-
-//           if (!user?.password) return null;
-
-//           const isPasswordValid = await bcrypt.compare(password, user.password);
-//           if (!isPasswordValid) return null;
-
-//           return {
-//             id: user.id,
-//             email: user.email,
-//             name: user.name ?? undefined,
-//           };
-//         },
-//       }),
-//     ],
-//     session: {
-//       strategy: "jwt",
-//     },
-//     callbacks: {
-//       async jwt({ token, user, account }) {
-//         if (user?.id) token.id = user.id;
-//         if (account) token.accessToken = account.access_token;
-//         return token;
-//       },
-//       async session({ session, token }) {
-//         if (session.user && token?.id) session.user.id = token.id;
-//         return session;
-//       },
-//     },
-//     secret: process.env.NEXTAUTH_SECRET,
-//     pages: {
-//       signIn: "/",
-//     },
-//   };
-// }
-
-// // Lazy init so buildAuthOptions() runs at request time, not at build (avoids "Failed to collect page data")
-// let nextAuthInstance;
-// function getNextAuth() {
-//   if (!nextAuthInstance) nextAuthInstance = NextAuth(buildAuthOptions());
-//   return nextAuthInstance;
-// }
-// export const GET = (req, ctx) => getNextAuth().handlers.GET(req, ctx);
-// export const POST = (req, ctx) => getNextAuth().handlers.POST(req, ctx);
-// /** NextAuth v5: use auth() instead of getServerSession */
-// export async function auth() {
-//   return getNextAuth().auth();
-// }
