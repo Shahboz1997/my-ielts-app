@@ -16,8 +16,11 @@ model User {
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  credits       Int       @default(5)   // For essay checks; decremented on each check
+  language      String?   @default("en") // en | ru | uz
   accounts      Account[]
   sessions      Session[]
+  checks        Check[]   // Связь с проверками
 }
 
 model Account {
@@ -61,3 +64,15 @@ model Task {
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+model Check {
+  id         String   @id @default(cuid())
+  type       String   @default("TASK_2") // 'TASK_1' | 'TASK_2'
+  content    String   @db.Text
+  promptText String?  @db.Text
+  score      Float?
+  feedback   String?  @db.Text   // Full JSON: criteria, corrections, suggested_rewrite, etc.
+  createdAt  DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+

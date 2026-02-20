@@ -1,8 +1,13 @@
-"use client"; 
-import React, {useEffect, useRef, useState } from 'react';
+"use client";
+import React, { useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AnimatedScore from '../components/AnimatedScore';
 import Navbar from '../components/Navbar';
 import AuthModal from '../components/AuthModal';
+import LandingPage from '../components/LandingPage';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUpIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
@@ -212,7 +217,12 @@ import {
   const [loading, setLoading] = useState(false);
   const synonymMap = { "good": "excellent, superb", "bad": "atrocious, detrimental" };
   const [genLoading, setGenLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
+  useEffect(() => {
+    setThemeMounted(true);
+  }, []);
+  const darkMode = themeMounted && resolvedTheme === 'dark';
   const [archive, setArchive] = useState([]);
   const [isRewriteOpen, setIsRewriteOpen] = useState(true);
   // Инициализируем пустые объекты (чтобы не было ошибки "not defined")
@@ -233,6 +243,7 @@ import {
   const [error, setError] = useState(null);
   const [activeResultT2, setResultT2] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authModalMessage, setAuthModalMessage] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [lastSearchIndex, setLastSearchIndex] = useState(0);
   const [lastSearchWord, setLastSearchWord] = useState("");
@@ -326,11 +337,28 @@ import {
   const activeResult = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
   const [highlightedWord, setHighlightedWord] = useState(null);
   const editorRef = useRef(null); // Реф для текстового поля
+  const { data: session, status: sessionStatus, update } = useSession();
+  const router = useRouter();
+
+  // Sync session to local auth state and credits for Navbar
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && session?.user) {
+      setIsLoggedIn(true);
+      setCredits(session.user.credits ?? 0);
+    } else if (sessionStatus === 'unauthenticated') {
+      setIsLoggedIn(false);
+      setCredits(0);
+    }
+  }, [sessionStatus, session?.user?.credits]);
+
   const handleAnalyze = async (mode) => {
-    // Выбираем нужный сеттер в зависимости от режима
+    if (!session?.user) {
+      setIsAuthOpen(true);
+      return;
+    }
     const setCurLoading = mode === 'task1' ? setLoadingT1 : setLoadingT2;
-    
-    setCurLoading(true); // Включаем загрузку только для текущего таска
+    setCurLoading(true);
+    setError(null);
     try {
       const payload = {
         analysisMode: mode,
@@ -341,15 +369,22 @@ import {
       };
 
       const res = await axios.post('/api/check', payload);
-      
+
+      if (res.data?.savedId) {
+        await update(); // refresh session so Navbar shows updated credits
+        router.push('/history/' + res.data.savedId);
+        return;
+      }
       if (mode === 'task1') setResultT1(res.data);
       else setResultT2(res.data);
-      
       if (typeof playSuccessSound === 'function') playSuccessSound();
     } catch (err) {
-      console.error("Analysis Error:", err);
+      const msg = err.response?.status === 403
+        ? 'You have run out of credits. Please refill to continue.'
+        : (err.response?.data?.error || err.message || 'Analysis failed.');
+      setError(msg);
     } finally {
-      setCurLoading(false); // Выключаем загрузку
+      setCurLoading(false);
     }
   };
   const saveToArchive = (taskType, result, essay, prompt, image) => {
@@ -1239,66 +1274,114 @@ const insertLinkingWord = (word) => {
     }
   }, 10);
 }
-return (
-      <div className={`min-h-screen flex flex-col transition-all duration-500 ${darkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900 overflow-y-hidden'}`}>
-        {/* NAVBAR */}
-          <>
-          <Navbar 
+
+  // Render landing when unauthenticated (after all hooks to avoid "fewer hooks" error)
+  if (sessionStatus === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300">
+        <LandingPage
+          onLoginClick={() => setIsAuthOpen(true)}
+          onFullAnalysisClick={() => {
+            setAuthModalMessage('Sign up to see your Band Score');
+            setIsAuthOpen(true);
+          }}
+          isLoggedIn={false}
+        />
+        <AnimatePresence>
+          {isAuthOpen && (
+            <AuthModal
+              isOpen={isAuthOpen}
+              onClose={() => { setIsAuthOpen(false); setAuthModalMessage(null); }}
+              onLoginSuccess={() => { setIsAuthOpen(false); setAuthModalMessage(null); }}
+              message={authModalMessage}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  return (
+      <div className="min-h-screen flex flex-col bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto transition-colors duration-300">
+        <Navbar 
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
           isMenuOpen={isMenuOpen}
           setIsMenuOpen={setIsMenuOpen}
           isLoggedIn={isLoggedIn}
           credits={credits}
-          onLoginClick={() => setIsAuthOpen(true)} // Передаем функцию открытия
+          onLoginClick={() => setIsAuthOpen(true)}
         />
         <AnimatePresence>
-        {isAuthOpen && (
-          <AuthModal 
-            isOpen={isAuthOpen} 
-            onClose={() => setIsAuthOpen(false)} 
-            onLoginSuccess={() => {
-              setIsLoggedIn(true);
-              setIsAuthOpen(false);
-            }}
-          />
-        )}
-      </AnimatePresence>
-          </>
-          
-    <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
+          {isAuthOpen && (
+            <AuthModal 
+              isOpen={isAuthOpen} 
+              onClose={() => { setIsAuthOpen(false); setAuthModalMessage(null); }} 
+              onLoginSuccess={() => {
+                setIsLoggedIn(true);
+                setIsAuthOpen(false);
+                setAuthModalMessage(null);
+              }}
+              message={authModalMessage}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="flex flex-1">
+          {/* Left sidebar — Cathoven-style */}
+          <aside className="hidden lg:flex w-56 shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <nav className="p-4 space-y-1">
+              <button
+                onClick={() => setActiveTab('Topics')}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium tracking-tight transition-colors ${
+                  activeTab === 'Topics' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400'
+                }`}
+              >
+                New Analysis
+              </button>
+              <Link
+                href="/history"
+                className="block px-4 py-2.5 rounded-xl text-sm font-medium tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                Archive
+              </Link>
+              <div className="px-4 py-2.5 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400">
+                Credits: {credits}
+              </div>
+              <Link
+                href="/settings"
+                className="block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                Settings
+              </Link>
+            </nav>
+          </aside>
+
+    <main className="flex-1 min-w-0 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8">
     {activeTab === 'Topics' && (
     <div className="space-y-12 animate-in fade-in duration-700">
-      {/* 1. Header */}
-        <header className="text-center space-y-4 mb-12">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">
-            Focus On <span className="text-red-600">Excellence</span>
+      <header className="text-center space-y-4 mb-12">
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Focus on <span className="text-indigo-600 dark:text-indigo-400">Excellence</span>
           </h1>
-          <p className="text-slate-500 max-w-xl mx-auto uppercase text-[10px] font-bold tracking-widest italic">
+          <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto text-sm font-medium tracking-tight">
             Challenge your limits with AI-powered task generation
           </p>
-          {/* Секция выбора пути */}
           <div className="pt-6 flex flex-col items-center gap-3">
-<div className="flex items-center gap-4 w-full max-w-md px-6">
-<div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
-<span className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">OR</span>
-<div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
-</div>
-
-<p className="text-sm md:text-base font-medium text-slate-600 dark:text-slate-400 px-4">
-Already have a draft?{" "}
-<button 
-  onClick={scrollToEditor}
-  className="text-red-600 font-black hover:text-red-700 transition-colors cursor-pointer underline underline-offset-4 decoration-red-600/30 hover:decoration-red-600"
->
-  Proceed directly to Evaluation
-</button>
-{" "}or start writing below.
-</p>
+            <div className="flex items-center gap-4 w-full max-w-md px-6">
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
+              <span className="text-xs font-semibold tracking-tight text-slate-600 dark:text-slate-400">OR</span>
+              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
             </div>
-          </header>
+            <p className="text-sm md:text-base font-medium text-slate-600 dark:text-slate-400 px-4">
+              Already have a draft?{" "}
+              <button onClick={scrollToEditor} className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors cursor-pointer underline underline-offset-4 decoration-indigo-600/30 hover:decoration-indigo-600">
+                Proceed directly to Evaluation
+              </button>
+              {" "}or start writing below.
+            </p>
+          </div>
+        </header>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12 items-stretch">
       {/* --- 2. ACADEMIC TASK 1 LAB --- */}
       <motion.section
@@ -1308,40 +1391,33 @@ Already have a draft?{" "}
   transition={{ duration: 0.6 }}
   className="flex flex-col space-y-4 md:space-y-6"
 >
-  <h2 className="mt-[10px] text-xl md:text-2xl font-black flex items-center justify-center md:justify-start gap-2 uppercase tracking-tighter text-red-600">
-    <div className="w-1.5 h-6 md:w-2 md:h-8 bg-red-600 rounded-full" />
+  <h2 className="mt-[10px] text-xl md:text-2xl font-extrabold flex items-center justify-center md:justify-start gap-2 tracking-tight text-slate-900 dark:text-white">
+    <div className="w-1.5 h-6 md:w-2 md:h-8 bg-indigo-600 dark:bg-indigo-500 rounded-full" />
     Task 1 Lab
   </h2>
 
   <div
     onClick={generateTask1Data}
-    // Убрал hover: классы и group (так как он больше не нужен для анимаций детей)
-    className={`p-6 md:p-8 flex-1 min-h-[280px] md:min-h-[320px] rounded-[2rem] md:rounded-[2.5rem] cursor-pointer border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 md:gap-6 ${
-      darkMode
-        ? "bg-slate-900 border-slate-800"
-        : "bg-red-50/30 border-red-200"
+    className={`p-6 md:p-8 flex-1 min-h-[280px] md:min-h-[320px] rounded-3xl cursor-pointer border border-dashed transition-all flex flex-col items-center justify-center gap-4 md:gap-6 ${
+      darkMode ? "bg-slate-900 border-slate-700" : "bg-indigo-50/40 border-indigo-100"
     }`}
   >
-    {/* Убрал group-hover:scale-110 */}
     <div className="bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-sm transition-transform">
       {isGenLoadingT1 ? (
-        <ArrowPathIcon className="w-10 h-10 md:w-12 md:h-12 animate-spin text-red-600" />
+        <ArrowPathIcon className="w-10 h-10 md:w-12 md:h-12 animate-spin text-indigo-600" />
       ) : (
-        <ChartBarIcon className="w-10 h-10 md:w-12 md:h-12 text-red-600" />
+        <ChartBarIcon className="w-10 h-10 md:w-12 md:h-12 text-indigo-600" />
       )}
     </div>
-
     <div className="text-center">
-      <h3 className="font-black text-lg md:text-xl uppercase tracking-tight italic min-h-[1.5em]">
+      <h3 className="font-extrabold text-lg md:text-xl tracking-tight min-h-[1.5em] text-slate-900 dark:text-slate-100">
         <TypingTitle text="Generate Data Task" />
       </h3>
-      <p className="text-[10px] md:text-[11px] text-slate-500 uppercase font-bold tracking-widest mt-1 md:mt-2">
+      <p className="text-xs text-slate-600 dark:text-slate-400 font-medium tracking-tight mt-1 md:mt-2">
         Charts, Graphs & Diagrams
       </p>
     </div>
-
-    {/* Убрал прозрачность и смещение, чтобы кнопка была видна всегда */}
-    <button className="px-6 py-2 bg-red-600 text-white text-[10px] font-black uppercase rounded-full shadow-lg shadow-red-200 transition-all">
+    <button className="px-6 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-full shadow-sm hover:bg-indigo-700 transition-all">
       {isGenLoadingT1 ? "Generating..." : "Instant Launch"}
     </button>
   </div>
@@ -1355,67 +1431,55 @@ Already have a draft?{" "}
         className="flex flex-col space-y-4 md:space-y-6"
       >
         {/* Исправил mt-[30px] на mt-[10px], чтобы убрать перекос */}
-        <h2 className="mt-[10px] text-xl md:text-2xl font-black flex items-center justify-center md:justify-start gap-2 uppercase tracking-tighter text-red-600">
-          <div className="w-1.5 h-6 md:w-2 md:h-8 bg-red-600 rounded-full" />
+        <h2 className="mt-[10px] text-xl md:text-2xl font-extrabold flex items-center justify-center md:justify-start gap-2 tracking-tight text-slate-900 dark:text-white">
+          <div className="w-1.5 h-6 md:w-2 md:h-8 bg-indigo-600 dark:bg-indigo-500 rounded-full" />
           Task 2 Lab
         </h2>
 
         <div
-          className={`p-6 md:p-8 flex-1 min-h-[280px] md:min-h-[320px] rounded-[2rem] md:rounded-[2.5rem] border-2 border-dashed transition-all flex flex-col items-center justify-center gap-4 md:gap-6 ${
-            darkMode ? "bg-slate-900 border-slate-800" : "bg-red-50/30 border-red-200"
+          className={`p-6 md:p-8 flex-1 min-h-[280px] md:min-h-[320px] rounded-3xl border border-dashed transition-all flex flex-col items-center justify-center gap-4 md:gap-6 ${
+            darkMode ? "bg-slate-900 border-slate-700" : "bg-indigo-50/40 border-indigo-100"
           }`}
         >
           <div className="bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-sm">
             {genLoading ? (
-              <ArrowPathIcon className="w-10 h-10 md:w-12 md:h-12 animate-spin text-red-600" />
+              <ArrowPathIcon className="w-10 h-10 md:w-12 md:h-12 animate-spin text-indigo-600" />
             ) : (
-              <SparklesIcon className="w-10 h-10 md:w-12 md:h-12 text-red-600" />
+              <SparklesIcon className="w-10 h-10 md:w-12 md:h-12 text-indigo-600" />
             )}
           </div>
-
           <div className="text-center space-y-4 w-full">
             <div>
-              <h3 className="font-black text-lg md:text-xl uppercase tracking-tight italic min-h-[1.5em]">
+              <h3 className="font-extrabold text-lg md:text-xl tracking-tight min-h-[1.5em] text-slate-900 dark:text-slate-100">
                 <TypingTitle text="Generate Essay Task" />
               </h3>
-              <p className="text-[10px] md:text-[11px] text-slate-500 uppercase font-bold tracking-widest mt-1">
-                Custom Topics & Prompts
-              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium tracking-tight mt-1">Custom Topics & Prompts</p>
             </div>
-
             <div className="flex flex-col gap-3 w-full max-w-[240px] md:max-w-xs mx-auto">
               <input
                 value={customKeyword}
                 onChange={(e) => setCustomKeyword(e.target.value)}
                 placeholder="Enter Keyword..."
-                className={`px-4 py-2.5 md:py-3 rounded-xl border-2 outline-none text-center text-[11px] md:text-xs font-bold transition-all ${
-                  darkMode
-                    ? "bg-slate-950 border-slate-800 focus:border-red-600 text-white"
-                    : "bg-white border-red-100 focus:border-red-600 shadow-inner"
+                className={`px-4 py-2.5 md:py-3 rounded-xl border outline-none text-center text-sm font-medium transition-all ${
+                  darkMode ? "bg-slate-950 border-slate-700 focus:border-indigo-500 text-white" : "bg-white border-slate-200 focus:border-indigo-500 shadow-sm"
                 }`}
               />
               <button
                 onClick={async () => {
                   setGenLoading(true);
                   try {
-                    const res = await axios.post("/api/check", {
-                      generateTopic: true,
-                      keyword: customKeyword,
-                    });
+                    const res = await axios.post("/api/check", { generateTopic: true, keyword: customKeyword });
                     if (res.data.question) {
                       setPromptT2(res.data.question);
                       setIsAutoGenerated(true);
                       setActiveTab("Task 2");
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }
-                  } catch (e) {
-                    console.error(e);
-                  } finally {
-                    setGenLoading(false);
-                  }
+                  } catch (e) { console.error(e); }
+                  finally { setGenLoading(false); }
                 }}
                 disabled={genLoading}
-                className="bg-red-600 text-white py-2.5 md:py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-200 hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50"
+                className="bg-indigo-600 text-white py-2.5 md:py-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50"
               >
                 {genLoading ? "Initializing..." : "Initialize Topic"}
               </button>
@@ -1430,26 +1494,31 @@ Already have a draft?{" "}
     {(activeTab === 'Task 1' || activeTab === 'Task 2') && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-6">
-          <div className={`p-8 rounded-[3rem] shadow-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+          <div className="p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             
             <div className="flex flex-col gap-6 mb-8">
       {/* Верхний ряд: Заголовок и Таймер */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-100 dark:border-slate-800/50">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
   
   {/* ЛЕВАЯ ЧАСТЬ: Заголовок и индикатор (Всегда сверху слева) */}
   <div className="flex items-center justify-between lg:justify-start w-full lg:w-auto gap-4 shrink-0">
-    <div className="space-y-1">
-      <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tighter text-red-600 leading-none">
-        {activeTab}
-      </h2>
-      <div className="h-1 w-full bg-red-600 rounded-full opacity-20" />
+    <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+      {['Task 1', 'Task 2'].map((tab) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium tracking-tight transition-all ${
+            activeTab === tab ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+          }`}
+        >
+          {tab}
+        </button>
+      ))}
     </div>
-
-    {/* Кнопка Clear Draft для мобилок (видима только до lg экрана рядом с заголовком) */}
     <div className="lg:hidden">
       <button 
         onClick={() => activeTab === 'Task 1' ? resetTask1() : activeTab === 'Task 2' ? resetTask2() : systemReset()}
-        className="p-2 text-slate-400 hover:text-red-600 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl transition-all"
+        className="p-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
         title="Clear Draft"
       >
         <TrashIcon className="w-5 h-5" />
@@ -1457,56 +1526,33 @@ Already have a draft?{" "}
     </div>
   </div>
 
-  {/* ЦЕНТРАЛЬНАЯ ЧАСТЬ: Кнопка Clear Draft (Скрыта на мобилках, видна на десктопе) */}
   <div className="hidden lg:flex flex-1 justify-center">
     <button 
       onClick={() => activeTab === 'Task 1' ? resetTask1() : activeTab === 'Task 2' ? resetTask2() : systemReset()}
-      className="group flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-red-600 transition-all border border-dashed border-slate-200 dark:border-slate-800 hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-2xl"
+      className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all border border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-700 rounded-xl"
     >
-      <TrashIcon className="w-4 h-4 transition-transform group-hover:rotate-12" />
-      <span>Clear Draft</span>
+      <TrashIcon className="w-4 h-4" />
+      Clear Draft
     </button>
   </div>
 
-  {/* ПРАВАЯ ЧАСТЬ: Управление временем (Таймер) */}
-  <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center w-full lg:w-auto bg-slate-50 dark:bg-slate-900/50 lg:bg-transparent p-3 lg:p-0 rounded-2xl border border-slate-100 lg:border-0 dark:border-slate-800">
-    <div className="flex items-center gap-2">
-      {/* Таймер */}
-      <motion.div 
-        animate={timeLeft > 0 && timeLeft <= 60 && timerActive ? {
-          backgroundColor: ["#fef2f2", "#fee2e2", "#fef2f2"],
-          scale: [1, 1.03, 1],
-        } : {}}
-        transition={{ repeat: Infinity, duration: 1 }}
-        className={`flex items-center justify-center gap-3 px-4 h-11 min-w-[120px] rounded-2xl font-mono font-bold border transition-all duration-300 shadow-sm ${
-          timeLeft <= 60 && timeLeft > 0
-            ? 'text-red-600 border-red-500 bg-white shadow-red-200' 
-            : 'text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950'
-        }`}
-      >
-        <ClockIcon className={`w-5 h-5 ${timeLeft <= 60 && timerActive ? 'animate-pulse text-red-600' : 'text-slate-400'}`} />
-        <span className="text-lg tabular-nums tracking-tighter">
-          {formatTime(timeLeft)}
-        </span>
-      </motion.div>
-
-      {/* Кнопка Play/Pause */}
-      <button 
-        onClick={() => setTimerActive(!timerActive)} 
-        className={`flex items-center justify-center w-11 h-11 rounded-2xl text-white shadow-xl transition-all active:scale-90 ${
-          timerActive 
-            ? 'bg-amber-500 shadow-amber-500/30 hover:bg-amber-600' 
-            : 'bg-red-600 shadow-red-600/30 hover:bg-red-700'
-        }`}
-      >
-        {timerActive ? (
-          <PauseIcon className="w-6 h-6 fill-current"/>
-        ) : (
-          <PlayIcon className="w-6 h-6 ml-0.5 fill-current"/> 
-        )}
-      </button>
-    </div>
-
+  <div className="flex items-center gap-2 justify-end">
+    <motion.div
+      animate={timeLeft > 0 && timeLeft <= 60 && timerActive ? { opacity: [1, 0.9, 1] } : {}}
+      transition={{ repeat: Infinity, duration: 1 }}
+      className={`flex items-center justify-center gap-2 px-3 h-10 min-w-[100px] rounded-xl font-mono text-sm font-medium border transition-all ${
+        timeLeft <= 60 && timeLeft > 0 ? 'text-red-600 border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800' : 'text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50'
+      }`}
+    >
+      <ClockIcon className={`w-4 h-4 ${timeLeft <= 60 && timeLeft > 0 && timerActive ? 'text-red-600' : 'text-slate-400'}`} />
+      <span className="tabular-nums">{formatTime(timeLeft)}</span>
+    </motion.div>
+    <button
+      onClick={() => setTimerActive(!timerActive)}
+      className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all active:scale-95 ${timerActive ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+    >
+      {timerActive ? <PauseIcon className="w-5 h-5 fill-current" /> : <PlayIcon className="w-5 h-5 ml-0.5 fill-current" />}
+    </button>
   </div>
 </div>
     </div>
@@ -1515,13 +1561,13 @@ Already have a draft?{" "}
       {/* 1. Блок Графика с функцией Zoom */}
       {/* Заменил group relative на sticky top-4 */}
 <div className="group sticky top-4 z-40 transition-all duration-300">
-  <div className="block w-full border-2 border-dashed border-red-200 rounded-[2.5rem] p-4 text-center backdrop-blur-md bg-white/60 dark:bg-slate-900/60 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+  <div className="block w-full border border-dashed border-indigo-100 dark:border-slate-700 rounded-3xl p-4 text-center backdrop-blur-md bg-white/80 dark:bg-slate-900/60 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
     {image ? (
       <div className="relative inline-block w-full">
         {/* Линия сканирования */}
         {isDescribing && (
           <div className="absolute inset-0 z-20 overflow-hidden rounded-2xl pointer-events-none">
-            <div className="w-full h-1 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-scan-line" />
+            <div className="w-full h-1 bg-indigo-500 shadow-[0_0_15px_rgba(79,70,229,0.5)] animate-scan-line" />
           </div>
         )}
         <Zoom overlayBgColorEnd="rgba(0, 0, 0, 0.85)" transitionDuration={400}>
@@ -1536,7 +1582,7 @@ Already have a draft?{" "}
         </Zoom>
 
         {!isDescribing && (
-          <label className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase cursor-pointer hover:bg-red-700 transition-colors shadow-lg whitespace-nowrap z-40">
+          <label className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full cursor-pointer hover:bg-indigo-700 transition-colors shadow-sm whitespace-nowrap z-40">
             <input 
               type="file" 
               hidden 
@@ -1561,8 +1607,8 @@ Already have a draft?{" "}
             if (file) handleImageUpload(file);
           }} 
         />
-        <PhotoIcon className="w-10 h-10 mx-auto text-red-500" />
-        <p className="text-[11px] font-bold text-yellow-500 uppercase tracking-tighter">Upload Diagram</p>
+        <PhotoIcon className="w-10 h-10 mx-auto text-indigo-500" />
+        <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 tracking-tight">Upload Diagram</p>
       </label>
     )}
   </div>
@@ -1573,34 +1619,23 @@ Already have a draft?{" "}
     </div>
     )}
       {activeTab === 'Task 2' && currentTopic && (
-              <div className="mb-6 p-6 bg-red-50 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20 italic">
-                <p className="text-[10px] font-black text-red-600 uppercase mb-2 tracking-widest">Selected Prompt:</p>
-                <p className="text-lg font-bold">"{currentTopic.q}"</p>
+              <div className="mb-6 p-6 bg-indigo-50 dark:bg-indigo-950/20 rounded-3xl border border-indigo-100 dark:border-indigo-900/30">
+                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-2 tracking-tight">Selected Prompt</p>
+                <p className="text-lg font-medium text-slate-900 dark:text-white">"{currentTopic.q}"</p>
               </div>
             )}
     <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className={`p-1.5 sm:p-2 rounded-xl border-2 border-dashed transition-all duration-500 ${
-  isPromptOpen 
-    ? (darkMode ? 'border-slate-800 bg-slate-900/40 shadow-sm' : 'border-red-100 bg-red-50/20 shadow-sm') 
-    : 'border-transparent bg-transparent shadow-none opacity-50 hover:opacity-100'
+            <div className={`p-1.5 sm:p-2 rounded-xl border transition-all duration-300 ${
+  isPromptOpen ? (darkMode ? 'border-slate-800 bg-slate-900/40 shadow-sm' : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 shadow-sm') : 'border-transparent bg-transparent opacity-50 hover:opacity-100'
 }`}>
-  {/* ХЕДЕР - МАКСИМАЛЬНО ПРИЖАТ К КРАЯМ */}
-  <div 
-    onClick={() => setIsPromptOpen(!isPromptOpen)}
-    className="flex justify-between items-center cursor-pointer px-1"
-  >
+  <div onClick={() => setIsPromptOpen(!isPromptOpen)} className="flex justify-between items-center cursor-pointer px-1">
     <div className="flex items-center gap-1">
-      <span className={`text-[7px] font-black uppercase tracking-[0.15em] transition-colors ${
-        isPromptOpen ? 'text-red-600/70' : 'text-slate-400'
-      }`}>
+      <span className={`text-xs font-semibold tracking-tight transition-colors ${isPromptOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}>
         {activeTab} Topic
       </span>
-      {!isPromptOpen && <div className="w-0.5 h-0.5 rounded-full bg-red-400/50" />}
+      {!isPromptOpen && <div className="w-0.5 h-0.5 rounded-full bg-indigo-400/50" />}
     </div>
-    
-    <ChevronDownIcon className={`w-2.5 h-2.5 transition-all duration-500 ${
-      isPromptOpen ? 'text-red-400 rotate-0' : 'text-slate-300 -rotate-180'
-    }`} />
+    <ChevronDownIcon className={`w-4 h-4 transition-all duration-300 ${isPromptOpen ? 'text-indigo-500 rotate-0' : 'text-slate-400 -rotate-180'}`} />
   </div>
 
   {/* КОНТЕНТ С ПЛАВНЫМ ИСЧЕЗНОВЕНИЕМ */}
@@ -1628,15 +1663,15 @@ Already have a draft?{" "}
         placeholder="Enter topic..."
       />
       <div className="flex justify-end pr-1 opacity-20">
-        <p className="text-[5px] font-black uppercase italic tracking-tighter">Essential</p>
+        <p className="text-[5px] font-extrabold uppercase tracking-tighter text-slate-500 dark:text-slate-400">Essential</p>
       </div>
     </div>
   </div>
 </div>
     </div>
     {/* Контейнер редактора (без изменений, но с привязкой к активной вкладке) */}
-   <div  className={`relative w-full group overflow-hidden rounded-[2.5rem] border transition-all duration-500 ${
-  darkMode ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'
+   <div className={`relative w-full group overflow-hidden rounded-3xl transition-all duration-300 ${
+  darkMode ? 'bg-slate-900/50 border border-slate-800' : 'bg-white shadow-sm border-0'
    }`}>
    {/* --- ПАНЕЛЬ СЧЕТЧИКА (Fixed Float) --- */}
   {/* z-40 и pointer-events-none позволяют печатать прямо "под" ним */}
@@ -1652,12 +1687,12 @@ Already have a draft?{" "}
     }`} />
     
     <div className="flex flex-col items-center leading-none">
-      <span className={`text-[14px] font-black tabular-nums tracking-tight ${darkMode ? 'text-slate-100' : 'text-slate-900'}`}>
+      <span className="text-[14px] font-extrabold tabular-nums tracking-tight text-slate-900 dark:text-slate-100">
         {currentWordCount}
       </span>
       {/* Разделительная линия */}
       <div className="h-[1px] w-6 bg-slate-400/20 my-1" />
-      <span className="text-slate-400 font-bold text-[9px] tracking-tighter">
+      <span className="text-slate-600 dark:text-slate-400 font-bold text-[9px] tracking-tighter">
         {targetWords}
       </span>
     </div>
@@ -1666,8 +1701,8 @@ Already have a draft?{" "}
   {/* --- ШКАЛА ПРОГРЕССА (Верхняя линия) --- */}
   <div className="absolute top-0 left-0 w-full h-[3px] bg-slate-200 dark:bg-slate-800 z-50">
     <div className={`h-full transition-all duration-700 ease-out ${
-        currentWordCount < targetWords ? 'bg-gradient-to-r from-red-500 to-orange-400' : 'bg-gradient-to-r from-green-500 to-emerald-400'
-      }`}style={{ width: `${Math.min(100, (currentWordCount / targetWords) * 100)}%` }}
+        currentWordCount < targetWords ? 'bg-gradient-to-r from-indigo-500 to-slate-400' : 'bg-gradient-to-r from-green-500 to-emerald-400'
+      }`} style={{ width: `${Math.min(100, (currentWordCount / targetWords) * 100)}%` }}
     />
   </div>
   {/* --- 1. СЛОЙ ВИЗУАЛИЗАЦИИ (Подложка) --- */}
@@ -1808,21 +1843,21 @@ Already have a draft?{" "}
       {/* 1. Блок общего вердикта (Strategy) — Теперь с более ярким градиентом */}
       {/* 2. Сетка критериев (Scores & Feedback) */}
       <section className="space-y-4">
-        <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 ml-2">
+        <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100 ml-2">
           Criteria Breakdown
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Object.entries(activeResult.criteria || {}).map(([key, data]) => (
-            <div key={key} className="p-6 rounded-[2rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col group hover:border-red-500/50 transition-all duration-300">
+            <div key={key} className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col group hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-all duration-300">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 group-hover:text-red-600">
+                <span className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                   {key.replace(/_/g, ' ').replace('Task Achievement', 'TA').replace('Task Response', 'Task Response')}
                 </span>
-                <div className="bg-red-600 px-4 py-1.5 rounded-2xl shadow-lg shadow-red-600/20">
-                  <span className="text-xl font-black text-white">{data.score}</span>
+                <div className="bg-indigo-600 px-4 py-1.5 rounded-xl shadow-sm">
+                  <span className="text-xl font-semibold text-white">{data.score}</span>
                 </div>
               </div>
-              <p className="text-[13px] leading-relaxed text-slate-700 dark:text-slate-300 font-medium italic pt-4 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium pt-4 border-t border-slate-200 dark:border-slate-800">
                 {data.comment}
               </p>
             </div>
@@ -1831,7 +1866,7 @@ Already have a draft?{" "}
       </section>
       {/* 3. Группировка детальных ошибок (Corrections) */}
       <div className="space-y-6">
-  <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400 ml-2">
+  <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100 ml-2">
     Detailed Corrections
   </h3>
      <div className="grid grid-cols-1 gap-8">
@@ -1848,16 +1883,16 @@ Already have a draft?{" "}
             exit={{ opacity: 0, x: 50, scale: 0.9, height: 0, marginBottom: 0 }}
             transition={{ duration: 0.4, ease: "circOut" }}
             layout
-            className="group p-8 sm:p-10 rounded-[3.5rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl transition-all duration-500 hover:border-red-500/30 overflow-hidden"
+            className="group p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 hover:border-indigo-200 dark:hover:border-indigo-800/30 overflow-hidden"
           >
             <div className="flex flex-col lg:flex-row gap-10">
               {/* ЛЕВАЯ ЧАСТЬ: Оригинал и Исправление */}
               <div className="flex-1 space-y-8">
                 <div className="space-y-3">
-                  <span className="text-[10px] font-black text-red-600 uppercase px-3 py-1 bg-red-50 dark:bg-red-900/20 rounded-full border border-red-100 dark:border-red-800/30">
+                  <span className="text-xs font-semibold text-indigo-600 uppercase px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-full border border-indigo-100 dark:border-indigo-800/30">
                     Original Text
                   </span>
-                  <p className="text-[15px] sm:text-base font-bold text-slate-400 dark:text-slate-500 line-through italic decoration-red-500/40 leading-[1.8]">
+                  <p className="text-sm sm:text-base font-medium text-slate-400 dark:text-slate-500 line-through decoration-indigo-400/50 leading-relaxed">
                     {err.original}
                   </p>
                 </div>
@@ -1877,7 +1912,7 @@ Already have a draft?{" "}
                       </svg>
                     </button>
                   </div>
-                  <p className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-[1.6]">
+                  <p className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-[1.6]">
                     {err.fixed}
                   </p> 
 
@@ -1887,7 +1922,7 @@ Already have a draft?{" "}
                       handleReplaceWord(err.original, err.fixed);
                       setAppliedCorrections(prev => [...prev, i]); // Скрываем блок
                     }}
-                    className={`mt-4 group/apply flex items-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-lg
+                    className={`mt-4 group/apply flex items-center gap-3 px-6 py-3 rounded-2xl text-sm font-extrabold tracking-tight transition-all active:scale-95 shadow-lg
                       ${darkMode 
                         ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20' 
                         : 'bg-slate-900 hover:bg-indigo-600 text-white shadow-slate-300'
@@ -1904,12 +1939,12 @@ Already have a draft?{" "}
               </div>
 
               {/* ПРАВАЯ ЧАСТЬ (Оставляем без изменений) */}
-              <div className="lg:w-[40%] flex flex-col justify-between p-7 sm:p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[280px]">
+              <div className="lg:w-[40%] flex flex-col justify-between p-7 sm:p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[280px]">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-4 mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                      <span className="font-black uppercase text-[10px] text-red-600 tracking-widest">
+                      <span className="font-extrabold uppercase text-[10px] text-indigo-600 dark:text-indigo-400 tracking-widest">
                         Rule: {err.rule}
                       </span>
                     </div>
@@ -1922,10 +1957,10 @@ Already have a draft?{" "}
                   </p>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Complexity Scale</span>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase italic">Mastery: {err.level === 'C2' ? 'Native' : 'Advanced'}</span>
+                    <span className="text-[9px] font-extrabold text-slate-700 dark:text-slate-400 uppercase tracking-widest">Complexity Scale</span>
+                    <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-400 uppercase">Mastery: {err.level === 'C2' ? 'Native' : 'Advanced'}</span>
                   </div>
                   <div className="flex gap-1 h-1">
                     {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
@@ -1946,7 +1981,7 @@ Already have a draft?{" "}
         );
       })
     ) : (
-      <p className="text-center text-slate-400 py-10 italic">No corrections found.</p>
+      <p className="text-center text-slate-600 dark:text-slate-400 py-10 italic">No corrections found.</p>
     )}
   </AnimatePresence>
      </div>
@@ -1970,8 +2005,8 @@ Already have a draft?{" "}
         onClick={() => setIsRewriteOpen(!isRewriteOpen)}
         className="flex items-center justify-between cursor-pointer group/header"
       >
-        <h4 className={`font-black uppercase tracking-[0.3em] flex items-center gap-3 transition-all duration-500 ${
-          isRewriteOpen ? 'text-[12px] text-green-700 dark:text-green-400 mb-8' : 'text-[9px] text-slate-400 mb-0'
+        <h4 className={`font-extrabold tracking-tight flex items-center gap-3 transition-all duration-500 ${
+          isRewriteOpen ? 'text-sm text-green-700 dark:text-green-400 mb-8' : 'text-xs text-slate-600 dark:text-slate-400 mb-0'
         }`}>
           <div className={`transition-all duration-500 ${
             isRewriteOpen ? 'p-2 bg-green-600 rounded-xl shadow-lg shadow-green-600/30' : 'p-1 bg-slate-200 dark:bg-slate-800 rounded-md shadow-none'
@@ -1981,7 +2016,7 @@ Already have a draft?{" "}
           Suggested Rewrite
         </h4>
         
-        <ChevronDownIcon className={`w-4 h-4 text-red-800 transition-transform duration-500 ${
+        <ChevronDownIcon className={`w-4 h-4 text-slate-600 dark:text-slate-400 transition-transform duration-500 ${
           isRewriteOpen ? 'rotate-0' : '-rotate-180'
         }`} />
       </div>
@@ -1996,12 +2031,12 @@ Already have a draft?{" "}
               “
             </span>
             
-            <p className="text-[16px] md:text-[17px] leading-[1.9] text-slate-800 dark:text-slate-100 font-bold italic tracking-tight">
+            <p className="text-[16px] md:text-[17px] leading-[1.9] text-slate-800 dark:text-slate-100 font-semibold tracking-tight">
               {activeResult.suggested_rewrite}
             </p>
             
             <div className="mt-6 flex justify-end">
-              <span className="text-[10px] font-black uppercase tracking-widest text-green-600/50">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-green-600/50 dark:text-green-400/50">
                 Perfected by AI Expert
               </span>
             </div>
@@ -2026,10 +2061,10 @@ Already have a draft?{" "}
           <button 
             onClick={saveCurrentToArchive}
             disabled={isSaved}
-            className={`w-full sm:w-auto group flex items-center justify-center gap-2 px-6 py-4 sm:py-3 text-[10px] font-black uppercase tracking-widest transition-all duration-300 rounded-2xl shadow-lg active:scale-95 ${
+            className={`w-full sm:w-auto group flex items-center justify-center gap-2 px-6 py-4 sm:py-3 text-sm font-extrabold tracking-tight transition-all duration-300 rounded-2xl shadow-sm active:scale-95 disabled:opacity-50 ${
               isSaved 
-                ? 'bg-green-600 text-white shadow-green-200 scale-105' 
-                : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-black'
+                ? 'bg-green-600 text-white' 
+                : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700'
             }`}
           >
             {isSaved ? (
@@ -2039,44 +2074,57 @@ Already have a draft?{" "}
               </>
             ) : (
               <>
-                <BookmarkIcon className="w-4 h-4 transition-transform group-hover:-translate-y-0.5 text-red-500" />
+                <BookmarkIcon className="w-4 h-4 transition-transform group-hover:-translate-y-0.5 text-white" />
                 <span>Save to Archive</span>
               </>
             )}
           </button>
         </div>
 
+        {error && (
+          <div className="w-full basis-full rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 flex items-center justify-between gap-2">
+            <span>{error}</span>
+            <button type="button" onClick={() => setError(null)} className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg" aria-label="Dismiss"> <XMarkIcon className="w-4 h-4" /> </button>
+          </div>
+        )}
         {/* ПРАВАЯ КНОПКА: ANALYZE */}
         <div className="w-full sm:w-auto">
           <button 
             onClick={() => handleAnalyze(activeTab === 'Task 1' ? 'task1' : 'task2')} 
             disabled={activeTab === 'Task 1' ? loadingT1 : loadingT2} 
-            className="w-full sm:px-10 py-4 text-xs md:text-sm bg-red-600 text-white rounded-2xl font-black uppercase flex items-center justify-center gap-3 shadow-xl shadow-red-200 dark:shadow-none transition-all active:scale-95 hover:bg-red-700 disabled:opacity-50"
+            className="w-full sm:px-10 py-4 text-sm bg-indigo-600 text-white rounded-2xl font-semibold flex items-center justify-center gap-3 shadow-sm transition-all active:scale-95 hover:bg-indigo-700 disabled:opacity-50"
           >
             {(activeTab === 'Task 1' ? loadingT1 : loadingT2) ? (
               <ArrowPathIcon className="w-5 h-5 animate-spin" />
             ) : (
               <SparklesIcon className="w-5 h-5 animate-pulse" />
             )}
-            <span>{(activeTab === 'Task 1' ? loadingT1 : loadingT2) ? "Analyzing..." : "Analyze Essay"}</span>
+            <span>{(activeTab === 'Task 1' ? loadingT1 : loadingT2) ? "Examiner is reviewing your essay..." : "Analyze Essay"}</span>
           </button>
         </div>
 
       </div>
         </div>
-        {/* Aside: Здесь также стоит добавить очистку или разделение баллов */}
+        {/* Aside: loading skeleton or result */}
          <aside className="lg:col-span-4 space-y-6" ref={activeResultsRef}>
-      {!activeResult ? (
-      // <div className="..."> Analysis Pending for {activeTab} </div>
-        <div className={`h-80 border-2 border-dashed rounded-[3rem] flex flex-col items-center justify-center p-10 text-center transition-all ${darkMode ? 'border-slate-800 bg-slate-900/20 text-slate-600' : 'border-slate-200 bg-slate-50 text-slate-400'}`}>
-    //       <div className="w-20 h-20 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-sm">
-    //         <SparklesIcon className="w-10 h-10 opacity-30 text-red-600" />
-    //       </div>
-    //       <h5 className="text-[11px] font-black uppercase tracking-[0.3em] mb-2">Analysis Pending {activeTab}</h5>
-    //       <p className="text-[10px] font-medium leading-relaxed max-w-[180px]">
-    //         Submit your essay to receive instant AI feedback and band score.
-    //       </p>
-    //     </div>
+      {(activeTab === 'Task 1' ? loadingT1 : loadingT2) ? (
+        <div className={`rounded-3xl border border-dashed p-8 ${darkMode ? 'border-slate-700 bg-slate-900/40' : 'border-indigo-100 bg-indigo-50/30'}`}>
+          <AnalysisSkeleton darkMode={darkMode} />
+          <p className="text-center text-sm font-semibold tracking-tight text-indigo-600 dark:text-indigo-400 mt-6">
+            Examiner is reviewing your essay...
+          </p>
+          <div className="flex justify-center mt-4">
+            <ArrowPathIcon className="w-8 h-8 animate-spin text-indigo-600" />
+          </div>
+        </div>
+      ) : !activeResult ? (
+        <div className={`h-80 border border-dashed rounded-3xl flex flex-col items-center justify-center p-10 text-center transition-all ${darkMode ? 'border-slate-700 bg-slate-900/20 text-slate-500' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
+          <SparklesIcon className="w-12 h-12 opacity-30 text-indigo-500 mb-4" />
+          <h5 className="text-sm font-semibold tracking-tight mb-2">Analysis Pending {activeTab}</h5>
+          <p className="text-[10px] font-medium leading-relaxed max-w-[180px]">
+            Submit your essay to receive instant AI feedback and band score.
+          </p>
+        </div>
       ) : (
              <motion.div
         initial={{ opacity: 0, y: 20 }} 
@@ -2095,18 +2143,18 @@ Already have a draft?{" "}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/70 sm:text-[9px] sm:tracking-[0.4em]">
+            <p className="text-[8px] font-extrabold uppercase tracking-[0.3em] text-white/80 sm:text-[9px] sm:tracking-[0.4em]">
               Performance Index
             </p>
           </div>
-          <h4 className="flex items-baseline font-black leading-none tracking-tighter text-[18vw] sm:text-7xl md:text-8xl">
+          <h4 className="flex items-baseline font-extrabold leading-none tracking-tighter text-[18vw] sm:text-7xl md:text-8xl">
             <AnimatedScore value={activeResult.overall_band} />
             <span className="ml-2 text-lg font-light opacity-30 sm:text-xl">/ 9.0</span>
           </h4>
         </div>
 
         <div className="shrink-0 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-right backdrop-blur-md sm:px-4">
-          <p className="text-[7px] font-black uppercase tracking-widest text-indigo-200 sm:text-[8px]">AI Engine</p>
+          <p className="text-[7px] font-extrabold uppercase tracking-widest text-indigo-200 dark:text-indigo-300 sm:text-[8px]">AI Engine</p>
           <p className="text-[9px] font-bold sm:text-[10px]">v4.2 PRO</p>
         </div>
       </div>
@@ -2114,7 +2162,7 @@ Already have a draft?{" "}
       <div className="flex flex-row items-stretch gap-2 mt-2">
         <button 
           onClick={() => downloadReport()}
-          className="group/btn flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-4 text-[9px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-slate-900 hover:shadow-xl active:scale-[0.97] sm:gap-3 sm:rounded-[1.8rem] sm:py-5 sm:text-[10px] sm:tracking-[0.3em]"
+          className="group/btn flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 dark:bg-slate-950 px-4 py-4 text-xs font-extrabold tracking-tight text-white transition-all hover:bg-slate-800 dark:hover:bg-slate-900 hover:shadow-xl active:scale-[0.97] sm:gap-3 sm:rounded-[1.8rem] sm:py-5"
         >
           <DocumentArrowDownIcon className="h-4 w-4 text-indigo-400 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" /> 
           <span className="whitespace-nowrap">Official PDF</span>
@@ -2136,8 +2184,8 @@ Already have a draft?{" "}
 </div>
           {/* --- 3. DEEP LINGUISTIC ANALYSIS --- */}
           <div className={`p-8 rounded-[3rem] border shadow-sm max-h-[600px] overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden
- ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-    <h5 className="text-[10px] font-black uppercase mb-6 tracking-[0.2em] text-red-600 sticky top-0 bg-inherit z-10 pb-2">
+ ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 dark:border-slate-800'}`}>
+    <h5 className="text-xs font-extrabold mb-6 tracking-tight text-slate-800 dark:text-slate-100 sticky top-0 bg-inherit z-10 pb-2">
         Linguistic Insights
     </h5>
             <div className="space-y-6">
@@ -2148,7 +2196,7 @@ Already have a draft?{" "}
   <div className="flex justify-between items-end border-b-[3px] border-blue-500/20 pb-2">
     <div className="flex items-center gap-2">
       <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Linking Words</span>
+      <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-100">Linking Words</span>
     </div>
     <span className="text-[11px] font-black text-blue-600 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-md italic">
       Score: {activeResult.analysis?.linking_words?.score}/9.0
@@ -2188,7 +2236,7 @@ Already have a draft?{" "}
 
     if (!hasSuggestions) {
       return (
-        <span className="text-[10px] font-bold text-slate-400 italic py-1 px-2">
+        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic py-1 px-2">
           Great flow! No extra suggestions needed.
         </span>
       );
@@ -2216,8 +2264,8 @@ Already have a draft?{" "}
 
 
               {/* Repetitions List */}
-              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase block mb-4 text-slate-400">Frequency Alert</span>
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-extrabold uppercase block mb-4 text-slate-800 dark:text-slate-100">Frequency Alert</span>
                   <div className="space-y-2">
   <AnimatePresence mode="popLayout">
     {activeResult?.analysis?.word_repetition?.map((item, i) => {
@@ -2239,7 +2287,7 @@ Already have a draft?{" "}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             {/* ИНФОРМАЦИЯ О СЛОВЕ */}
             <div className="flex items-center gap-2">
-              <span className={`text-sm font-black uppercase tracking-tight ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+              <span className={`text-sm font-extrabold uppercase tracking-tight text-slate-900 dark:text-slate-100`}>
                 "{wordText}"
               </span>
               <span className="text-[10px] text-red-500 font-bold bg-red-100/20 px-2 py-0.5 rounded-full border border-red-500/10">
@@ -2281,7 +2329,7 @@ Already have a draft?{" "}
         pb-0.5 border-b-[3px] 
         ${searchState.word === wordText.toLowerCase().trim() 
           ? 'text-red-600 border-red-600' 
-          : 'text-slate-400 border-transparent group-hover:text-red-600 group-hover:border-red-600/50'}
+          : 'text-slate-600 dark:text-slate-400 border-transparent group-hover:text-red-600 group-hover:border-red-600/50'}
       `}>
         Find
       </span>
@@ -2299,7 +2347,7 @@ Already have a draft?{" "}
       w-3.5 h-3.5 transition-colors duration-200
       ${searchState.word === wordText.toLowerCase().trim() 
         ? 'text-red-600' 
-        : 'text-slate-400 group-hover:text-red-600'}
+        : 'text-slate-600 dark:text-slate-400 group-hover:text-red-600'}
     `} />
   </button>
 </div>
@@ -2308,8 +2356,8 @@ Already have a draft?{" "}
 
           {/* СЕКЦИЯ СИНОНИМОВ (UPGRADES) */}
           {synonyms.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-[9px] font-black uppercase text-slate-400 mb-2 tracking-widest flex items-center gap-1">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <p className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 mb-2 tracking-widest flex items-center gap-1">
                 <SparklesIcon className="w-3 h-3 text-emerald-500" />
                 Band 8.0+ Replacements:
               </p>
@@ -2340,10 +2388,10 @@ Already have a draft?{" "}
               {activeResult.plagiarism && (
                 <div className={`mt-6 p-4 rounded-2xl border-l-4 ${activeResult.plagiarism.score > 30 ? 'bg-red-50 border-red-500' : 'bg-emerald-50 border-emerald-500'}`}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] font-black uppercase text-slate-400">Plagiarism Check</span>
-                    <span className="text-[9px] font-black uppercase text-slate-900">{activeResult.plagiarism.score}%</span>
+                    <span className="text-[9px] font-extrabold uppercase text-slate-800 dark:text-slate-100">Plagiarism Check</span>
+                    <span className="text-[9px] font-extrabold text-slate-900 dark:text-white">{activeResult.plagiarism.score}%</span>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-800">{activeResult.plagiarism.status}</p>
+                  <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">{activeResult.plagiarism.status}</p>
                 </div>
               )}
 
@@ -2359,12 +2407,12 @@ Already have a draft?{" "}
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-2 sm:px-0">
   {/* HEADER: Адаптивный заголовок и кнопка очистки */}
   <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-6 sm:mb-10">
-    <h2 className="text-3xl sm:text-4xl font-black italic tracking-tighter">
-      Practice <span className="text-red-600">History</span>
+    <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+      Practice <span className="text-indigo-600 dark:text-indigo-400">History</span>
     </h2>
     <button 
       onClick={clearArchive} 
-      className="w-full sm:w-auto text-red-600 font-black uppercase text-[9px] sm:text-[10px] tracking-widest flex items-center justify-center gap-2 px-4 sm:px-6 py-3 rounded-xl sm:rounded-2xl bg-red-50 hover:bg-red-100 transition-all border border-red-100 active:scale-95 shadow-sm"
+      className="w-full sm:w-auto text-slate-900 dark:text-white font-extrabold text-xs tracking-tight flex items-center justify-center gap-2 px-4 sm:px-6 py-3 rounded-xl sm:rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 active:scale-95 shadow-sm"
     >
       <TrashIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> 
       Destroy Archive
@@ -2373,21 +2421,21 @@ Already have a draft?{" "}
   
   {archive.length === 0 ? (
     <div className="text-center py-10 sm:p-20 opacity-20">
-      <BookOpenIcon className="w-20 h-20 sm:w-32 sm:h-32 mx-auto text-red-600" />
+      <BookOpenIcon className="w-20 h-20 sm:w-32 sm:h-32 mx-auto text-slate-300 dark:text-slate-600" />
     </div>
   ) : (
     <div className="grid gap-3 sm:gap-4">
       {archive.map(entry => (
         <div 
           key={entry.id} 
-          className={`p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2.5rem] border flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:border-red-600 ${
-            darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100 shadow-xl'
+          className={`p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2.5rem] border flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:border-indigo-500 dark:hover:border-indigo-600 ${
+            darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 dark:border-slate-800 shadow-sm'
           }`}
         >
           {/* ИНФОРМАЦИЯ: Балл и текст */}
           <div className="flex items-center gap-4 sm:gap-6 w-full md:w-auto">
             {/* BAND BADGE: Уменьшается на мобилках */}
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-600 text-white rounded-xl sm:rounded-2xl flex flex-col items-center justify-center font-black shadow-lg shrink-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl sm:rounded-2xl flex flex-col items-center justify-center font-extrabold shadow-sm shrink-0">
               <span className="text-[7px] sm:text-[8px] opacity-60 uppercase leading-none">Band</span>
               <span className="text-lg sm:text-xl">
                 {entry.fullData?.overall_band || "—"}
@@ -2395,21 +2443,21 @@ Already have a draft?{" "}
             </div>  
 
             <div className="min-w-0 flex-1">
-              <h4 className="font-black text-sm sm:text-lg uppercase leading-tight tracking-tight truncate max-w-[200px] sm:max-w-none">
+              <h4 className="font-extrabold text-sm sm:text-lg leading-tight tracking-tight truncate max-w-[200px] sm:max-w-none text-slate-900 dark:text-slate-100">
                 {entry.taskType}: {(entry.question || "No Topic").substring(0, 30)}...
               </h4>
-              <p className="text-slate-400 text-[8px] sm:text-[10px] mt-1 sm:mt-2 font-bold uppercase tracking-wider italic">
+              <p className="text-slate-600 dark:text-slate-400 text-[8px] sm:text-[10px] mt-1 sm:mt-2 font-bold uppercase tracking-wider italic">
                 {entry.date || "Unknown Date"}
               </p>
             </div>
           </div>
           
           {/* КНОПКИ ДЕЙСТВИЯ: Группировка на мобилках */}
-          <div className="flex items-center justify-between w-full md:w-auto gap-2 border-t md:border-0 pt-3 md:pt-0 border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between w-full md:w-auto gap-2 border-t md:border-0 pt-3 md:pt-0 border-slate-200 dark:border-slate-800">
             <div className="flex gap-2">
               <button 
                 onClick={() => downloadReport(entry)} 
-                className="p-3 sm:p-4 bg-slate-100 dark:bg-slate-800 rounded-xl sm:rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                className="p-3 sm:p-4 bg-slate-100 dark:bg-slate-800 rounded-xl sm:rounded-2xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                 title="Download PDF"
               >
                 <DocumentArrowDownIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2423,7 +2471,7 @@ Already have a draft?{" "}
                     localStorage.setItem('ielts_archive_v5', JSON.stringify(updated));
                   }
                 }} 
-                className="p-3 sm:p-4 bg-red-50 text-red-600 rounded-xl sm:rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-90"
+                className="p-3 sm:p-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl sm:rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-all active:scale-90 border border-slate-200 dark:border-slate-700"
               >
                 <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
@@ -2444,7 +2492,7 @@ Already have a draft?{" "}
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }} 
-              className="flex-1 md:flex-none px-4 sm:px-6 py-3 sm:py-4 bg-slate-100 dark:bg-slate-800 rounded-xl sm:rounded-2xl font-black uppercase text-[9px] sm:text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-sm active:scale-95 text-center"
+              className="flex-1 md:flex-none px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-extrabold text-xs tracking-tight bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 text-center"
             >
               Review
             </button>
@@ -2456,192 +2504,121 @@ Already have a draft?{" "}
 </div>
     )}
     </main>
-      {/* FOOTER */}
-        <footer className={`p-12 border-t mt-20 transition-all duration-500 ${darkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
-  <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-16">   
-    {/* 1. Брендинг */}
-    <div className="space-y-8">
-      <div className="flex items-center gap-3 text-2xl font-black italic tracking-tighter group cursor-default">
-        <div className="bg-red-600 p-2 rounded-xl rotate-3 group-hover:rotate-12 transition-transform">
-          <FireIcon className="w-6 h-6 text-white" />
         </div>
-        <span>BAND<span className="text-red-600">BOOSTER</span></span>
-      </div>   
-      <div className="relative group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-rose-600 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
-        <div className={`relative p-6 rounded-3xl border ${darkMode ? 'bg-slate-900/40 border-slate-800' : 'bg-slate-50 border-slate-100 shadow-sm'}`}>
-          <div className="flex items-center gap-2 mb-4">
-            {[...Array(5)].map((_, i) => (
-              <StarIcon key={i} className="w-3 h-3 text-red-600 fill-red-600" />
-            ))}
-          </div>
-          <p className={`text-[12px] font-serif leading-relaxed italic ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-            "This AI analysis is terrifyingly accurate. Finally hit Band 7.5 in writing!"
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-            <div className="w-6 h-1 bg-red-600 rounded-full"></div>
-            <span className="text-[10px] font-black uppercase text-red-600 tracking-[0.2em]">Amara V.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* 2. Форма связи */}
-            <div className="relative space-y-6 min-h-[400px]">
-  {/* ЗАГОЛОВОК */}
-  <div className="flex items-center justify-between">
-    <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-600">
-      Improvement Hub
-    </h5>
-    <div className="h-px flex-1 bg-red-600/10 ml-4"></div>
-  </div>
-
-  {/* ФОРМА */}
-  <form 
-    onSubmit={handleSubmit} 
-    className={`space-y-4 max-w-lg mx-auto transition-opacity duration-500 ${status === 'success' ? 'opacity-20 pointer-events-none' : 'opacity-100'}`}
-  >
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <input 
-        name="name" 
-        type="text" 
-        placeholder="NAME*" 
-        required 
-        className={`w-full px-4 py-3 text-[11px] font-black uppercase tracking-wider rounded-xl border-2 outline-none transition-all
-          ${darkMode 
-            ? 'bg-slate-900/50 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-600' 
-            : 'bg-slate-50 border-slate-100 text-slate-900 placeholder:text-slate-400 focus:border-red-600'
-          }`} 
-      />
-      <input 
-  name="email" 
-  type="email" 
-  placeholder="EMAIL*" 
-  required 
-  /* Убрал uppercase, чтобы текст вводился как обычно */
-  className={`w-full px-4 py-3 text-[11px] font-black tracking-wider rounded-xl border-2 outline-none transition-all
-    ${darkMode 
-      ? 'bg-slate-900/50 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-600' 
-      : 'bg-slate-50 border-slate-100 text-slate-900 placeholder:text-slate-400 focus:border-red-600'
-    }`} 
-/>
-    </div>
-
-    <textarea 
-      name="message" 
-      placeholder="HOW CAN WE MAKE BANDBOOSTER BETTER?*" 
-      required 
-      className={`w-full px-4 py-4 text-[11px] font-bold rounded-xl border-2 outline-none resize-none h-32 transition-all
-        ${darkMode 
-          ? 'bg-slate-900/50 border-slate-800 text-white placeholder:text-slate-600 focus:border-red-600' 
-          : 'bg-slate-50 border-slate-100 text-slate-800 placeholder:text-slate-400 focus:border-red-600'
-        }`}
-    ></textarea>
-
-    {/* ОШИБКА */}
-    <AnimatePresence>
-      {error && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="p-3 bg-red-600/10 border border-red-600/20 rounded-xl text-red-600 text-[10px] font-bold uppercase tracking-wider flex items-center gap-2"
-        >
-          <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-ping" />
-          {error}
-        </motion.div>
-      )}
-    </AnimatePresence>
-
-    <button 
-      type="submit" 
-      disabled={status === 'sending'}
-      className={`w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-2xl active:scale-[0.98] disabled:opacity-50
-        ${darkMode 
-          ? 'bg-red-600 text-white hover:bg-red-500 shadow-red-900/20' 
-          : 'bg-slate-950 text-white hover:bg-red-600 shadow-slate-300'
-        }`}
-    >
-      {status === 'sending' ? 'Sending...' : 'Send Suggestion'}
-    </button>
-  </form>
-
-  {/* ОКНО УСПЕХА (ЦЕНТРИРОВАНО ВНУТРИ RELATIVE БЛОКА) */}
-  <AnimatePresence>
-    {status === 'success' && (
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="absolute inset-0 flex items-center justify-center z-50 backdrop-blur-[4px] bg-white/10 dark:bg-black/10 rounded-[2rem]"
-      >
-        <div className={`p-10 rounded-[3rem] shadow-2xl flex flex-col items-center gap-6 border-2 transform -translate-y-4
-          ${darkMode ? 'bg-slate-900 border-red-600/50 shadow-black' : 'bg-white border-red-100 shadow-slate-200'}`}
-        >
-          <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center shadow-xl shadow-red-600/40 animate-bounce">
-            <CheckCircleIcon className="w-12 h-12 text-white" />
-          </div>
-          <div className="text-center">
-            <h3 className={`font-black uppercase italic tracking-tighter text-2xl ${darkMode ? 'text-white' : 'text-slate-950'}`}>
-              Sent!
-            </h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-2">
-              Feedback received. Thanks!
-            </p>
-          </div>
-          {/* Кнопка ручного закрытия */}
-          <button 
-            onClick={() => setStatus('idle')}
-            className="text-[9px] font-black uppercase tracking-widest text-red-600 hover:underline mt-2"
+      {/* PRICING BLOCK — visible for Stripe compliance */}
+      <section id="pricing" className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl p-6 bg-[#f8fafc] dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800"
           >
-            Close
-          </button>
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white mb-1">Plans &amp; Pricing</h3>
+              <p className="text-sm font-medium tracking-tight text-slate-500 dark:text-slate-400">Credits and subscriptions — use the <strong className="text-red-600 dark:text-red-400">Pricing</strong> menu in the navigation bar to view plans and top up.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="shrink-0 px-5 py-2.5 rounded-xl text-sm font-semibold tracking-tight text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              View Pricing
+            </button>
+          </motion.div>
         </div>
-      </motion.div>
-    )}
-  </AnimatePresence>
-</div>
-    {/* 3. НАВИГАЦИЯ И ДАННЫЕ (Интегрировано) */}
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-red-600">Quick Links</h5>
-        <div className="h-px flex-1 bg-red-600/10 ml-4"></div>
-      </div>
-      
-      {/* Ссылки из NAV */}
-      <div className="grid grid-cols-2 gap-2">
-        {['Topics', 'Task 1', 'Task 2', 'Archive'].map((t) => (
-          <button
-            key={t}
-            onClick={() => { setActiveTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            className={`text-left px-4 py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-              activeTab === t 
-                ? 'bg-red-600 border-red-600 text-white shadow-lg' 
-                : darkMode ? 'bg-slate-900 border-slate-800 text-slate-400 hover:border-red-600' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-red-600'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      </section>
+      {/* FOOTER — matches main (Cathoven-style) */}
+        <footer className="border-t border-slate-200 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-950 transition-colors">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+              {/* Brand */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  Band<span className="text-indigo-600">Booster</span>
+                </div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-400">AI IELTS Examiner</p>
+              </div>
 
-      <div className={`p-6 rounded-3xl border-l-8 border-red-600 ${darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
-        <p className="text-[11px] leading-relaxed font-bold uppercase tracking-tight opacity-60">
-          "Disclaimer: Independent AI software. No affiliation with official testing boards or centers. For educational use only."
-        </p>
-      </div>
+              {/* Resources */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-4">Resources</h4>
+                <ul className="space-y-3">
+                  {['Topics', 'Task 1', 'Task 2'].map((t) => (
+                    <li key={t}>
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className={`text-sm font-medium tracking-tight transition-colors ${activeTab === t ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400'}`}
+                      >
+                        {t}
+                      </button>
+                    </li>
+                  ))}
+                  <li>
+                    <Link href="/history" className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                      Archive
+                    </Link>
+                  </li>
+                </ul>
+              </div>
 
-      <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-          <ChatBubbleLeftRightIcon className="w-5 h-5 text-red-600" />
-        </div>
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Direct Contact</p>
-          <a href="mailto:sashabilov@gmail.com" className="text-sm font-black hover:text-red-600">sashabilov@gmail.com</a>
-        </div>
-      </div>
-    </div>
-  </div>
+              {/* Feedback form column */}
+              <div className="relative space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-4">Feedback</h4>
+                <form onSubmit={handleSubmit} className={`space-y-3 transition-opacity ${status === 'success' ? 'opacity-20 pointer-events-none' : ''}`}>
+                  <input name="name" type="text" placeholder="Name" required className={`w-full px-4 py-2.5 text-sm rounded-xl border outline-none transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'}`} />
+                  <input name="email" type="email" placeholder="Email" required className={`w-full px-4 py-2.5 text-sm rounded-xl border outline-none transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'}`} />
+                  <textarea name="message" placeholder="How can we improve?" required rows={3} className={`w-full px-4 py-2.5 text-sm rounded-xl border outline-none resize-none transition-colors ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-indigo-500'}`} />
+                  {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
+                  <button type="submit" disabled={status === 'sending'} className="w-full py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                    {status === 'sending' ? 'Sending...' : 'Send'}
+                  </button>
+                </form>
+                <AnimatePresence>
+                  {status === 'success' && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm">
+                      <div className="text-center">
+                        <CheckCircleIcon className="w-10 h-10 text-indigo-600 mx-auto mb-2" />
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">Thanks for your feedback!</p>
+                        <button type="button" onClick={() => setStatus('idle')} className="mt-2 text-xs font-medium text-indigo-600 hover:underline">Close</button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Legal & Contact */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-4">Legal</h4>
+                <ul className="space-y-3">
+                  <li><Link href="/privacy" className="text-sm font-medium tracking-tight text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">Privacy Policy</Link></li>
+                  <li><Link href="/terms" className="text-sm font-medium tracking-tight text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">Terms of Service</Link></li>
+                  <li><Link href="/refund" className="text-sm font-medium tracking-tight text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">Refund Policy</Link></li>
+                </ul>
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-6 leading-relaxed">
+                  Independent AI software. Not affiliated with IDP or British Council. For educational use only.
+                </p>
+              </div>
+            </div>
+            <div className="mt-12 pt-8 border-t border-slate-200 dark:border-slate-800 text-center space-y-2">
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm font-medium tracking-tight text-slate-500 dark:text-slate-400">
+                <Link href="/privacy" className="hover:text-red-600 dark:hover:text-red-400 transition-colors">Privacy Policy</Link>
+                <span aria-hidden>·</span>
+                <Link href="/terms" className="hover:text-red-600 dark:hover:text-red-400 transition-colors">Terms of Service</Link>
+                <span aria-hidden>·</span>
+                <Link href="/refund" className="hover:text-red-600 dark:hover:text-red-400 transition-colors">Refund Policy</Link>
+              </div>
+              <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
+                © 2026 BANDBOOSTER LLC. Registered in Delaware, USA. All rights reserved.
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                16192 Coastal Highway, Lewes, Delaware 19958, USA · <a href="mailto:support@bandbooster.com" className="hover:text-red-600 dark:hover:text-red-400 transition-colors">support@bandbooster.com</a>
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 pt-1">We accept Visa, Mastercard, Apple Pay</p>
+            </div>
+          </div>
   <AnimatePresence>
   {showScrollTop && (
     <motion.div
@@ -2650,34 +2627,19 @@ Already have a draft?{" "}
       exit={{ opacity: 0, scale: 0.5, y: 20 }}
       className="fixed bottom-8 right-8 z-[100] flex items-center justify-center group"
     >
-      <span className="absolute right-full mr-4 px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none">
+      <span className="absolute right-full mr-4 px-3 py-1 bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
         Back to top
       </span>
       <button
         onClick={handleScrollToTop}
-        className={`relative p-4 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-2xl ${
-          darkMode ? 'bg-slate-900 text-white shadow-black/60' : 'bg-white text-red-600 shadow-red-200/60 border border-red-50'
+        className={`relative p-4 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-lg ${
+          darkMode ? 'bg-slate-800 text-white border border-slate-700' : 'bg-white text-indigo-600 border border-slate-200 shadow-sm'
         }`}
       >
-        <svg className="absolute inset-0 w-full h-full -rotate-90 p-0.5">
-            <circle 
-              cx="50%" cy="50%" r="46%" 
-              fill="transparent" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              className={darkMode ? 'text-slate-800' : 'text-slate-100'} 
-            />
-            <motion.circle
-              cx="50%" cy="50%" r="46%" 
-              fill="transparent" 
-              stroke="#ef4444" 
-              strokeWidth="2" 
-              // ИСПРАВЛЕНО: strokeLinecap вместо strokeDashcap
-              strokeLinecap="round" 
-              style={{ pathLength: scrollProgress / 100 }}
-              transition={{ type: "spring", stiffness: 60, damping: 15 }}
-            />
-          </svg>
+        <svg className="absolute inset-0 w-full h-full -rotate-90 p-0.5" aria-hidden>
+          <circle cx="50%" cy="50%" r="46%" fill="transparent" stroke="currentColor" strokeWidth="2" className={darkMode ? 'text-slate-700' : 'text-slate-100'} />
+          <motion.circle cx="50%" cy="50%" r="46%" fill="transparent" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" style={{ pathLength: scrollProgress / 100 }} transition={{ type: 'spring', stiffness: 60, damping: 15 }} />
+        </svg>
         <ChevronUpIcon className="w-6 h-6 relative z-10 group-hover:-translate-y-1 transition-transform" />
       </button>
     </motion.div>

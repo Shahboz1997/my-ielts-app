@@ -24,6 +24,8 @@ html, body {
   /* Убедитесь, что прокрутка РАЗРЕШЕНА, но СКРЫТА */
   overflow-y: scroll; 
   scroll-behavior: smooth;
+  /* Smooth theme transition (next-themes + class) */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Убираем синее выделение при нажатии на кнопки в мобилках */
@@ -31,23 +33,43 @@ html, body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Кастомный скроллбар для Indigo стиля */
+/* Cathoven-style scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #4f46e5;
+  background: #cbd5e1;
   border-radius: 10px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 .essay-preview p:first-of-type {
-  font-weight: 800;
-  color: #4f46e5;
-  border-left: 4px solid #4f46e5;
+  font-weight: 600;
+  color: #2563eb;
+  border-left: 4px solid #2563eb;
   padding-left: 12px;
-  font-style: italic;
 }
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #ef4444; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+
+/* Error underlines: Grammar = red wavy, Vocab = blue wavy */
+.underline-grammar {
+  text-decoration: underline wavy #ef4444;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.underline-vocab {
+  text-decoration: underline wavy #2563eb;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.underline-cohesion {
+  text-decoration: underline wavy #7c3aed;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 
 @keyframes scan-line {
   0% { top: 0%; }
@@ -89,10 +111,10 @@ img {
   text-decoration-skip-ink: none;
 }
 
-/* Эффект при появлении ошибки */
+/* Error highlight (coral for errors only) */
 .error-highlight {
-  background-color: rgba(239, 68, 68, 0.1); /* bg-red-500/10 */
-  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+  background-color: rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
   border-radius: 4px;
 }
 

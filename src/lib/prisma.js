@@ -7,10 +7,17 @@ const globalForPrisma = globalThis;
 function createPgPool() {
   // Use DIRECT_URL for Prisma + pg adapter to avoid pooler limitations
   // (e.g. compound findUnique can fail through pooler). Fallback to DATABASE_URL.
-  const connectionString =
+  let connectionString =
     process.env.DIRECT_URL || process.env.DATABASE_URL;
-  const ssl = connectionString?.includes('sslmode=require')
-    ? { rejectUnauthorized: false }
+  // Explicit sslmode=verify-full avoids pg v9 / pg-connection-string v3 security warning
+  connectionString = connectionString?.replace(
+    /\bsslmode=(?:prefer|require|verify-ca)\b/i,
+    "sslmode=verify-full"
+  ) ?? connectionString;
+  const ssl = connectionString?.includes('sslmode=')
+    ? connectionString.includes('sslmode=verify-full')
+      ? { rejectUnauthorized: true }
+      : { rejectUnauthorized: false }
     : undefined;
 
   return new Pool({

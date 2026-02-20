@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from "next-auth/react";
+import { useTheme } from 'next-themes';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { 
   FireIcon, SunIcon, MoonIcon, Bars3Icon, XMarkIcon, 
-  BoltIcon, CreditCardIcon, ShieldCheckIcon 
+  BoltIcon, CreditCardIcon, ShieldCheckIcon,
+  GlobeAltIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 
 const stripePromise = loadStripe('pk_test_your_public_key_here');
 
 // --- ФОРМА ОПЛАТЫ STRIPE ---
-const CheckoutForm = ({ plan, darkMode, onClose }) => {
+const CheckoutForm = ({ plan, darkMode, onClose, isAgreed }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState(null);
@@ -19,7 +23,7 @@ const CheckoutForm = ({ plan, darkMode, onClose }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !isAgreed) return;
     setProcessing(true);
     setError(null);
 
@@ -38,6 +42,8 @@ const CheckoutForm = ({ plan, darkMode, onClose }) => {
     }
   };
 
+  const canSubmit = isAgreed && !processing;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
@@ -48,26 +54,46 @@ const CheckoutForm = ({ plan, darkMode, onClose }) => {
         }} />
       </div>
       {error && <div className="text-red-500 text-[10px] font-black uppercase text-center">{error}</div>}
-      <button disabled={processing} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-transform active:scale-95">
+      <button
+        type="submit"
+        disabled={!canSubmit}
+        className={`w-full py-4 rounded-2xl font-semibold tracking-tight text-xs shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${
+          canSubmit
+            ? 'bg-indigo-600 text-white shadow-indigo-600/30 hover:bg-indigo-700'
+            : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 opacity-50 cursor-not-allowed'
+        }`}
+      >
         {processing ? 'Processing...' : plan.price === '3.99$' ? 'Start 3-Day Free Trial' : `Pay ${plan?.price} Now`}
       </button>
     </form>
   );
 };
 const Navbar = ({ 
-  activeTab, setActiveTab, darkMode, setDarkMode, 
+  activeTab, setActiveTab, darkMode: darkModeProp, setDarkMode: setDarkModeProp, 
   isMenuOpen, setIsMenuOpen, onLoginClick 
 }) => {
   const { data: session, status } = useSession();
-   const isLoggedIn = status === "authenticated";
-  const credits = session?.user?.credits || 0;
+  const { resolvedTheme, setTheme } = useTheme();
+  const [themeMounted, setThemeMounted] = useState(false);
+  useEffect(() => { setThemeMounted(true); }, []);
+  const darkMode = darkModeProp !== undefined ? darkModeProp : (themeMounted && resolvedTheme === 'dark');
 
+  const isLoggedIn = status === "authenticated";
+  const credits = session?.user?.credits || 0;
   const [isPricingOpen, setIsPricingOpen] = useState(false);
-  
-  // ДОБАВЬТЕ ЭТУ СТРОКУ, ЕСЛИ ЕЕ НЕТ:
-  const [selectedPlan, setSelectedPlan] = useState(null); 
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAgreed, setIsAgreed] = useState(false);
+
+  useEffect(() => {
+    if (selectedPlan) setIsAgreed(false);
+  }, [selectedPlan]);
 
   const menuItems = ['Topics', 'Task 1', 'Task 2', 'Archive'];
+  const handleThemeToggle = () => {
+    if (!themeMounted) return;
+    setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+  };
   
   const plans = [
     { name: 'Trial', price: '3.99$', desc: '3 Days FREE, then 3.99$ per 5 days' },
@@ -83,34 +109,43 @@ const Navbar = ({
       }`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           
-          {/* ЛОГОТИП (Всегда виден) */}
-          <div className="flex items-center gap-2 text-2xl font-black italic cursor-pointer" onClick={() => setActiveTab('Topics')}>
-            <FireIcon className="w-8 h-8 text-red-600 shrink-0" /> 
+          {/* ЛОГОТИП — reset to main dashboard (Topics) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('Topics')}
+            className="flex items-center gap-2 text-2xl font-black italic cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded"
+            aria-label="Go to Topics"
+          >
+            <FireIcon className="w-8 h-8 text-indigo-600 shrink-0" /> 
             <span className={`${darkMode ? 'text-white' : 'text-slate-900'} uppercase tracking-tighter`}>
-              BAND<span className="text-red-600">BOOSTER</span>
+              BAND<span className="text-indigo-600">BOOSTER</span>
             </span>
-          </div>
+          </button>
 
           {/* ДЕСКТОПНОЕ МЕНЮ (Скрыто на мобилках) */}
           <div className="hidden md:flex items-center gap-6">
             <div className={`flex p-1 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
-              {menuItems.map(t => (
-                <button key={t} onClick={() => setActiveTab(t)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === t ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-red-500'}`}>{t}</button>
-              ))}
+              {menuItems.map((item) =>
+                item === 'Archive' ? (
+                  <Link key={item} href="/history" className={`px-4 py-2 rounded-xl font-semibold tracking-tight transition-all block ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</Link>
+                ) : (
+                  <button key={item} type="button" onClick={() => setActiveTab(item)} className={`px-4 py-2 rounded-xl font-semibold tracking-tight transition-all ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</button>
+                )
+              )}
             </div>
 
             <div className="flex items-center gap-4 border-l pl-6 border-slate-700/30">
               <div className="relative">
-                <button onClick={() => setIsPricingOpen(!isPricingOpen)} className="flex items-center gap-2 px-3 py-2 text-amber-500 text-[10px] font-black uppercase hover:bg-amber-500/10 rounded-xl transition-all">
+                <button onClick={() => setIsPricingOpen(!isPricingOpen)} className="flex items-center gap-2 px-3 py-2 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-xl transition-all">
                   <CreditCardIcon className="w-4 h-4" /> Pricing
                 </button>
                 <AnimatePresence>
                   {isPricingOpen && (
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className={`absolute right-0 mt-3 w-64 p-4 rounded-2xl shadow-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                        {plans.map(p => (
-                          <div key={p.name} onClick={() => { setSelectedPlan(p); setIsPricingOpen(false); }} className="p-3 mb-1 rounded-xl cursor-pointer hover:bg-red-600 hover:text-white group transition-all">
-                             <div className="flex justify-between font-black text-[10px] uppercase"><span>{p.name}</span><span className="text-red-600 group-hover:text-white">{p.price}</span></div>
-                             <div className="text-[8px] opacity-60 group-hover:opacity-100 tracking-tighter">{p.desc}</div>
+                          <div key={p.name} onClick={() => { setSelectedPlan(p); setIsPricingOpen(false); }} className="p-3 mb-1 rounded-xl cursor-pointer font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 transition-all">
+                             <div className="flex justify-between"><span>{p.name}</span><span className="text-indigo-600">{p.price}</span></div>
+                             <div className="text-[8px] opacity-60 tracking-tighter">{p.desc}</div>
                           </div>
                        ))}
                     </motion.div>
@@ -120,37 +155,83 @@ const Navbar = ({
             {isLoggedIn ? (
         <div className="flex items-center gap-3">
           {/* Кредиты */}
-          <div className="flex items-center gap-1 font-black text-xs text-red-600 bg-red-600/10 px-2 py-1 rounded-lg">
+          <div className="flex items-center gap-1 font-semibold text-xs text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight">
             {credits} <BoltIcon className="w-3 h-3" />
           </div>
           
-          {/* Аватарка или Кнопка выхода */}
-          <button 
-            onClick={() => signOut()} 
-            className="flex items-center gap-2 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
-            title="Logout"
-          >
-            {session.user.image ? (
-              <img src={session.user.image} className="w-7 h-7 rounded-full border border-red-600" alt="profile" />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center text-[10px] text-white font-black">
-                {session.user.name?.charAt(0) || 'U'}
-              </div>
-            )}
-          </button>
+          {/* User dropdown: Profile, Billing, Logout */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center gap-2 p-1 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-xl transition-all"
+              aria-expanded={isUserMenuOpen}
+              aria-haspopup="true"
+            >
+              {session.user.image ? (
+                <img src={session.user.image} className="w-7 h-7 rounded-full border border-slate-200 dark:border-slate-700" alt="profile" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] text-white font-semibold">
+                  {session.user.name?.charAt(0) || 'U'}
+                </div>
+              )}
+              <ChevronDownIcon className="w-4 h-4" />
+            </button>
+            <AnimatePresence>
+              {isUserMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" aria-hidden="true" onClick={() => setIsUserMenuOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute right-0 mt-2 w-48 py-1 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800 z-50 bg-white dark:bg-slate-900"
+                  >
+                    <Link
+                      href="/settings"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="block px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => { setIsPricingOpen(true); setIsUserMenuOpen(false); }}
+                      className="w-full text-left px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
+                    >
+                      Billing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { signOut(); setIsUserMenuOpen(false); }}
+                      className="w-full text-left px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 border-t border-slate-100 dark:border-slate-800"
+                    >
+                      Logout
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
               ) : (
-                <button onClick={onLoginClick} className="text-[10px] font-black uppercase px-4 py-2 bg-red-600 text-white rounded-xl">Login</button>
+                <button onClick={() => onLoginClick()} className="font-semibold tracking-tight px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">Login</button>
               )}
-              <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800">
-                {darkMode ? <SunIcon className="w-5 h-5 text-amber-400" /> : <MoonIcon className="w-5 h-5 text-red-600" />}
+              <button
+                type="button"
+                onClick={handleThemeToggle}
+                disabled={!themeMounted}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
+                aria-label={themeMounted && resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {themeMounted && resolvedTheme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
           {/* КНОПКА БУРГЕРА (Только мобильные) */}
           <div className="md:hidden flex items-center">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-red-600 p-2 transition-transform active:scale-90">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-600 dark:text-slate-400 hover:text-indigo-600 p-2 transition-transform active:scale-90">
               {isMenuOpen ? <XMarkIcon className="w-8 h-8" /> : <Bars3Icon className="w-8 h-8" />}
             </button>
           </div>
@@ -164,14 +245,18 @@ const Navbar = ({
                 
                 {/* 1. Навигация */}
                 <div className="grid grid-cols-2 gap-2">
-                  {menuItems.map(t => (
-                    <button key={t} onClick={() => { setActiveTab(t); setIsMenuOpen(false); }} className={`p-4 rounded-xl font-black uppercase text-[10px] text-center ${activeTab === t ? 'bg-red-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>{t}</button>
-                  ))}
+                  {menuItems.map((item) =>
+item === 'Archive' ? (
+                    <Link key={item} href="/history" onClick={() => setIsMenuOpen(false)} className={`p-4 rounded-xl font-semibold tracking-tight text-center block text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</Link>
+                  ) : (
+                    <button key={item} type="button" onClick={() => { setActiveTab(item); setIsMenuOpen(false); }} className={`p-4 rounded-xl font-semibold tracking-tight text-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800'}`}>{item}</button>
+                  )
+                  )}
                 </div>
 
                 {/* 2. Блок Pricing внутри бургера */}
                 <div className={`p-4 rounded-2xl border ${darkMode ? 'border-slate-800 bg-slate-800/30' : 'border-slate-100 bg-slate-50'}`}>
-                  <h4 className="text-[10px] font-black uppercase text-amber-500 mb-3 flex items-center gap-2 tracking-widest"><CreditCardIcon className="w-4 h-4" /> Subscription Plans</h4>
+                  <h4 className="text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 mb-3 flex items-center gap-2"><CreditCardIcon className="w-4 h-4" /> Subscription Plans</h4>
                   <div className="space-y-2">
                     {plans.map(p => (
                       <button key={p.name} onClick={() => { setSelectedPlan(p); setIsMenuOpen(false); }} className="w-full flex justify-between items-center p-4 rounded-xl bg-white dark:bg-slate-900 border dark:border-slate-700 shadow-sm active:scale-[0.98] transition-transform">
@@ -179,19 +264,24 @@ const Navbar = ({
                           <div className="text-[10px] font-black uppercase dark:text-white">{p.name}</div>
                           <div className="text-[8px] text-slate-500 font-bold uppercase">{p.desc}</div>
                         </div>
-                        <div className="text-red-600 font-black text-xs">{p.price}</div>
+                        <div className="text-indigo-600 font-semibold text-xs">{p.price}</div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* 3. Утилиты (Тема и Логин) */}
+                {/* 3. Утилиты: только Theme и Login (Settings — в Sidebar) */}
                 <div className="flex gap-2">
-                   <button onClick={() => setDarkMode(!darkMode)} className="flex-1 p-4 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-3 font-black uppercase text-[10px] dark:text-white transition-colors">
-                      {darkMode ? <><SunIcon className="w-5 h-5 text-amber-400" /> Day</> : <><MoonIcon className="w-5 h-5 text-red-600" /> Night</>}
+                   <button
+                     type="button"
+                     onClick={handleThemeToggle}
+                     disabled={!themeMounted}
+                     className="flex-1 p-4 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-3 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors"
+                   >
+                     {themeMounted && resolvedTheme === 'dark' ? <><SunIcon className="w-5 h-5" /> Day</> : <><MoonIcon className="w-5 h-5" /> Night</>}
                    </button>
                    {!isLoggedIn && (
-                     <button onClick={onLoginClick} className="flex-1 p-4 bg-red-600 text-white rounded-xl font-black uppercase text-[10px] shadow-lg shadow-red-600/20">Login</button>
+                     <button onClick={() => onLoginClick()} className="flex-1 p-4 bg-indigo-600 text-white rounded-xl font-semibold tracking-tight shadow-lg hover:bg-indigo-700 transition-colors">Login</button>
                    )}
                 </div>
 
@@ -211,19 +301,39 @@ const Navbar = ({
                 <div className="italic font-black uppercase text-2xl tracking-tighter">
                   <h3>{selectedPlan.price === '0$' ? 'Start Trial' : 'Checkout'}</h3>
                 </div>
-                <button onClick={() => setSelectedPlan(null)} className="p-2 hover:bg-red-500/10 rounded-full transition-colors"><XMarkIcon className="w-6 h-6" /></button>
+                <button onClick={() => setSelectedPlan(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-full transition-colors"><XMarkIcon className="w-6 h-6" /></button>
               </div>
 
               <div className={`mb-8 p-5 rounded-2xl border-2 border-dashed ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-100 bg-slate-50'}`}>
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-black text-xs uppercase text-slate-500">{selectedPlan.name} Plan</span>
-                  <span className="text-2xl font-black text-red-600">{selectedPlan.price}</span>
+                  <span className="text-2xl font-semibold text-indigo-600">{selectedPlan.price}</span>
                 </div>
                 <p className="text-[9px] font-bold uppercase text-slate-400 tracking-tight">{selectedPlan.desc}</p>
               </div>
 
+              <label className={`flex items-start gap-3 mb-6 cursor-pointer select-none ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <input
+                  type="checkbox"
+                  checked={isAgreed}
+                  onChange={(e) => setIsAgreed(e.target.checked)}
+                  className="mt-1 w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-red-600 focus:ring-red-500 focus:ring-offset-0 dark:focus:ring-offset-slate-900 accent-red-600"
+                />
+                <span className="text-sm font-medium tracking-tight">
+                  I agree to the{' '}
+                  <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-red-600 dark:text-red-400 hover:underline">
+                    Terms of Service
+                  </Link>
+                  {' '}and{' '}
+                  <Link href="/refund" target="_blank" rel="noopener noreferrer" className="text-red-600 dark:text-red-400 hover:underline">
+                    Refund Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+
               <Elements stripe={stripePromise}>
-                <CheckoutForm plan={selectedPlan} darkMode={darkMode} onClose={() => setSelectedPlan(null)} />
+                <CheckoutForm plan={selectedPlan} darkMode={darkMode} onClose={() => setSelectedPlan(null)} isAgreed={isAgreed} />
               </Elements>
 
               <div className="mt-8 flex justify-center items-center gap-2 text-[9px] font-black uppercase text-slate-500 opacity-50 italic">

@@ -1,0 +1,2 @@
+-- Placeholder: migration 20260213221232 was applied on the database from another environment.
+-- Restored locally so migration history matches; do not re-run.
