@@ -4,16 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, EnvelopeIcon, LockClosedIcon, UserIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { signIn } from 'next-auth/react'; 
 
-const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
+const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
   const validate = () => {
     setError('');
+    setMessage('');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address');
@@ -36,6 +38,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
 
     setIsLoading(true);
     setError('');
+    setMessage('');
 
     if (isLogin) {
       // --- ВХОД ---
@@ -73,6 +76,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
         const data = await res.json();
 
         if (res.ok) {
+          setMessage('Success! You can now log in.');
           // После регистрации сразу логиним
           await signIn('credentials', {
             email: formData.email,
@@ -117,7 +121,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             <h2 className="text-2xl font-semibold tracking-tight text-slate-800 dark:text-white">
               {isLogin ? 'Welcome back' : 'Create account'}
             </h2>
-            {message && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{message}</p>}
+            {(message || messageProp) && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{message || messageProp}</p>}
           </div>
 
           <AnimatePresence mode="wait">
@@ -209,6 +213,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setMessage('');
               }}
               className="text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors"
             >

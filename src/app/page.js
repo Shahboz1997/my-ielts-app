@@ -351,6 +351,16 @@ import {
     }
   }, [sessionStatus, session?.user?.credits]);
 
+  // После Google OAuth редирект иногда приходит с ?error=OAuthAccountNotLinked, хотя связка аккаунта и сессия уже созданы — обновляем сессию и убираем ошибку из URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') !== 'OAuthAccountNotLinked') return;
+    update().then(() => {
+      router.replace('/', { scroll: false });
+    });
+  }, [update, router]);
+
   const handleAnalyze = async (mode) => {
     if (!session?.user) {
       setIsAuthOpen(true);

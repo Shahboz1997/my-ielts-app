@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 
 // Конфигурация AuthOptions
 export const authOptions = {
+  trustHost: true, // нужен для OAuth callback на localhost и Vercel
   adapter: PrismaAdapter(getPrisma()),
   providers: [
     // 1. Вход через Google
@@ -53,6 +54,48 @@ export const authOptions = {
     strategy: "jwt", // Обязательно для Credentials и Middleware
   },
   callbacks: {
+    // Отладка + связывание аккаунта Google с существующим пользователем по email
+    async signIn({ user, account, profile }) {
+      console.log("DEBUG SIGNIN:", {
+        email: user?.email,
+        provider: account?.provider,
+        profileEmail: profile?.email,
+      });
+      if (account?.provider === "google" && user?.email) {
+        const prisma = getPrisma();
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+        });
+        if (existingUser) {
+          try {
+            await prisma.account.upsert({
+              where: {
+                provider_providerAccountId: {
+                  provider: "google",
+                  providerAccountId: account.providerAccountId,
+                },
+              },
+              create: {
+                userId: existingUser.id,
+                type: account.type ?? "oauth",
+                provider: "google",
+                providerAccountId: account.providerAccountId,
+                access_token: account.access_token ?? null,
+                refresh_token: account.refresh_token ?? null,
+                expires_at: account.expires_at ?? null,
+              },
+              update: {},
+            });
+            console.log("DEBUG SIGNIN: Account linked for", user.email, "providerAccountId", account.providerAccountId);
+          } catch (err) {
+            console.error("DEBUG SIGNIN: upsert Account failed", err);
+          }
+        } else {
+          console.log("DEBUG SIGNIN: No existing user for email", user.email, "- adapter will create new user");
+        }
+      }
+      return true;
+    },
     // Сохраняем ID и Кредиты пользователя в JWT токене
     async jwt({ token, user, trigger, session }) {
       if (user) {
