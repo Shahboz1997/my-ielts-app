@@ -14,24 +14,51 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   metadataBase: new URL(
-    process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3000' 
+    process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3000'
       : 'https://bandbooster.com'
   ),
-  title: "BandBooster | AI IELTS Writing Checker & Examiner",
-  description: "Improve your IELTS Writing score with AI...",
+  title: 'BANDBOOSTER | AI-Powered IELTS Writing Examiner & Essay Scorer',
+  description:
+    'Get instant Band 9.0 feedback on your IELTS Task 1 and Task 2. Our AI examiner analyses your grammar, vocabulary, and coherence using official criteria.',
+  keywords: [
+    'IELTS writing',
+    'IELTS essay scorer',
+    'AI IELTS examiner',
+    'Band 9 feedback',
+    'Task 1 Task 2',
+    'IELTS preparation',
+    'academic writing',
+    'English language assessment',
+  ],
+  authors: [{ name: 'BANDBOOSTER' }],
+  openGraph: {
+    type: 'website',
+    title: 'Boost Your IELTS Score with AI | BANDBOOSTER',
+    description:
+      'Stop guessing your score. Get detailed academic evaluation for Task 1 and Task 2 in seconds.',
+    images: ['/og-image.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Master IELTS Writing with BANDBOOSTER',
+    description:
+      'Stop guessing your score. Get detailed academic evaluation for Task 1 and Task 2 in seconds.',
+    images: ['/og-image.png'],
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport = {
-  themeColor: "#4f46e5",
-  width: "device-width",
+  themeColor: '#dc2626',
+  width: 'device-width',
   initialScale: 1,
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 min-h-screen`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-slate-900 dark:bg-[#030712] dark:text-slate-100 transition-colors duration-500 min-h-screen`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Providers>
             {children}

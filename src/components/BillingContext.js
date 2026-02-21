@@ -7,9 +7,9 @@ export const BillingProvider = ({ children }) => {
   const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   const plans = [
-    { id: 'trial_paid', name: 'Paid Trial', price: '3.99$', desc: 'Full access for 5 days' },
-    { id: 'monthly', name: 'Monthly', price: '14.99$', desc: 'Best for students' },
-    { id: 'yearly', name: 'Yearly', price: '39$', desc: 'Save 70% per year' },
+    { id: 'credits_small', name: '5 Reviews', price: '4$', desc: 'Perfect for a quick check' },
+    { id: 'weekly', name: '7 Days Unlimited', price: '12$', desc: 'Best for last-minute prep', popular: true },
+    { id: 'monthly', name: '30 Days Pro', price: '30$', desc: 'Master every criteria' },
   ];
 
   const openPricing = () => setIsPricingOpen(true);

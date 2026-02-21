@@ -51,8 +51,18 @@ export async function POST(request) {
 
   } catch (error) {
     console.error("REGISTER_ERROR:", error);
+    const isDbUnreachable = error?.code === "P1001" || /Can't reach database server/i.test(error?.message ?? "");
+    if (isDbUnreachable) {
+      return NextResponse.json(
+        {
+          error:
+            "База данных недоступна. Проверьте DATABASE_URL в .env.local: для Supabase используйте порт 6543 (Session) и добавьте ?sslmode=require.",
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { error: "Ошибка сервера при регистрации" }, 
+      { error: "Ошибка сервера при регистрации" },
       { status: 500 }
     );
   }

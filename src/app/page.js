@@ -217,6 +217,7 @@ import {
   const [loading, setLoading] = useState(false);
   const synonymMap = { "good": "excellent, superb", "bad": "atrocious, detrimental" };
   const [genLoading, setGenLoading] = useState(false);
+  const [genTopicError, setGenTopicError] = useState(null);
   const { resolvedTheme, setTheme } = useTheme();
   const [themeMounted, setThemeMounted] = useState(false);
   useEffect(() => {
@@ -1439,14 +1440,20 @@ const insertLinkingWord = (word) => {
             <div className="flex flex-col gap-3 w-full max-w-[240px] md:max-w-xs mx-auto">
               <input
                 value={customKeyword}
-                onChange={(e) => setCustomKeyword(e.target.value)}
+                onChange={(e) => { setCustomKeyword(e.target.value); setGenTopicError(null); }}
                 placeholder="Enter Keyword..."
                 className={`px-4 py-2.5 md:py-3 rounded-xl border outline-none text-center text-sm font-medium transition-all ${
                   darkMode ? "bg-slate-950 border-slate-700 focus:border-indigo-500 text-white" : "bg-white border-slate-200 focus:border-indigo-500 shadow-sm"
                 }`}
               />
+              {genTopicError && (
+                <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                  {genTopicError}
+                </p>
+              )}
               <button
                 onClick={async () => {
+                  setGenTopicError(null);
                   setGenLoading(true);
                   try {
                     const res = await axios.post("/api/check", { generateTopic: true, keyword: customKeyword });
@@ -1456,7 +1463,11 @@ const insertLinkingWord = (word) => {
                       setActiveTab("Task 2");
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }
-                  } catch (e) { console.error(e); }
+                  } catch (e) {
+                    const msg = e.response?.data?.error || e.message || (e.response?.status === 500 ? "Server error. Check OPENAI_API_KEY in .env.local and try again." : "Request failed. Please try again.");
+                    setGenTopicError(msg);
+                    console.error(e);
+                  }
                   finally { setGenLoading(false); }
                 }}
                 disabled={genLoading}

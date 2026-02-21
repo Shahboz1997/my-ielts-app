@@ -4,7 +4,9 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import nodemailer from 'nodemailer';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 const TASK1_FOCUS = `TASK 1 (Academic) FOCUS:
 - Task Achievement: Accurate reporting of main trends, key features, and data; clear overview; no irrelevant detail.
@@ -136,6 +138,9 @@ await transporter.sendMail({
     }
     // --- 1. РЕЖИМ: Глубокий анализ изображения (Vision) ---
     if (body.describeImage && body.image) {
+      if (!openai) {
+        return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 });
+      }
       try {
         let finalImage;
         if (body.image.startsWith('http')) {
@@ -168,6 +173,9 @@ await transporter.sendMail({
 
     // --- 2. РЕЖИМ: Генерация случайного Task 1 (Текст) ---
     if (body.generateTask1) {
+      if (!openai) {
+        return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 });
+      }
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -183,14 +191,39 @@ await transporter.sendMail({
 
     // --- 3. РЕЖИМ: Генерация темы Task 2 ---
     if (body.generateTopic) {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are an IELTS Examiner. Generate a Task 2 question. Return ONLY the text." },
-          { role: "user", content: `Topic: ${body.keyword || 'General'}` }
-        ]
-      });
-      return NextResponse.json({ question: response.choices[0].message.content });
+      if (!openai) {
+        return NextResponse.json(
+          { error: 'OpenAI API key is not configured. Add OPENAI_API_KEY to .env.local.' },
+          { status: 503 }
+        );
+      }
+      const keyword = typeof body.keyword === 'string' ? body.keyword.trim() : '';
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "You are an IELTS Examiner. Generate a Task 2 question. Return ONLY the text." },
+            { role: "user", content: `Topic: ${keyword || 'General'}` }
+          ]
+        });
+        const raw = response?.choices?.[0]?.message?.content;
+        const text = (typeof raw === 'string' ? raw : '').trim();
+        if (!text) {
+          return NextResponse.json(
+            { error: 'Could not generate a topic. Please try again.' },
+            { status: 502 }
+          );
+        }
+        return NextResponse.json({ question: text });
+      } catch (err) {
+        console.error('Generate topic error:', err);
+        const message = err?.message || err?.error?.message || 'Topic generation failed.';
+        const status = err?.status === 401 ? 401 : 500;
+        return NextResponse.json(
+          { error: message },
+          { status }
+        );
+      }
     }
 
     // --- 4. ОСНОВНОЙ РЕЖИМ: Глубокий анализ эссе ---
@@ -203,6 +236,8 @@ await transporter.sendMail({
       return NextResponse.json({ error: "Text is too short for analysis." }, { status: 400 });
     }
 
+    const { auth } = await import('@/app/api/auth/[...nextauth]/route');
+    const { getPrisma } = await import('@/lib/prisma');
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Please sign in to check your essay." }, { status: 401 });
@@ -211,6 +246,9 @@ await transporter.sendMail({
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!user || (user.credits != null && user.credits < 1)) {
       return NextResponse.json({ error: "You have run out of credits. Please refill to continue." }, { status: 403 });
+    }
+    if (!openai) {
+      return NextResponse.json({ error: 'OpenAI API key is not configured.' }, { status: 503 });
     }
 
     const examinerPrompt = buildExaminerPrompt(taskCriteriaName, isT1);

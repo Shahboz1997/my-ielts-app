@@ -11,11 +11,16 @@ export default async function HistoryDetailPage({ params }) {
   const id = typeof resolved?.id === 'string' ? resolved.id : resolved?.id?.[0];
   if (!id) notFound();
 
-  const prisma = getPrisma();
-
-  const check = await prisma.check.findFirst({
-    where: { id, userId: session.user.id },
-  });
+  let check = null;
+  try {
+    const prisma = getPrisma();
+    check = await prisma.check.findFirst({
+      where: { id, userId: session.user.id },
+    });
+  } catch (err) {
+    console.error("History detail DB error:", err);
+    notFound();
+  }
   if (!check) notFound();
 
   return <AnalyticalLab check={check} />;

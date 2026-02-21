@@ -11,8 +11,7 @@ import {
   GlobeAltIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
-
-const stripePromise = loadStripe('pk_test_your_public_key_here');
+import { useBilling } from '@/components/BillingContext';
 
 // --- ФОРМА ОПЛАТЫ STRIPE ---
 const CheckoutForm = ({ plan, darkMode, onClose, isAgreed }) => {
@@ -84,6 +83,25 @@ const Navbar = ({
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+  const [stripePromise, setStripePromise] = useState(null);
+  const [stripeLoadError, setStripeLoadError] = useState(null);
+
+  useEffect(() => {
+    const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!pk || !pk.startsWith('pk_')) {
+      setStripeLoadError('Stripe key not configured');
+      return;
+    }
+    let cancelled = false;
+    loadStripe(pk)
+      .then((stripe) => {
+        if (!cancelled && stripe) setStripePromise(Promise.resolve(stripe));
+      })
+      .catch(() => {
+        if (!cancelled) setStripeLoadError('Failed to load Stripe.js');
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (selectedPlan) setIsAgreed(false);
@@ -104,8 +122,8 @@ const Navbar = ({
   // ... остальной код
   return (
     <>
-      <nav className={`sticky top-0 z-50 p-4 border-b backdrop-blur-md transition-colors duration-300 ${
-        darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200'
+      <nav className={`sticky top-0 z-50 p-4 border-b backdrop-blur-xl transition-colors duration-300 ${
+        darkMode ? 'bg-[#030712]/80 border-slate-800/50' : 'bg-white/80 border-slate-100'
       }`}>
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           
@@ -116,9 +134,9 @@ const Navbar = ({
             className="flex items-center gap-2 text-2xl font-black italic cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded"
             aria-label="Go to Topics"
           >
-            <FireIcon className="w-8 h-8 text-indigo-600 shrink-0" /> 
-            <span className={`${darkMode ? 'text-white' : 'text-slate-900'} uppercase tracking-tighter`}>
-              BAND<span className="text-indigo-600">BOOSTER</span>
+            <FireIcon className="w-8 h-8 text-red-600 shrink-0" /> 
+            <span className={`${darkMode ? 'text-white' : 'text-slate-900'} uppercase tracking-tighter font-black`}>
+              BAND<span className="text-red-600">BOOSTER</span>
             </span>
           </button>
 
@@ -127,9 +145,9 @@ const Navbar = ({
             <div className={`flex p-1 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
               {menuItems.map((item) =>
                 item === 'Archive' ? (
-                  <Link key={item} href="/history" className={`px-4 py-2 rounded-xl font-semibold tracking-tight transition-all block ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</Link>
+                  <Link key={item} href="/history" className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all block ${activeTab === item ? 'bg-red-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-red-600'}`}>{item}</Link>
                 ) : (
-                  <button key={item} type="button" onClick={() => setActiveTab(item)} className={`px-4 py-2 rounded-xl font-semibold tracking-tight transition-all ${activeTab === item ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</button>
+                  <button key={item} type="button" onClick={() => setActiveTab(item)} className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all ${activeTab === item ? 'bg-red-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-red-600'}`}>{item}</button>
                 )
               )}
             </div>
@@ -331,9 +349,19 @@ const Navbar = ({
                 </span>
               </label>
 
-              <Elements stripe={stripePromise}>
-                <CheckoutForm plan={selectedPlan} darkMode={darkMode} onClose={() => setSelectedPlan(null)} isAgreed={isAgreed} />
-              </Elements>
+              {stripeLoadError && (
+                <div className="py-4 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-sm text-center">
+                  {stripeLoadError}. Add <code className="text-xs bg-black/10 dark:bg-white/10 px-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to <code className="text-xs bg-black/10 dark:bg-white/10 px-1 rounded">.env.local</code> with your Stripe publishable key (pk_test_... or pk_live_...).
+                </div>
+              )}
+              {!stripeLoadError && !stripePromise && (
+                <div className="py-8 text-slate-500 dark:text-slate-400 text-sm text-center">Loading payment form…</div>
+              )}
+              {!stripeLoadError && stripePromise && (
+                <Elements stripe={stripePromise}>
+                  <CheckoutForm plan={selectedPlan} darkMode={darkMode} onClose={() => setSelectedPlan(null)} isAgreed={isAgreed} />
+                </Elements>
+              )}
 
               <div className="mt-8 flex justify-center items-center gap-2 text-[9px] font-black uppercase text-slate-500 opacity-50 italic">
                 <ShieldCheckIcon className="w-4 h-4" /> 256-bit Encrypted Secure Payment
