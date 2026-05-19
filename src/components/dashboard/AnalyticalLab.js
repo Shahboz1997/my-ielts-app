@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Download, ArrowLeft, Zap, BookOpen, GitBranch, ChevronDown, Sparkles } from 'lucide-react';
 import { generateStratumWritingPdfFromCheck } from '@/lib/stratumWritingPdf';
 import SuggestedRewriteKaraoke from './SuggestedRewriteKaraoke';
+import LexicalUpgradePanel from '@/components/LexicalUpgradePanel';
+import { mergeLexicalUpgrades, getWeakWordsSet } from '@/lib/lexicalUpgrade';
 
 const FEED_LABEL = { grammar: 'Grammar', lexical: 'Vocabulary', cohesion: 'Cohesion', logic: 'Logic' };
 
@@ -462,7 +464,16 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
       };
     });
   }, [feedback.errors, corrections]);
-  const lexicalUpgrade = Array.isArray(feedback.lexical_upgrade) ? feedback.lexical_upgrade : [];
+  const lexicalUpgradeRaw = Array.isArray(feedback.lexical_upgrade) ? feedback.lexical_upgrade : [];
+  const lexicalUpgrade = useMemo(
+    () =>
+      mergeLexicalUpgrades({
+        apiRows: lexicalUpgradeRaw,
+        essayText: userText || '',
+        isT1: taskTypeNormalized === 'task1',
+      }),
+    [lexicalUpgradeRaw, userText, taskTypeNormalized]
+  );
   const linkingWords = feedback?.analysis?.linking_words ?? feedback?.linking_words ?? null;
   const repetitionAlertsRaw = feedback?.analysis?.word_repetition ?? feedback?.word_repetition ?? [];
   const repetitionAlerts = Array.isArray(repetitionAlertsRaw) ? repetitionAlertsRaw : [];
@@ -495,14 +506,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
 
   const wordLevelsMap = useMemo(() => buildWordLevelsMap(feedback.word_levels), [feedback.word_levels]);
   const errorWordsSet = useMemo(() => buildErrorWordsSet(feedback.errors, corrections), [feedback.errors, corrections]);
-  const weakWordsSet = useMemo(() => {
-    const set = new Set();
-    (lexicalUpgrade || []).forEach((row) => {
-      const w = (row.band_56_word || '').toString().toLowerCase().trim().replace(/[.,!?;:()]/g, '');
-      if (w) set.add(w);
-    });
-    return set;
-  }, [lexicalUpgrade]);
+  const weakWordsSet = useMemo(() => getWeakWordsSet(lexicalUpgrade), [lexicalUpgrade]);
   const useTypedErrorHighlight = viewMode === 'feedback' && errors.length > 0;
 
   const handleSavePromptToBank = useCallback(() => {
@@ -747,33 +751,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
     }
     handleAutoFix(original, fixed);
   }, [handleReplaceWord, handleAutoFix]);
-
-  /** Одним кликом заменить первое вхождение каждого слабого слова на первый синоним. */
-  const handleApplyAllUpgrades = useCallback(() => {
-    if (!setUserText || !lexicalUpgrade.length) return;
-    const entries = lexicalUpgrade
-      .map((row) => {
-        const w = (row.band_56_word || '').trim();
-        const syns = Array.isArray(row.band_89_synonyms) ? row.band_89_synonyms : (row.band_89_synonyms ? String(row.band_89_synonyms).split(',').map((s) => s.trim()) : []);
-        const first = syns[0]?.trim();
-        return w && first ? { weakWord: w, firstSyn: first } : null;
-      })
-      .filter(Boolean);
-    if (entries.length === 0) return;
-    const lower = userText.toLowerCase();
-    const replacements = entries
-      .map(({ weakWord, firstSyn }) => {
-        const idx = lower.indexOf(weakWord.toLowerCase());
-        return idx === -1 ? null : { idx, weakWord, firstSyn, len: weakWord.length };
-      })
-      .filter(Boolean);
-    replacements.sort((a, b) => b.idx - a.idx);
-    let result = userText;
-    replacements.forEach(({ idx, firstSyn, len }) => {
-      result = result.slice(0, idx) + firstSyn + result.slice(idx + len);
-    });
-    setUserText(result);
-  }, [setUserText, userText, lexicalUpgrade]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -1353,6 +1330,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
             </div>
           </div>
 
+
           {(linkingWords || repetitionAlerts.length > 0) && (
             <div className="rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6 sm:py-3 border-b border-slate-100 dark:border-white/5">
@@ -1506,82 +1484,12 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
             </div>
           )}
 
-          <div className="rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 shadow-sm overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6 sm:py-3 border-b border-slate-100 dark:border-white/5">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 text-xs dark:bg-indigo-500/10 dark:text-indigo-300" aria-hidden>
-                  🪄
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    Lexical upgrade
-                  </span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                    Swap weak words for sharper choices
-                  </span>
-                </div>
-              </div>
-              {lexicalUpgrade.length > 0 && setUserText && (
-                <button
-                  type="button"
-                  onClick={handleApplyAllUpgrades}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-amber-500/90 hover:bg-amber-500 text-white shadow-sm border border-amber-400/50 transition-colors"
-                  title="Заменить первое вхождение каждого слабого слова на первый синоним"
-                >
-                  <span aria-hidden>🪄</span>
-                  Применить все улучшения
-                </button>
-              )}
-            </div>
-            <div className="p-3 sm:p-4">
-              {lexicalUpgrade.length === 0 ? (
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 italic py-4 text-center">
-                  No upgrades needed yet. Use more academic language to see suggestions.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  {lexicalUpgrade.map((row, i) => {
-                    const weakWord = row.band_56_word;
-                    const synonymsRaw = Array.isArray(row.band_89_synonyms)
-                      ? row.band_89_synonyms
-                      : (row.band_89_synonyms ? String(row.band_89_synonyms).split(',') : []);
-                    const synonyms = synonymsRaw.map((s) => s.trim()).filter(Boolean);
-
-                    if (!weakWord || synonyms.length === 0) return null;
-
-                    return (
-                      <div
-                        key={`${weakWord}-${i}`}
-                        className="flex flex-col gap-1.5 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-slate-900/60 px-2.5 py-2"
-                      >
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-medium shrink-0">
-                            B5–6
-                          </span>
-                          <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-100 italic">
-                            {weakWord}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {synonyms.map((syn, idx) => (
-                            <button
-                              key={`${weakWord}-${syn}-${idx}`}
-                              type="button"
-                              className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-medium hover:bg-indigo-100 hover:text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20 transition-colors"
-                              onClick={() => onReplaceWord(weakWord, syn, 1, i)}
-                              title={`Replace "${weakWord}" with "${syn}" in your essay`}
-                            >
-                              {syn}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          <LexicalUpgradePanel
+            rows={lexicalUpgrade}
+            onReplaceWord={onReplaceWord}
+            setUserText={setUserText}
+            userText={userText}
+          />
 
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-fit">
             <div className="flex flex-wrap gap-2">

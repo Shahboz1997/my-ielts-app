@@ -1,5 +1,5 @@
 import LegalPageLayout from '@/components/LegalPageLayout';
-import { SUPPORT_EMAIL } from '@/lib/support';
+import { BUSINESS_ADDRESS, LEGAL_COMPANY_NAME, REGISTERED_AGENT_ADDRESS, REGISTERED_AGENT_NAME, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export const metadata = {
   title: 'Terms of Service | STRATUM.ai',
@@ -60,11 +60,24 @@ export default function TermsPage() {
       </section>
 
       <section>
+        <h2>Company</h2>
+        <p>
+          These Terms of Service are entered into with {LEGAL_COMPANY_NAME}, which operates
+          STRATUM.ai. Principal office and mailing address: {BUSINESS_ADDRESS}. Registered agent:{' '}
+          {REGISTERED_AGENT_NAME}, {REGISTERED_AGENT_ADDRESS}.
+        </p>
+      </section>
+
+      <section>
         <h2>Contact</h2>
         <p>
           For questions about these Terms of Service, contact us at{' '}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="text-indigo-600 dark:text-indigo-400 hover:underline">
             {SUPPORT_EMAIL}
+          </a>{' '}
+          or{' '}
+          <a href={SUPPORT_PHONE_TEL} className="text-indigo-600 dark:text-indigo-400 hover:underline">
+            {CONTACT_SUPPORT_LABEL}
           </a>.
         </p>
       </section>

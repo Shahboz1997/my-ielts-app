@@ -16,6 +16,7 @@ import { normalizeSubtopic } from '@/lib/errorSubtopics.js';
 import { writingProfileTag } from '@/lib/writingProfileCache.js';
 import { CREDITS_EXHAUSTED_CODE } from '@/lib/credits';
 import { SUPPORT_EMAIL } from '@/lib/support';
+import { normalizeLexicalUpgradeFromApi } from '@/lib/lexicalUpgrade';
 
 const API_KEY_ERROR_MSG = 'Check API Key. Add a valid OPENAI_API_KEY to .env.local.';
 
@@ -295,7 +296,11 @@ ${baseCriteria}
 
 ${errorsSpec}
 
-Keep "analysis.word_repetition" and "lexical_upgrade" as before.
+LEXICAL UPGRADE (Task 1 — data description only):
+- Return 8–15 items in "lexical_upgrade" for weak Band 5–6 words that ACTUALLY appear in the essay.
+- Each item: { "band_56_word", "c1_synonyms": [2 strings], "c2_synonyms": [2 strings] }.
+- C1 = formal academic (CEFR C1); C2 = rarer, precise (CEFR C2). Fit chart/report register.
+- Focus: trends, comparisons, approximators, process verbs. NO opinion phrases (I think, in my opinion).
 
 ADDITIONAL REQUIREMENT (Task 1 only):
 Return a "task1_strategy" object that focuses on STRUCTURE and GROUPING (not grammar). It must be actionable and brief:
@@ -336,7 +341,11 @@ ${baseCriteria.replace('Task Achievement', 'Task Response')}
 
 ${errorsSpec}
 
-Keep "analysis.word_repetition" and "lexical_upgrade" as before.
+LEXICAL UPGRADE (Task 2 — argumentation):
+- Return 8–15 items in "lexical_upgrade" for weak Band 5–6 words that ACTUALLY appear in the essay.
+- Each item: { "band_56_word", "c1_synonyms": [2 strings], "c2_synonyms": [2 strings] }.
+- C1 = formal academic; C2 = precise/rare but natural in essays. Prefer stance, cause-effect, hedging lexis.
+- Avoid chart-only verbs unless describing data.
 
 ADDITIONAL REQUIREMENT (Task 2 only):
 Return an "idea_development" object that evaluates DEPTH of ideas, not grammar/wording. It must be practical and specific:
@@ -426,7 +435,12 @@ OUTPUT: Return **ONLY** valid JSON (no markdown fences). Shape:
   "highlights": [],
   "corrections": [],
   "lexical_upgrade": [
-    { "band_56_word": "string", "band_89_synonyms": ["string", "string", "string"] }
+    {
+      "band_56_word": "weak word as in essay",
+      "c1_synonyms": ["C1 alternative", "C1 alternative"],
+      "c2_synonyms": ["C2 alternative", "C2 alternative"],
+      "band_89_synonyms": ["optional legacy — same as merged c1+c2"]
+    }
   ],
   "analysis": {
     "linking_words": { "score": 0, "found": [], "suggestions": [] },
@@ -662,7 +676,7 @@ export async function POST(req) {
       hasEssay2: typeof body?.essay2 === 'string' && body.essay2.trim().length > 0,
       analysisMode: body?.analysisMode,
     });
-    // Footer feedback is handled by POST /api/feedback (no OpenAI key required).
+    // Footer feedback opens the user's mail client (mailto) — no server SMTP.
     // --- 1. РЕЖИМ: Глубокий анализ изображения (Vision / OCR) ---
     // Frontend sends POST with { describeImage: true, image: base64OrUrl }. API key is read at request time via getOpenAIClient().
     if (body.describeImage && body.image) {
@@ -971,6 +985,7 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
       band_descriptor: c.band_descriptor || ''
     }));
     if (!Array.isArray(result.lexical_upgrade)) result.lexical_upgrade = [];
+    result.lexical_upgrade = normalizeLexicalUpgradeFromApi(result.lexical_upgrade);
     if (!Array.isArray(result.logical_errors)) result.logical_errors = [];
     result.logical_errors = result.logical_errors.map((e) => ({
       phrase: typeof e?.phrase === 'string' ? e.phrase : typeof e?.text === 'string' ? e.text : '',

@@ -1,10 +1,27 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDF_BRAND_TAGLINE, PDF_CONTACT_LINE, PDF_LEGAL_LINE } from '@/lib/support';
 
 const themeRed = [220, 38, 38];
 const themeDark = [15, 23, 42];
 const themeBlue = [37, 99, 235];
 const themeGreen = [15, 118, 110];
+const greyText = [100, 116, 139];
+
+function addPdfFooters(doc) {
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFontSize(7);
+    doc.setTextColor(...greyText);
+    doc.text(`Page ${p} / ${totalPages}`, 105, 282, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text(PDF_BRAND_TAGLINE, 105, 287, { align: 'center' });
+    doc.setFontSize(6);
+    doc.text(PDF_LEGAL_LINE, 105, 292, { align: 'center' });
+    doc.text(PDF_CONTACT_LINE, 105, 296, { align: 'center' });
+  }
+}
 
 function addWatermark(doc) {
   try {
@@ -79,9 +96,19 @@ export function downloadCheckReport(check) {
 
   doc.setFontSize(10);
   doc.setTextColor(60, 60, 60);
-  const essayLines = doc.splitTextToSize(essay, 170);
-  doc.text(essayLines, 20, currentY);
-  currentY += essayLines.length * 5 + 15;
+  const essayParas = String(essay || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split(/\n\s*\n+|\n+/)
+    .map((p) => p.replace(/[ \t]+/g, ' ').trim())
+    .filter(Boolean);
+  essayParas.forEach((para, idx) => {
+    if (idx > 0) currentY += 6;
+    const lines = doc.splitTextToSize(para, 170);
+    doc.text(lines, 20, currentY);
+    currentY += lines.length * 5 + 2;
+  });
+  currentY += 10;
 
   if (result.improvement_strategy) {
     doc.setTextColor(...themeBlue);
@@ -133,5 +160,6 @@ export function downloadCheckReport(check) {
   }
 
   const filename = `STRATUM_Report_${isT1 ? 'T1' : 'T2'}_${check.id.slice(-8)}_${Date.now()}.pdf`;
+  addPdfFooters(doc);
   doc.save(filename);
 }

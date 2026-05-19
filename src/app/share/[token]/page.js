@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/prisma";
 import { verifyShareToken } from "@/lib/shareToken";
 import { resolvePublicSiteOrigin } from "@/lib/publicSiteUrl";
-import CompareDraftRewrite from "./CompareDraftRewrite";
+import SharedReportDetails from "./SharedReportDetails";
 
 function safeJsonParse(str) {
   try {
@@ -27,15 +27,6 @@ function formatDate(iso) {
   } catch {
     return "";
   }
-}
-
-function toBullets(text, max = 6) {
-  if (!text || typeof text !== "string") return [];
-  return text
-    .split(/\n+|\.\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, max);
 }
 
 function scoreChip(label, value) {
@@ -78,31 +69,106 @@ async function loadShare(token) {
   return {
     ref: ref || null,
     tasks: ordered.map((c) => {
-    const fb = safeJsonParse(c.feedback);
-    const criteria = fb.criteria || {};
-    const isTask1 = (c.type || "TASK_2") === "TASK_1";
-    const taskKey = isTask1 ? "Task_Achievement" : "Task_Response";
-    const band =
-      (fb.overall_band != null && Number.isFinite(Number(fb.overall_band)) ? Number(fb.overall_band) : null) ??
-      (c.score != null && Number.isFinite(Number(c.score)) ? Number(c.score) : null);
-    return {
-      id: c.id,
-      type: isTask1 ? "TASK_1" : "TASK_2",
-      createdAt: c.createdAt,
-      band,
-      criteria: {
-        task: criteria[taskKey]?.score ?? null,
-        cc: criteria.Coherence_and_Cohesion?.score ?? null,
-        lr: criteria.Lexical_Resource?.score ?? null,
-        gra: criteria.Grammatical_Range_and_Accuracy?.score ?? null,
-        taskComment: criteria[taskKey]?.comment ?? "",
-        ccComment: criteria.Coherence_and_Cohesion?.comment ?? "",
-        lrComment: criteria.Lexical_Resource?.comment ?? "",
-        graComment: criteria.Grammatical_Range_and_Accuracy?.comment ?? "",
-      },
-      suggestedRewrite: typeof fb.suggested_rewrite === "string" ? fb.suggested_rewrite : "",
-      essay: typeof c.content === "string" ? c.content.trim() : "",
-    };
+      const fb = safeJsonParse(c.feedback);
+      const criteria = fb.criteria || {};
+      const isTask1 = (c.type || "TASK_2") === "TASK_1";
+      const taskKey = isTask1 ? "Task_Achievement" : "Task_Response";
+      const band =
+        (fb.overall_band != null && Number.isFinite(Number(fb.overall_band)) ? Number(fb.overall_band) : null) ??
+        (c.score != null && Number.isFinite(Number(c.score)) ? Number(c.score) : null);
+
+      const lw = fb.analysis?.linking_words ?? fb.linking_words ?? null;
+      const repetitions = Array.isArray(fb.analysis?.word_repetition)
+        ? fb.analysis.word_repetition
+        : Array.isArray(fb.word_repetition)
+          ? fb.word_repetition
+          : [];
+
+      const lexicalRaw = Array.isArray(fb.lexical_upgrade) ? fb.lexical_upgrade : [];
+      const lexical = lexicalRaw
+        .map((item) => {
+          const basic = String(item.band_56_word || item.original || "").trim();
+          const c1 = Array.isArray(item.c1_synonyms)
+            ? item.c1_synonyms.join(", ")
+            : String(item.c1_synonyms || "");
+          const c2 = Array.isArray(item.c2_synonyms)
+            ? item.c2_synonyms.join(", ")
+            : String(item.c2_synonyms || "");
+          const legacy = Array.isArray(item.band_89_synonyms)
+            ? item.band_89_synonyms.join(", ")
+            : String(item.band_89_synonyms || item.synonyms || "");
+          const upgrade = [c1 && `C1: ${c1}`, c2 && `C2: ${c2}`].filter(Boolean).join(" · ") || legacy;
+          if (!basic && !upgrade) return null;
+          return { basic: basic || "—", upgrade: upgrade || "—" };
+        })
+        .filter(Boolean);
+
+      let cefr = null;
+      const rawCefr = fb.cefr_stats;
+      if (rawCefr && typeof rawCefr === "object") {
+        cefr = {};
+        if (Array.isArray(rawCefr)) {
+          rawCefr.forEach((x) => {
+            const id = String(x?.level ?? x?.id ?? "").toUpperCase();
+            if (id) cefr[id] = Math.min(100, Math.max(0, Number(x?.percent ?? x?.value ?? 0)));
+          });
+        } else {
+          Object.entries(rawCefr).forEach(([k, v]) => {
+            cefr[String(k).toUpperCase()] = Math.min(100, Math.max(0, Number(v)));
+          });
+        }
+        if (!Object.keys(cefr).length) cefr = null;
+      }
+
+      const corrections = Array.isArray(fb.corrections)
+        ? fb.corrections.map((err) => ({
+            original: err.original ?? "",
+            fixed: err.fixed ?? err.suggestion ?? "",
+            suggestion: err.suggestion ?? "",
+            category: err.category ?? err.rule ?? "",
+            rule: err.rule ?? "",
+            explanation: err.explanation ?? "",
+          }))
+        : [];
+
+      return {
+        id: c.id,
+        type: isTask1 ? "TASK_1" : "TASK_2",
+        createdAt: c.createdAt,
+        band,
+        criteria: {
+          task: criteria[taskKey]?.score ?? null,
+          cc: criteria.Coherence_and_Cohesion?.score ?? null,
+          lr: criteria.Lexical_Resource?.score ?? null,
+          gra: criteria.Grammatical_Range_and_Accuracy?.score ?? null,
+          taskComment: criteria[taskKey]?.comment ?? "",
+          ccComment: criteria.Coherence_and_Cohesion?.comment ?? "",
+          lrComment: criteria.Lexical_Resource?.comment ?? "",
+          graComment: criteria.Grammatical_Range_and_Accuracy?.comment ?? "",
+        },
+        improvementStrategy:
+          typeof fb.improvement_strategy === "string" ? fb.improvement_strategy : "",
+        task1Strategy: isTask1 && fb.task1_strategy ? fb.task1_strategy : null,
+        suggestedRewrite:
+          typeof fb.suggested_rewrite === "string" ? fb.suggested_rewrite : "",
+        corrections,
+        insights: {
+          linking: lw
+            ? {
+                score: lw.score ?? null,
+                found: Array.isArray(lw.found) ? lw.found.map(String) : [],
+                suggestions: Array.isArray(lw.suggestions) ? lw.suggestions.map(String) : [],
+              }
+            : null,
+          repetitions,
+          lexical,
+          plagiarism:
+            fb.plagiarism && (fb.plagiarism.score != null || fb.plagiarism.status)
+              ? { score: fb.plagiarism.score ?? null, status: fb.plagiarism.status ?? "" }
+              : null,
+          cefr,
+        },
+      };
     }),
   };
 }
@@ -116,7 +182,7 @@ export async function generateMetadata({ params }) {
   const bands = share.tasks.map((d) => (d.band != null ? String(d.band.toFixed(1)) : "—")).join(" · ");
   const by = share.ref ? ` by @${share.ref}` : "";
   const title = `Shared IELTS report (${bands})${by}`;
-  const description = "Task 1 + Task 2 analysis shared from STRATUM.ai — band score, criteria breakdown, and key improvements.";
+  const description = "IELTS Writing analysis: criteria breakdown, Task 1 strategy, linguistic insights, and detailed corrections.";
 
   return {
     title,
@@ -164,7 +230,7 @@ export default async function SharePage({ params }) {
               <span className="ml-2 text-white/40">{hasT1 && hasT2 ? "Task 1 + Task 2" : hasT1 ? "Task 1" : "Task 2"}</span>
             </h1>
             <p className="mt-2 max-w-2xl text-sm font-semibold text-white/70">
-              A clean, shareable report: band score, criteria breakdown, and the most actionable improvements.
+              Full analysis: criteria, strategy, insights, corrections, and improved essay.
             </p>
             {ref ? (
               <p className="mt-2 text-[12px] font-black uppercase tracking-widest text-white/55">
@@ -204,7 +270,7 @@ export default async function SharePage({ params }) {
                 <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(700px_circle_at_10%_10%,rgba(99,102,241,0.35),transparent_50%),radial-gradient(900px_circle_at_90%_0%,rgba(244,63,94,0.25),transparent_55%)]" />
 
                 <div className="relative z-10">
-                  <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-6">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span
@@ -224,44 +290,17 @@ export default async function SharePage({ params }) {
                         <div className="pb-2 text-sm font-black uppercase tracking-widest text-white/40">Band</div>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {scoreChip(t.type === "TASK_1" ? "TA" : "TR", t.criteria.task)}
-                        {scoreChip("CC", t.criteria.cc)}
-                        {scoreChip("LR", t.criteria.lr)}
-                        {scoreChip("GRA", t.criteria.gra)}
-                      </div>
                     </div>
 
-                    <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-white/5 p-5 backdrop-blur-md">
-                      <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/60">Most important fixes</p>
-                      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-[11px] font-black uppercase tracking-wide text-white">Task</p>
-                          <ul className="mt-2 space-y-1.5 text-[12px] font-semibold text-white/75">
-                            {toBullets(t.criteria.taskComment, 3).map((b, i) => (
-                              <li key={i} className="leading-snug">- {b}</li>
-                            ))}
-                            {toBullets(t.criteria.taskComment, 3).length === 0 && <li className="text-white/50">- No notes</li>}
-                          </ul>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-[11px] font-black uppercase tracking-wide text-white">Language</p>
-                          <ul className="mt-2 space-y-1.5 text-[12px] font-semibold text-white/75">
-                            {toBullets([t.criteria.lrComment, t.criteria.graComment].filter(Boolean).join(". "), 3).map((b, i) => (
-                              <li key={i} className="leading-snug">- {b}</li>
-                            ))}
-                            {toBullets([t.criteria.lrComment, t.criteria.graComment].filter(Boolean).join(". "), 3).length === 0 && (
-                              <li className="text-white/50">- No notes</li>
-                            )}
-                          </ul>
-                        </div>
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      {scoreChip(t.type === "TASK_1" ? "TA" : "TR", t.criteria.task)}
+                      {scoreChip("CC", t.criteria.cc)}
+                      {scoreChip("LR", t.criteria.lr)}
+                      {scoreChip("GRA", t.criteria.gra)}
                     </div>
                   </div>
 
-                  {t.essay || t.suggestedRewrite ? (
-                    <CompareDraftRewrite draft={t.essay} rewrite={t.suggestedRewrite} />
-                  ) : null}
+                  <SharedReportDetails task={t} />
                 </div>
               </section>
             );

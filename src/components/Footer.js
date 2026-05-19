@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Layers } from 'lucide-react';
-import { SUPPORT_EMAIL } from '@/lib/support';
+import { BUSINESS_ADDRESS, COPYRIGHT_LINE, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export default function Footer() {
   return (
@@ -51,6 +51,17 @@ export default function Footer() {
                   {SUPPORT_EMAIL}
                 </a>
               </li>
+              <li>
+                <a
+                  href={SUPPORT_PHONE_TEL}
+                  className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  {CONTACT_SUPPORT_LABEL}
+                </a>
+              </li>
+              <li className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 leading-relaxed">
+                {BUSINESS_ADDRESS}
+              </li>
               <li><Link href="/#pricing" className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Contact Us</Link></li>
               <li><Link href="/#pricing" className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Top-up Credits</Link></li>
             </ul>
@@ -58,7 +69,7 @@ export default function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t border-white/5 text-center space-y-2">
           <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-            © 2026 STRATUM LLC. Registered in Wyoming, USA. All rights reserved. 30 N Gould St Ste R, Sheridan, WY 82801, USA
+            {COPYRIGHT_LINE}
           </p>
         </div>
       </div>

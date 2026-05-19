@@ -28,4 +28,11 @@ export function register() {
         console.warn("[Server start] DB warmup failed:", e?.message ?? e)
       );
   }
+
+  // Preload auth route so the first client /api/auth/session is not blocked on cold compile.
+  void import("@/app/api/auth/[...nextauth]/route")
+    .then(() => console.log("[Server start] Auth route: loaded"))
+    .catch((e) =>
+      console.warn("[Server start] Auth route preload failed:", e?.message ?? e)
+    );
 }

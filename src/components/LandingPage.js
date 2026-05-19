@@ -45,7 +45,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { TASK1_TIPS, TASK2_TIPS } from '@/lib/ieltsGuidelines';
-import { SUPPORT_EMAIL } from '@/lib/support';
+import { COPYRIGHT_SHORT, BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 import { useBilling } from '@/components/BillingContext';
 import NeuralSyncShowcase from '@/components/NeuralSyncShowcase';
 
@@ -1255,15 +1255,20 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               </Link>
             </div>
             <p className="text-sm font-medium tracking-wide text-slate-900 dark:text-white">
-              © 2026 STRATUM LLC. Registered in Wyoming, USA.
+              {COPYRIGHT_SHORT}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {BUSINESS_ADDRESS} ·{' '}
+              <a href={SUPPORT_PHONE_TEL} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                {CONTACT_SUPPORT_LABEL}
+              </a>
+              {' · '}
+              <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                {SUPPORT_EMAIL}
+              </a>
             </p>
             <p className="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
               Don&apos;t just practice. Evolve. Start your Stratum journey today.
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              <Link href="/refund" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Contact support
-              </Link>
             </p>
             <div className="flex flex-wrap justify-center items-center gap-4 pt-2 text-xs font-medium tracking-tight text-slate-400 dark:text-slate-500">
               <span>We accept</span>

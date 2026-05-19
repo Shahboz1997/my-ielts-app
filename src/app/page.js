@@ -11,7 +11,17 @@ import GlowFollow from '../components/GlowFollow';
 import ChatAssistantWidget from '../components/ChatAssistantWidget';
 import { LoadingState, EmptyState, ErrorState, SuccessState } from '../components/stratum';
 import CreditsExhaustedCallout from '../components/CreditsExhaustedCallout';
-import { SUPPORT_EMAIL } from '@/lib/support';
+import {
+  BUSINESS_ADDRESS,
+  COPYRIGHT_LINE,
+  SUPPORT_EMAIL,
+  SUPPORT_MAILTO,
+  SUPPORT_PHONE_TEL,
+  CONTACT_SUPPORT_LABEL,
+  buildFeedbackMailto,
+} from '@/lib/support';
+import LexicalUpgradePanel from '@/components/LexicalUpgradePanel';
+import { mergeLexicalUpgrades, getWeakWordsSet, getFirstUpgradeSynonym } from '@/lib/lexicalUpgrade';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -317,7 +327,6 @@ import 'react-medium-image-zoom/dist/styles.css';
   const analyzeInFlightRef = useRef(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [activeResultT1, setResultT1] = useState(null);
-  const [status, setStatus] = useState('idle'); // 'idle' | 'sending' — footer feedback only
   const [feedbackBanner, setFeedbackBanner] = useState(null); // { kind: 'success'|'error', message }
   const [showSupportModal, setShowSupportModal] = useState(false);
   const supportFirstFieldRef = useRef(null);
@@ -375,19 +384,17 @@ import 'react-medium-image-zoom/dist/styles.css';
       "https://anu.edu.vn/wp-content/uploads/2023/04/de-thi-ielts-writing-task-1-ngay-02022023.jpg"
     ],
   };
-  // Слабые слова для подсветки: из API (lexical_upgrade) или локальный список + UPGRADE_MAP.
-  // ВАЖНО: не используем `activeResult`, потому что он объявляется позже в файле.
-  const weakWordsSet = useMemo(() => {
-    const set = new Set();
+  const mergedLexicalUpgrade = useMemo(() => {
     const lexSource = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
-    const lex = Array.isArray(lexSource?.lexical_upgrade) ? lexSource.lexical_upgrade : [];
-    lex.forEach((row) => {
-      const w = (row.band_56_word || '').toLowerCase().trim().replace(/[.,!?;:()]/g, '');
-      if (w) set.add(w);
+    const essay = activeTab === 'Task 1' ? essayT1 : essayT2;
+    return mergeLexicalUpgrades({
+      apiRows: Array.isArray(lexSource?.lexical_upgrade) ? lexSource.lexical_upgrade : [],
+      essayText: essay || '',
+      isT1: activeTab === 'Task 1',
     });
-    if (set.size === 0) WEAK_WORDS.forEach((w) => set.add(w.toLowerCase()));
-    return set;
-  }, [activeTab, activeResultT1, activeResultT2]);
+  }, [activeTab, activeResultT1, activeResultT2, essayT1, essayT2]);
+
+  const weakWordsSet = useMemo(() => getWeakWordsSet(mergedLexicalUpgrade), [mergedLexicalUpgrade]);
 
   // Рендер CEFR-раскраски текста в подложке (highlightRef) на основе activeResult.analysis.word_levels и .errors.
   function renderColoredText() {
@@ -459,27 +466,16 @@ import 'react-medium-image-zoom/dist/styles.css';
     });
   }
 
-  // Одним кликом заменить первое вхождение каждого слабого слова на первый синоним (из API или UPGRADE_MAP).
   function handleApplyAllUpgrades() {
     const setter = activeTab === 'Task 1' ? setEssayT1 : setEssayT2;
     const currentText = activeTab === 'Task 1' ? essayT1 : essayT2;
-    const lexSource = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
-    const lex = Array.isArray(lexSource?.lexical_upgrade) ? lexSource.lexical_upgrade : [];
-    const entries = [];
-    if (lex.length > 0) {
-      lex.forEach((row) => {
-        const w = (row.band_56_word || "").trim();
-        const syns = Array.isArray(row.band_89_synonyms) ? row.band_89_synonyms : (row.band_89_synonyms ? String(row.band_89_synonyms).split(",").map((s) => s.trim()) : []);
-        const firstSyn = syns[0]?.trim();
-        if (w && firstSyn) entries.push({ weakWord: w, firstSyn });
-      });
-    } else {
-      WEAK_WORDS.forEach((word) => {
-        const syns = UPGRADE_MAP[word];
-        const firstSyn = Array.isArray(syns) ? syns[0] : (typeof syns === "string" ? syns : null);
-        if (firstSyn) entries.push({ weakWord: word, firstSyn });
-      });
-    }
+    const entries = mergedLexicalUpgrade
+      .map((row) => {
+        const firstSyn = getFirstUpgradeSynonym(row);
+        const w = (row.band_56_word || '').trim();
+        return w && firstSyn ? { weakWord: w, firstSyn } : null;
+      })
+      .filter(Boolean);
     if (entries.length === 0) return;
     // Замены с конца текста к началу, чтобы индексы не сбивались.
     const lower = currentText.toLowerCase();
@@ -503,53 +499,29 @@ import 'react-medium-image-zoom/dist/styles.css';
     }, 50);
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setStatus('sending');
     setFeedbackBanner(null);
 
     const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData);
+    const name = String(formData.get('name') ?? '').trim();
+    const email = String(formData.get('email') ?? '').trim();
+    const message = String(formData.get('message') ?? '').trim();
 
-    try {
-      const response = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      let payload = {};
-      try {
-        payload = await response.json();
-      } catch {
-        payload = {};
-      }
+    if (!name || !email || !message) return;
 
-      if (response.ok) {
-        e.target.reset();
-        setStatus('idle');
-        setFeedbackBanner({ kind: 'success', message: 'Thank you! We received your feedback.' });
-        if (showSupportModal) {
-          window.setTimeout(() => setShowSupportModal(false), 900);
-        }
-        window.setTimeout(() => {
-          setFeedbackBanner((b) => (b?.kind === 'success' ? null : b));
-        }, 8000);
-        return;
-      }
-
-      setStatus('idle');
-      const msg =
-        typeof payload.error === 'string' && payload.error.trim()
-          ? payload.error.trim()
-          : 'Could not send your message. Please try again.';
-      setFeedbackBanner({ kind: 'error', message: msg });
-    } catch {
-      setStatus('idle');
-      setFeedbackBanner({
-        kind: 'error',
-        message: 'Network error. Check your connection and try again.',
-      });
+    window.location.href = buildFeedbackMailto({ name, email, message });
+    e.currentTarget.reset();
+    setFeedbackBanner({
+      kind: 'success',
+      message: `Your email app should open with a draft to ${SUPPORT_EMAIL}. If it does not, email us directly.`,
+    });
+    if (showSupportModal) {
+      window.setTimeout(() => setShowSupportModal(false), 1200);
     }
+    window.setTimeout(() => {
+      setFeedbackBanner((b) => (b?.kind === 'success' ? null : b));
+    }, 10000);
   };
 
   useEffect(() => {
@@ -2362,7 +2334,7 @@ const insertLinkingWord = (word) => {
         </div>
         {/* Aside: одна прокрутка страницы; без вложенного скролла */}
          <aside
-          className="order-2 flex h-auto flex-col gap-5 sm:gap-6 xl:sticky xl:top-20 xl:order-none xl:col-span-3 xl:justify-start xl:self-start"
+          className="order-2 flex h-auto w-full min-w-0 max-w-full flex-col gap-5 sm:gap-6 xl:sticky xl:top-20 xl:order-none xl:col-span-3 xl:max-w-none xl:justify-start xl:self-start"
           ref={activeResultsRef}
         >
       {(activeTab === 'Task 1' ? loadingT1 : loadingT2) ? (
@@ -2378,266 +2350,289 @@ const insertLinkingWord = (word) => {
         </div>
       ) : (
              <div
-        className="flex h-auto flex-1 flex-col gap-6 sm:gap-8 overflow-visible"
+        className="flex h-auto min-w-0 w-full flex-1 flex-col gap-5 overflow-visible sm:gap-6 md:gap-8"
         >
-          <div className="relative group overflow-hidden bg-slate-950 rounded-[3rem] p-1 shadow-2xl shadow-slate-950/40">
-  <div className="group relative z-10 rounded-[2.5rem] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-5 sm:p-8 text-white shadow-xl shadow-black/20">
+          <div className="relative group min-w-0 w-full max-w-full overflow-hidden rounded-2xl bg-slate-950 p-0.5 shadow-xl shadow-slate-950/30 sm:rounded-3xl sm:p-1 sm:shadow-2xl xl:rounded-[2.5rem]">
+  <div className="group relative z-10 min-w-0 w-full rounded-[1.25rem] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4 text-white shadow-lg shadow-black/20 sm:rounded-[1.75rem] sm:p-6 md:rounded-[2.5rem] md:p-8 sm:shadow-xl">
     
     {/* Эффект блеска при наведении */}
     <div className="pointer-events-none absolute inset-0 translate-x-[-150%] bg-gradient-to-tr from-white/0 via-white/20 to-white/0 transition-transform duration-1000 group-hover:translate-x-[150%]" />
 
-    <div className="relative z-20 flex flex-col gap-6">
+    <div className="relative z-20 flex min-w-0 flex-col gap-4 sm:gap-5 md:gap-6">
       {/* ВЕРХНЯЯ ЧАСТЬ: Балл и Версия ИИ */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-            <p className="text-[8px] font-extrabold uppercase tracking-[0.3em] text-white/80 sm:text-[9px] sm:tracking-[0.4em]">
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+            <p className="text-[8px] font-extrabold uppercase tracking-[0.25em] text-white/80 sm:text-[9px] sm:tracking-[0.35em] md:tracking-[0.4em]">
               Performance Index
             </p>
           </div>
-          <h4 className="flex flex-wrap items-baseline font-black leading-none tracking-tighter text-white text-5xl sm:text-6xl md:text-7xl">
+          <h4 className="flex flex-wrap items-baseline gap-x-2 gap-y-0 font-black leading-none tracking-tighter text-white text-[2.75rem] min-[380px]:text-5xl sm:text-6xl lg:text-7xl">
             {activeResult.overall_band}
-            <span className="ml-2 text-lg font-light text-white/30 sm:text-xl">/ 9.0</span>
+            <span className="text-base font-light text-white/30 min-[380px]:text-lg sm:text-xl">/ 9.0</span>
           </h4>
         </div>
 
-        <div className="shrink-0 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2 text-right backdrop-blur-md sm:px-4">
+        <div className="flex w-full shrink-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2.5 backdrop-blur-md sm:w-auto sm:justify-end sm:py-2 sm:text-right md:px-4">
           <p className="text-[7px] font-extrabold uppercase tracking-widest text-indigo-200 dark:text-indigo-300 sm:text-[8px]">AI Engine</p>
-          <p className="text-[9px] font-bold sm:text-[10px]">v4.2 PRO</p>
+          <p className="text-[10px] font-bold sm:text-[10px]">v4.2 PRO</p>
         </div>
       </div>
       {/* НИЖНЯЯ ЧАСТЬ: Кнопки управления */}
-      <div className="flex flex-row items-stretch gap-2 mt-2">
+      <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[1fr_auto] sm:mt-1">
         <button 
+          type="button"
           onClick={() => downloadReport()}
-          className="group/btn flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-xs font-black uppercase tracking-widest text-slate-900 transition-all hover:bg-slate-100 active:scale-[0.97] sm:gap-3 sm:py-5"
+          className="group/btn flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-900 transition-all hover:bg-slate-100 active:scale-[0.97] sm:min-h-0 sm:py-4 sm:text-xs md:py-5"
         >
-          <Download className="h-4 w-4 text-slate-700 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" /> 
-          <span className="whitespace-nowrap">Official PDF</span>
+          <Download className="h-4 w-4 shrink-0 text-slate-700 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" /> 
+          <span className="truncate">Official PDF</span>
         </button>
 
         <button 
+          type="button"
           onClick={() => shareReport()}
-          className="flex aspect-square w-12 items-center justify-center rounded-2xl bg-white/10 text-white transition-all hover:bg-white/20 active:scale-90 sm:w-auto sm:px-5"
-          title={(activeResultT1?.savedId || activeResultT2?.savedId) ? "Share Analysis" : "Share summary (save to History for public link)"}
+          className="flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3.5 text-white transition-all hover:bg-white/20 active:scale-[0.98] min-[400px]:w-auto min-[400px]:min-w-[3.25rem] min-[400px]:max-w-[3.25rem] min-[400px]:px-0 sm:min-h-0 sm:min-w-0 sm:max-w-none sm:px-5"
+          title={(activeResultT1?.savedId || activeResultT2?.savedId) ? "Share full analysis" : "Share summary (save to History for public link)"}
+          aria-label="Share analysis"
         >
-          <Share2 className="h-5 w-5" /> 
+          <Share2 className="h-5 w-5 shrink-0" aria-hidden />
+          <span className="text-[11px] font-black uppercase tracking-widest min-[400px]:hidden sm:inline sm:text-xs">Share</span>
         </button>
       </div>
     </div>
   </div>
 
   {/* Background Decor */}
-  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[100px] rounded-full -mr-20 -mt-20 pointer-events-none" />
+  <div className="pointer-events-none absolute top-0 right-0 -mr-8 -mt-8 h-40 w-40 rounded-full bg-indigo-500/5 blur-[72px] sm:-mr-16 sm:-mt-16 sm:h-52 sm:w-52 sm:blur-[88px] md:-mr-20 md:-mt-20 md:h-64 md:w-64 md:blur-[100px]" />
 </div>
 
           {/* --- 3. DEEP LINGUISTIC ANALYSIS --- */}
-          <div className={`p-8 rounded-[3rem] border shadow-sm h-auto overflow-visible ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 dark:border-slate-800'}`}>
-    <h5 className="text-xs font-extrabold mb-8 tracking-tight text-slate-800 dark:text-slate-100 pb-2">
-        Linguistic Insights
-    </h5>
-            <div className="space-y-8">
-              
-              {/* Linking Words Section */}
-                <div className="space-y-6">
-  {/* ЗАГОЛОВОК И БАЛЛ */}
-  <div className="flex justify-between items-end border-b-[3px] border-amber-500/20 pb-2">
-    <div className="flex items-center gap-2">
-      <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-      <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-100">Linking Words</span>
-    </div>
-    <span className="text-[11px] font-black italic text-amber-900 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-200 px-2 py-0.5 rounded-md">
-      Score: {activeResult.analysis?.linking_words?.score}/9.0
-    </span>
-  </div>
-
-  {/* СПИСОК НАЙДЕННЫХ СЛОВ */}
-  <div className="flex flex-wrap gap-2">
-    {activeResult.analysis?.linking_words?.found?.map((w, i) => (
-      <button 
-        key={i}
-        onClick={() => triggerHighlight(w)}
-        className="group flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-xl font-bold border border-slate-200 bg-white text-slate-800 shadow-sm transition-all hover:border-amber-500 active:scale-95 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-amber-500"
-      >
-        <span className="underline underline-offset-[4px] decoration-transparent decoration-[3px] transition-all group-hover:decoration-amber-500">
-          {w}
-        </span>
-        <Search className="w-3 h-3 opacity-0 text-amber-600 transition-all group-hover:opacity-100 dark:text-amber-400 transform group-hover:scale-110" />
-      </button>
-    ))}
-  </div>
-
-  {/* БЛОК ПРЕДЛОЖЕНИЙ */}
-    <div className="rounded-[2rem] border-2 border-dashed border-amber-200/50 bg-amber-50/50 p-6 dark:border-amber-800/40 dark:bg-amber-950/10">
-  <p className="mb-4 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400">
-    <Sparkles className="h-3.5 w-3.5 animate-pulse" />
-    <span className="underline underline-offset-[6px] decoration-amber-500/40 decoration-[3px]">
-      Suggested Additions
-    </span>
-  </p>  
-  <div className="flex flex-wrap gap-2">
-  {(() => {
-    const suggestions = activeResult.analysis?.linking_words?.suggestions;
-    const hasSuggestions = suggestions && suggestions.length > 0;
-
-    if (!hasSuggestions) {
-      return (
-        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 italic py-1 px-2">
-          Great flow! No extra suggestions needed.
-        </span>
-      );
-    }
-
-    return suggestions.map((s, i) => (
-      <button 
-        key={i} 
-        onClick={() => insertLinkingWord(s)}
-        className="group relative flex items-center gap-1.5 rounded-xl border border-amber-100 bg-white px-3 py-2.5 text-[9px] font-black text-amber-700 shadow-sm transition-all hover:border-amber-500 active:scale-95 dark:border-amber-800/50 dark:bg-slate-800 dark:text-amber-300 dark:hover:border-amber-500"
-        title={`Click to insert "${s}"`}
-      >
-        <span className="font-bold opacity-40 transition-all group-hover:text-amber-600 group-hover:opacity-100 dark:group-hover:text-amber-400">+</span>
-        <span className="underline underline-offset-[2px] decoration-transparent decoration-2 transition-all group-hover:decoration-amber-500/50">
-          {s}
-        </span>
-      </button>
-    ));
-  })()}
-</div>
-
-    </div>
-
-</div>
-
-
-              {/* Repetitions List */}
-              <div className="border-t border-slate-200 pt-6 dark:border-slate-800">
-                <span className="text-[10px] font-extrabold uppercase block mb-4 text-slate-800 dark:text-slate-100">Frequency Alert</span>
-                  <div className="space-y-2">
-    {activeResult?.analysis?.word_repetition?.map((item, i) => {
-      const wordText = typeof item === 'object' ? item.word : item;
-      const count = typeof item === 'object' ? item.count : 0;
-      const synonyms = item.alternatives || []; 
-
-      return (
-        <div
-          key={wordText + i}
-          className={`mb-3 w-full rounded-[2.5rem] border p-4 transition-all ${
-            darkMode ? 'bg-slate-900/40 border-slate-800 shadow-none' : 'bg-white border-red-50 shadow-sm'
-          }`}
-        >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            {/* ИНФОРМАЦИЯ О СЛОВЕ */}
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-extrabold uppercase tracking-tight text-slate-900 dark:text-slate-100`}>
-                {'"'}{wordText}{'"'}
-              </span>
-              <span className="text-[10px] text-red-500 font-bold bg-red-100/20 px-2 py-0.5 rounded-full border border-red-500/10">
-                {count}x repeated
-              </span>
-            </div>
-
-            {/* ПОИСК ВХОЖДЕНИЙ */}
-              <div className="flex items-center gap-3">
-  <button 
-    onClick={(e) => {
-      e.preventDefault();
-      if (typeof playClickSound === 'function') playClickSound();
-      
-      // 1. Запускаем вашу логику поиска
-      triggerHighlight(wordText);
-
-      // 2. Добавляем плавный скролл (с небольшой задержкой, чтобы DOM успел обновиться)
-      setTimeout(() => {
-        const matches = document.querySelectorAll('.search-match');
-        if (matches.length > 0) {
-          // Скроллим к текущему индексу (current) или к первому, если только начали
-          const targetIndex = searchState.word === wordText.toLowerCase().trim() 
-            ? (searchState.current + 1) % matches.length 
-            : 0;
-
-          matches[targetIndex].scrollIntoView({
-            behavior: 'smooth',
-            block: 'center', // Чтобы слово было в центре экрана, а не сверху
-          });
-        }
-      }, 50); 
-    }}
-    className="group relative flex items-center gap-2 cursor-pointer select-none outline-none active:scale-95 transition-all py-1"
-  >
-    <div className="flex items-baseline gap-1">
-      <span className={`
-        text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-200
-        pb-0.5 border-b-[3px] 
-        ${searchState.word === wordText.toLowerCase().trim() 
-          ? 'text-red-600 border-red-600' 
-          : 'text-slate-600 dark:text-slate-400 border-transparent group-hover:text-red-600 group-hover:border-red-600/50'}
-      `}>
-        Find
-      </span>
-
-      {searchState.word === wordText.toLowerCase().trim() && searchState.count > 0 && (
-        <span className="ml-1 text-[10px] font-black tabular-nums text-red-600 animate-in fade-in zoom-in duration-300">
-          {searchState.current + 1}
-          <span className="mx-0.5 opacity-40">/</span>
-          {searchState.count}
-        </span>
-      )}
-    </div>
-
-    <Search className={`
-      w-3.5 h-3.5 transition-colors duration-200
-      ${searchState.word === wordText.toLowerCase().trim() 
-        ? 'text-red-600' 
-        : 'text-slate-600 dark:text-slate-400 group-hover:text-red-600'}
-    `} />
-  </button>
-</div>
-
-          </div>
-
-          {/* СЕКЦИЯ СИНОНИМОВ (UPGRADES) */}
-          {synonyms.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
-              <p className="text-[9px] font-black uppercase text-slate-700 dark:text-slate-400 mb-2 tracking-widest flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-emerald-500" />
-                Band 8.0+ Replacements:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {synonyms.map((syn) => (
-                  <button
-                    key={syn}
-                    onClick={() => replaceNext(wordText, syn)}
-                    className={`flex items-center gap-1.5 text-[10px] px-3 py-1.5 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 border ${
-                      darkMode 
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 shadow-none' 
-                        : 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 shadow-sm'
-                    }`}
-                  >
-                    + {syn}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    })}
-</div>
-  </div>
-              {/* Integrity Badge */}
-              {activeResult.plagiarism && (
-                <div className={`mt-2 rounded-[2.5rem] border-l-4 p-5 ${activeResult.plagiarism.score > 30 ? 'bg-red-50 border-red-500' : 'bg-emerald-50 border-emerald-500'}`}>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] font-extrabold uppercase text-slate-800 dark:text-slate-100">Plagiarism Check</span>
-                    <span className="text-[9px] font-extrabold text-slate-900 dark:text-white">{activeResult.plagiarism.score}%</span>
-                  </div>
-                  <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">{activeResult.plagiarism.status}</p>
+          <section
+            className={`min-w-0 overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
+              darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white dark:border-slate-800'
+            }`}
+          >
+            <header className="border-b border-slate-100 px-4 py-4 dark:border-white/5 sm:px-6 sm:py-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+                    Analysis
+                  </p>
+                  <h5 className="mt-1 text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
+                    Linguistic Insights
+                  </h5>
+                  <p className="mt-1 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    Linking, repetition, and lexical upgrades for your draft.
+                  </p>
                 </div>
+                {activeResult.analysis?.linking_words?.score != null && (
+                  <span className="shrink-0 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-1.5 text-[11px] font-bold tabular-nums text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-200">
+                    CC flow {activeResult.analysis.linking_words.score}/9
+                  </span>
+                )}
+              </div>
+            </header>
+
+            <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+              <article className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 dark:border-white/5 dark:bg-slate-950/40 sm:p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500 animate-pulse" aria-hidden />
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-800 dark:text-slate-100">
+                      Linking words
+                    </span>
+                  </div>
+                  {activeResult.analysis?.linking_words?.score != null && (
+                    <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300">
+                      {activeResult.analysis.linking_words.score}/9.0
+                    </span>
+                  )}
+                </div>
+
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Found in your essay
+                </p>
+                <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 custom-scrollbar sm:mx-0 sm:flex-wrap sm:overflow-visible">
+                  {(activeResult.analysis?.linking_words?.found?.length ?? 0) > 0 ? (
+                    activeResult.analysis.linking_words.found.map((w, i) => (
+                      <button
+                        key={`${w}-${i}`}
+                        type="button"
+                        onClick={() => triggerHighlight(w)}
+                        className="group inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 shadow-sm transition-all hover:border-amber-500 active:scale-95 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-amber-500"
+                      >
+                        <span className="max-w-[10rem] truncate underline decoration-transparent underline-offset-4 transition-all group-hover:decoration-amber-500 sm:max-w-none">
+                          {w}
+                        </span>
+                        <Search className="h-3.5 w-3.5 shrink-0 opacity-60 text-amber-600 group-hover:opacity-100 dark:text-amber-400" />
+                      </button>
+                    ))
+                  ) : (
+                    <span className="text-xs italic text-slate-500 dark:text-slate-400">No linking words detected yet.</span>
+                  )}
+                </div>
+
+                <div className="mt-4 rounded-xl border border-dashed border-amber-300/50 bg-amber-50/70 p-3 dark:border-amber-800/40 dark:bg-amber-950/20 sm:p-4">
+                  <p className="mb-3 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.15em] text-amber-800 dark:text-amber-300">
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse" aria-hidden />
+                    Suggested additions
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const suggestions = activeResult.analysis?.linking_words?.suggestions;
+                      if (!suggestions?.length) {
+                        return (
+                          <span className="text-xs font-medium italic text-slate-600 dark:text-slate-400">
+                            Great flow — no extra suggestions needed.
+                          </span>
+                        );
+                      }
+                      return suggestions.map((s, i) => (
+                        <button
+                          key={`${s}-${i}`}
+                          type="button"
+                          onClick={() => insertLinkingWord(s)}
+                          className="inline-flex max-w-full items-center gap-1 rounded-xl border border-amber-200/80 bg-white px-2.5 py-2 text-[10px] font-bold text-amber-800 shadow-sm transition-all hover:border-amber-500 active:scale-95 dark:border-amber-800/50 dark:bg-slate-800 dark:text-amber-200 dark:hover:border-amber-500 sm:px-3 sm:text-[11px]"
+                          title={`Insert "${s}"`}
+                        >
+                          <span className="opacity-50">+</span>
+                          <span className="truncate">{s}</span>
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </article>
+
+              {(activeResult?.analysis?.word_repetition?.length ?? 0) > 0 && (
+                <article className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 dark:border-white/5 dark:bg-slate-950/30 sm:p-5">
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-rose-500" aria-hidden />
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-800 dark:text-slate-100">
+                      Frequency alert
+                    </span>
+                  </div>
+                  <ul className="space-y-3">
+                    {activeResult.analysis.word_repetition.map((item, i) => {
+                      const wordText = typeof item === 'object' ? item.word : item;
+                      const count = typeof item === 'object' ? item.count : 0;
+                      const synonyms = item.alternatives || [];
+                      const wordKey = String(wordText || '').toLowerCase().trim();
+                      const isFinding = searchState.word === wordKey;
+
+                      return (
+                        <li
+                          key={`${wordText}-${i}`}
+                          className={`rounded-2xl border p-3 sm:p-4 ${
+                            darkMode
+                              ? 'border-slate-800 bg-slate-900/50'
+                              : 'border-rose-100/80 bg-white shadow-sm'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                              <span className="truncate text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                                &ldquo;{wordText}&rdquo;
+                              </span>
+                              <span className="shrink-0 rounded-full border border-rose-200/80 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-600 dark:border-rose-800/40 dark:bg-rose-950/40 dark:text-rose-300">
+                                {count}x
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (typeof playClickSound === 'function') playClickSound();
+                                triggerHighlight(wordText);
+                                setTimeout(() => {
+                                  const matches = document.querySelectorAll('.search-match');
+                                  if (matches.length === 0) return;
+                                  const targetIndex = isFinding
+                                    ? (searchState.current + 1) % matches.length
+                                    : 0;
+                                  matches[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }, 50);
+                              }}
+                              className={`inline-flex shrink-0 items-center gap-2 self-start rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 sm:self-center ${
+                                isFinding
+                                  ? 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-300'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'
+                              }`}
+                            >
+                              Find
+                              {isFinding && searchState.count > 0 && (
+                                <span className="tabular-nums">
+                                  {searchState.current + 1}/{searchState.count}
+                                </span>
+                              )}
+                              <Search className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          {synonyms.length > 0 && (
+                            <div className="mt-3 border-t border-slate-200/80 pt-3 dark:border-slate-700">
+                              <p className="mb-2 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                                <Sparkles className="h-3 w-3 text-emerald-500" aria-hidden />
+                                Band 8+ replacements
+                              </p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {synonyms.map((syn) => (
+                                  <button
+                                    key={`${wordText}-${syn}`}
+                                    type="button"
+                                    onClick={() => replaceNext(wordText, syn)}
+                                    className={`inline-flex max-w-full items-center rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition-all hover:scale-[1.02] active:scale-95 sm:text-[11px] ${
+                                      darkMode
+                                        ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                                        : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                    }`}
+                                  >
+                                    <span className="truncate">+ {syn}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </article>
               )}
 
+              <LexicalUpgradePanel
+                rows={mergedLexicalUpgrade}
+                onReplaceWord={(word, syn) => replaceNext(word, syn)}
+                setUserText={(text) => (activeTab === 'Task 1' ? setEssayT1(text) : setEssayT2(text))}
+                userText={activeTab === 'Task 1' ? essayT1 : essayT2}
+                className="shadow-none"
+              />
+
+              {activeResult.plagiarism && (
+                <div
+                  className={`rounded-2xl border-l-4 p-4 sm:p-5 ${
+                    activeResult.plagiarism.score > 30
+                      ? 'border-red-500 bg-red-50 dark:bg-red-950/30'
+                      : 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+                      Plagiarism check
+                    </span>
+                    <span className="text-sm font-black tabular-nums text-slate-900 dark:text-white">
+                      {activeResult.plagiarism.score}%
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs font-medium leading-relaxed text-slate-700 dark:text-slate-300 sm:text-sm">
+                    {activeResult.plagiarism.status}
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
+
 
         </div>
       )}
@@ -3303,13 +3298,22 @@ const insertLinkingWord = (word) => {
                   />
                   <button
                     type="submit"
-                    disabled={status === 'sending'}
                     className="btn-stratum w-full py-3 rounded-2xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
                   >
                     <div className="shimmer-layer animate-shimmer" aria-hidden />
-                    <span className="btn-stratum-text">{status === 'sending' ? 'SENDING...' : 'SEND · STRATUM'}</span>
+                    <span className="btn-stratum-text">EMAIL · STRATUM</span>
                   </button>
                 </form>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Opens your email app with a draft to{' '}
+                  <a
+                    href={SUPPORT_MAILTO}
+                    className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    {SUPPORT_EMAIL}
+                  </a>
+                  .
+                </p>
               </div>
 
               {/* Legal & Contact */}
@@ -3327,10 +3331,10 @@ const insertLinkingWord = (word) => {
             </div>
             <div className="mt-12 pt-8 border-t border-white/5 text-center space-y-2">
               <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
-                © 2026 STRATUM LLC. Registered in Wyoming, USA. All rights reserved. 30 N Gould St Ste R, Sheridan, WY 82801, USA
+                {COPYRIGHT_LINE}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                30 N Gould St Ste R, Sheridan, WY 82801, USA ·{' '}
+                {BUSINESS_ADDRESS} ·{' '}
                 <button
                   type="button"
                   onClick={() => setShowSupportModal(true)}
@@ -3376,8 +3380,17 @@ const insertLinkingWord = (word) => {
                           Contact support
                         </h3>
                         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                          Tell us what happened — we usually reply within 24 hours. You can also email{' '}
-                          <span className="font-semibold text-slate-900 dark:text-slate-200">{SUPPORT_EMAIL}</span>.
+                          Fill in the form and click Email — your mail app opens with a draft. Or write directly to{' '}
+                          <a
+                            href={SUPPORT_MAILTO}
+                            className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            {SUPPORT_EMAIL}
+                          </a>,{' '}
+                          <a href={SUPPORT_PHONE_TEL} className="font-semibold text-slate-900 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                            {CONTACT_SUPPORT_LABEL}
+                          </a>, or write to{' '}
+                          <span className="font-semibold text-slate-900 dark:text-slate-200">{BUSINESS_ADDRESS}</span>.
                         </p>
                       </div>
                       <button
@@ -3450,11 +3463,10 @@ const insertLinkingWord = (word) => {
                       />
                       <button
                         type="submit"
-                        disabled={status === 'sending'}
                         className="btn-stratum w-full py-3 rounded-2xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
                       >
                         <div className="shimmer-layer animate-shimmer" aria-hidden />
-                        <span className="btn-stratum-text">{status === 'sending' ? 'SENDING...' : 'SEND · STRATUM'}</span>
+                        <span className="btn-stratum-text">EMAIL · STRATUM</span>
                       </button>
                     </form>
                   </div>

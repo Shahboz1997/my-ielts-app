@@ -21,7 +21,19 @@ const isDev = process.env.NODE_ENV === "development";
 
 // Secret must be a non-empty string; undefined causes "Configuration" error
 function getSecret() {
-  const secret = (process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "").trim();
+  const authSecret = (process.env.AUTH_SECRET || "").trim();
+  const nextAuthSecret = (process.env.NEXTAUTH_SECRET || "").trim();
+  if (
+    authSecret &&
+    nextAuthSecret &&
+    authSecret !== nextAuthSecret &&
+    isDev
+  ) {
+    console.warn(
+      "[auth] AUTH_SECRET and NEXTAUTH_SECRET differ — using AUTH_SECRET. Keep only one in .env.local to avoid broken sessions."
+    );
+  }
+  const secret = authSecret || nextAuthSecret;
   if (secret.length > 0) return secret;
   if (isDev) {
     const fallback = "dev-secret-min-32-chars-required-for-auth";

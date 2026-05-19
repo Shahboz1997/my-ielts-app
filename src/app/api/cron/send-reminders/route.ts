@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import moment from "moment-timezone";
 import { getPrisma } from "@/lib/prisma";
+import { EMAIL_LEGAL_FOOTER } from "@/lib/support";
 
 type ReminderUser = {
   id: string;
@@ -80,8 +81,7 @@ function buildReminderEmail(params: {
       ? "Короткая сессия Writing сегодня поможет удержать темп."
       : "A short Writing session today helps you stay on track.";
 
-  const footer =
-    'STRATUM LLC, 30 N Gould St Ste R, Sheridan, WY 82801, USA';
+  const footer = EMAIL_LEGAL_FOOTER;
 
   const html = `
     <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:560px;line-height:1.55">

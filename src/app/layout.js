@@ -4,7 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "../components/Providers";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { getMetadataBaseUrl } from "@/lib/publicSiteUrl";
+import { LEGAL_COMPANY_NAME } from "@/lib/support";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -36,8 +38,9 @@ export const metadata = {
     'English language assessment',
     'STRATUM',
   ],
-  authors: [{ name: 'STRATUM.ai', url: baseUrl }],
-  creator: 'STRATUM.ai',
+  authors: [{ name: LEGAL_COMPANY_NAME, url: baseUrl }],
+  creator: LEGAL_COMPANY_NAME,
+  publisher: LEGAL_COMPANY_NAME,
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -72,7 +75,14 @@ export const viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  let session = null;
+  try {
+    session = await auth();
+  } catch (e) {
+    console.error("[layout] auth():", e?.message ?? e);
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -113,7 +123,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-[#F9FAFB] text-slate-900 dark:bg-[#050505] dark:text-slate-100 transition-colors duration-500 min-h-screen`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Providers>
+          <Providers session={session}>
             {children}
           </Providers>
         </ThemeProvider>
