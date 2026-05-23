@@ -1,12 +1,6 @@
 export const CAMBRIDGE_LEARNER_DICT_BASE =
   'https://dictionary.cambridge.org/dictionary/learner-english';
 
-export const CAMBRIDGE_GRAMMAR_BASE =
-  'https://dictionary.cambridge.org/grammar/british-grammar';
-
-export const CAMBRIDGE_GRAMMAR_SEARCH_BASE =
-  'https://dictionary.cambridge.org/search/british-grammar/direct/';
-
 const LOOKUP_STOPWORDS = new Set([
   'the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'or',
   'but', 'it', 'this', 'that', 'with', 'as', 'by', 'be', 'been', 'being', 'have', 'has', 'had',
@@ -30,14 +24,6 @@ export function cambridgeLookupUrl(term) {
   const slug = slugifyForCambridge(term);
   if (!slug) return CAMBRIDGE_LEARNER_DICT_BASE;
   return `${CAMBRIDGE_LEARNER_DICT_BASE}/${encodeURIComponent(slug)}`;
-}
-
-export function cambridgeGrammarUrl(term) {
-  const lookup = String(term || '').trim();
-  if (!lookup || !/[a-zA-Z]/.test(lookup)) {
-    return `${CAMBRIDGE_GRAMMAR_BASE}/`;
-  }
-  return `${CAMBRIDGE_GRAMMAR_SEARCH_BASE}?q=${encodeURIComponent(lookup)}`;
 }
 
 export function getWordAtCaret(text, caretPos) {
@@ -122,10 +108,5 @@ export function openCambridgeLookup(term) {
   const lookup = String(term || '').trim();
   if (!lookup || !/[a-zA-Z]/.test(lookup)) return false;
   window.open(cambridgeLookupUrl(lookup), '_blank', 'noopener,noreferrer');
-  return true;
-}
-
-export function openCambridgeGrammar(term) {
-  window.open(cambridgeGrammarUrl(term), '_blank', 'noopener,noreferrer');
   return true;
 }

@@ -2,13 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, PenLine, BookmarkPlus } from 'lucide-react';
+import { BookOpen, BookmarkPlus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import {
-  openCambridgeGrammar,
-  openCambridgeLookup,
-  resolvePageLookupTerm,
-} from '@/lib/cambridgeDictionary';
+import { openCambridgeLookup, resolvePageLookupTerm } from '@/lib/cambridgeDictionary';
 import { useWordList } from '@/context/WordListContext';
 
 const sidebarBtnClass =
@@ -51,13 +47,6 @@ export default function CambridgeSidebarLookup({ isMobile = false, variant = 'si
       return;
     }
     setShowInput((v) => !v);
-  };
-
-  const handleGrammar = () => {
-    const fromPage = resolvePageLookupTerm();
-    openCambridgeGrammar(fromPage);
-    setShowInput(false);
-    setShowWordListInput(false);
   };
 
   const saveWordToList = (raw, taskType = null) => {
@@ -165,15 +154,6 @@ export default function CambridgeSidebarLookup({ isMobile = false, variant = 'si
           </button>
           <button
             type="button"
-            onClick={handleGrammar}
-            className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-lg shadow-black/10 backdrop-blur-md transition-all hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-[0.98]"
-            title="Check grammar topic — Cambridge British Grammar"
-          >
-            <PenLine className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" strokeWidth={1.5} />
-            <span>Grammar</span>
-          </button>
-          <button
-            type="button"
             onClick={handleAddToWordList}
             className="group inline-flex items-center gap-2 rounded-2xl border border-slate-200/90 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 px-4 py-3 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-lg shadow-black/10 backdrop-blur-md transition-all hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-[0.98]"
             title="Save selected word to your word list"
@@ -203,20 +183,6 @@ export default function CambridgeSidebarLookup({ isMobile = false, variant = 'si
               <BookOpen className="w-5 h-5" strokeWidth={1.5} />
             </motion.span>
             <span className="text-[10px] font-medium mt-0.5 truncate max-w-[56px]">Word</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleGrammar}
-            className="flex flex-1 flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            title="Cambridge British Grammar"
-          >
-            <motion.span
-              whileTap={{ scale: 0.92 }}
-              className="group flex items-center justify-center w-10 h-10 rounded-xl transition-transform duration-200 hover:scale-110"
-            >
-              <PenLine className="w-5 h-5" strokeWidth={1.5} />
-            </motion.span>
-            <span className="text-[10px] font-medium mt-0.5 truncate max-w-[56px]">Grammar</span>
           </button>
           <button
             type="button"
@@ -288,18 +254,6 @@ export default function CambridgeSidebarLookup({ isMobile = false, variant = 'si
           strokeWidth={1.5}
         />
         <span className="hidden sm:inline">Look up word</span>
-      </button>
-      <button
-        type="button"
-        onClick={handleGrammar}
-        className={sidebarBtnClass}
-        title="Check grammar topic — Cambridge British Grammar"
-      >
-        <PenLine
-          className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110"
-          strokeWidth={1.5}
-        />
-        <span className="hidden sm:inline">Grammar</span>
       </button>
       <button
         type="button"
