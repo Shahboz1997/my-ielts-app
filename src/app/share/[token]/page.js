@@ -149,6 +149,8 @@ async function loadShare(token) {
         improvementStrategy:
           typeof fb.improvement_strategy === "string" ? fb.improvement_strategy : "",
         task1Strategy: isTask1 && fb.task1_strategy ? fb.task1_strategy : null,
+        letterStrategy: isTask1 && fb.letter_strategy ? fb.letter_strategy : null,
+        task1Kind: fb.task1Kind === "gt_letter" ? "gt_letter" : "academic",
         suggestedRewrite:
           typeof fb.suggested_rewrite === "string" ? fb.suggested_rewrite : "",
         corrections,

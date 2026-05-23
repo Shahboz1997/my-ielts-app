@@ -16,7 +16,7 @@ model User {
   emailVerified DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  credits       Int       @default(1)   // New users: free checks; decremented per check
+  credits       Int       @default(3)   // New users: free checks; decremented per check
   language      String?   @default("en") // en | ru | uz
   /// Email practice reminders (cron + /settings)
   practiceRemindersEnabled Boolean  @default(false)
@@ -28,7 +28,7 @@ model User {
   practiceReminderLastSent DateTime?
   accounts      Account[]
   sessions      Session[]
-  checks        Check[]   // Связь с проверками
+  checks          Check[]
 }
 
 model Account {
@@ -83,5 +83,7 @@ model Check {
   createdAt  DateTime @default(now())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 

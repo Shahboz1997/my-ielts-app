@@ -39,6 +39,59 @@ if (typeof dns.setDefaultResultOrder === "function" && preferIpv4ForDatabase(ear
   dns.setDefaultResultOrder("ipv4first");
 }
 
+function patchDnsLookupForSupabase() {
+  if (globalForPrisma.__supabaseDnsPatched) return;
+  globalForPrisma.__supabaseDnsPatched = true;
+
+  const originalLookup = dns.lookup.bind(dns);
+
+  dns.lookup = (hostname, options, callback) => {
+    let opts = options;
+    let cb = callback;
+    if (typeof opts === "function") {
+      cb = opts;
+      opts = {};
+    } else if (typeof opts === "number") {
+      cb = callback;
+      opts = { family: opts };
+    }
+    opts = opts || {};
+
+    const finish = (err, address, family) => {
+      if (err?.code === "EAI_AGAIN") {
+        const retry = (left) => {
+          originalLookup(hostname, opts, (retryErr, retryAddress, retryFamily) => {
+            if (retryErr?.code === "EAI_AGAIN" && left > 0) {
+              setTimeout(() => retry(left - 1), 120 + Math.random() * 180);
+              return;
+            }
+            cb(retryErr, retryAddress, retryFamily);
+          });
+        };
+        retry(3);
+        return;
+      }
+      cb(err, address, family);
+    };
+
+    if (/^db\.[^.]+\.supabase\.co$/i.test(String(hostname || ""))) {
+      originalLookup(hostname, { ...opts, verbatim: false }, finish);
+      return;
+    }
+
+    originalLookup(hostname, opts, finish);
+  };
+}
+
+patchDnsLookupForSupabase();
+
+function shouldForceIpv4(connectionString) {
+  if (!preferIpv4ForDatabase(connectionString)) return false;
+  // Supabase direct DB hostnames are often IPv6-only; family:4 → EAI_AGAIN on Windows.
+  if (/[@/]db\.[^./]+\.supabase\.co/i.test(connectionString || "")) return false;
+  return true;
+}
+
 /**
  * Supabase **Transaction** pooler (port 6543 / *.pooler.supabase.com) + Prisma: add `pgbouncer=true`
  * if missing (see Supabase “Connect to Postgres” → Prisma). Avoid **Session** pooler for Prisma app traffic.
@@ -90,14 +143,20 @@ function ensureLibpqCompatSslMode(connectionString) {
     : `${connectionString}?uselibpqcompat=true`;
 }
 
+function resolveRuntimeDatabaseUrl() {
+  const override = (process.env.PRISMA_RUNTIME_DATABASE_URL || "").trim();
+  if (override) return override;
+
+  const database = (process.env.DATABASE_URL || "").trim();
+  const direct = (process.env.DIRECT_URL || "").trim();
+  return database || direct;
+}
+
 function createPgPool() {
   // PRISMA_RUNTIME_DATABASE_URL overrides everything (e.g. force transaction pooler only).
   // Supabase: use DATABASE_URL = **Transaction** pooler URI for the app; DIRECT_URL = direct (migrations).
   // Prefer DATABASE_URL before DIRECT_URL so PrismaAdapter does not saturate the small direct pool.
-  let connectionString =
-    (process.env.PRISMA_RUNTIME_DATABASE_URL || "").trim() ||
-    (process.env.DATABASE_URL || "").trim() ||
-    (process.env.DIRECT_URL || "").trim();
+  let connectionString = resolveRuntimeDatabaseUrl();
   connectionString = normalizeSupabasePooledUrl(connectionString);
   connectionString = ensureSupabaseDefaultDatabase(connectionString);
   connectionString = ensureLibpqCompatSslMode(connectionString);
@@ -134,8 +193,13 @@ function createPgPool() {
     return undefined;
   }
 
-  // OAuth + PrismaAdapter: allow cold Supabase / TLS; too low → timeouts on first connect.
-  const ms = 60000;
+  // OAuth + PrismaAdapter: allow cold Supabase / TLS; cap dev waits so localhost does not hang ~60s.
+  const defaultConnectMs = process.env.NODE_ENV === "development" ? 15_000 : 60_000;
+  const ms = Math.max(
+    3_000,
+    Number.parseInt(process.env.PG_CONNECT_TIMEOUT_MS || String(defaultConnectMs), 10) ||
+      defaultConnectMs
+  );
   const defaultPoolMax = isSupabaseCloudHost(connectionString) ? 5 : 10;
   const max = Math.min(
     50,
@@ -146,13 +210,17 @@ function createPgPool() {
     )
   );
 
-  const preferIpv4 = !isTcpLocal && preferIpv4ForDatabase(connectionString);
+  const preferIpv4 = !isTcpLocal && shouldForceIpv4(connectionString);
+  const useResilientLookup =
+    !isTcpLocal &&
+    (preferIpv4 || isSupabaseCloudHost(connectionString));
 
   return new Pool({
     connectionString,
     ssl: poolSsl(connectionString),
     max,
     ...(preferIpv4 ? { family: 4 } : {}),
+    ...(useResilientLookup ? { lookup: createResilientLookup(preferIpv4) } : {}),
     // Recycle clients before hosted poolers close them server-side → fewer Prisma P1017 ("Server has closed the connection").
     maxUses: Math.max(
       50,
@@ -201,24 +269,109 @@ export function resetPrismaClients() {
   return resetPrismaChain;
 }
 
-const TRANSIENT_PRISMA_CODES = new Set(["P1017", "P1001", "P1008"]);
+const TRANSIENT_PRISMA_CODES = new Set(["P1017", "P1001", "P1008", "P2024"]);
+
+const TRANSIENT_NETWORK_CODES = new Set([
+  "EAI_AGAIN",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "ECONNRESET",
+  "ECONNREFUSED",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "EPIPE",
+]);
+
+function isTransientDbError(error) {
+  if (!error) return false;
+
+  const codes = [error.code, error.cause?.code, error.meta?.code].filter(Boolean);
+  if (codes.some((code) => TRANSIENT_PRISMA_CODES.has(code))) return true;
+  if (codes.some((code) => TRANSIENT_NETWORK_CODES.has(code))) return true;
+
+  const message = String(error.message || "");
+  return /getaddrinfo EAI_AGAIN|getaddrinfo ENOTFOUND|connection terminated|Server has closed the connection|Connection terminated unexpectedly|Can't reach database server|timeout exceeded when trying to connect/i.test(
+    message
+  );
+}
+
+function retryDelayMs(error, attemptIndex) {
+  const code = error?.code || error?.cause?.code;
+  if (code === "EAI_AGAIN" || /getaddrinfo EAI_AGAIN/i.test(String(error?.message || ""))) {
+    return 250 + 400 * attemptIndex;
+  }
+  return 80 + 120 * attemptIndex;
+}
+
+/**
+ * Windows / some LANs: intermittent DNS (EAI_AGAIN) on Supabase pooler hosts.
+ * Direct db.*.supabase.co hosts: resolve6 first (IPv4-only lookup often fails).
+ */
+function createResilientLookup(preferIpv4) {
+  return (hostname, options, callback) => {
+    const finish = (err, address, family) => {
+      if (err?.code === "EAI_AGAIN") {
+        const baseOpts = { ...(options || {}), verbatim: false };
+        const lookupOpts = preferIpv4 ? { ...baseOpts, family: 4 } : baseOpts;
+        const run = (retriesLeft) => {
+          dns.lookup(hostname, lookupOpts, (lookupErr, lookupAddress, lookupFamily) => {
+            if (lookupErr?.code === "EAI_AGAIN" && retriesLeft > 0) {
+              setTimeout(() => run(retriesLeft - 1), 120 + Math.random() * 180);
+              return;
+            }
+            callback(lookupErr, lookupAddress, lookupFamily);
+          });
+        };
+        run(3);
+        return;
+      }
+      callback(err, address, family);
+    };
+
+    if (/^db\.[^.]+\.supabase\.co$/i.test(hostname)) {
+      dns.promises
+        .resolve6(hostname)
+        .then((addresses) => {
+          if (!addresses?.length) {
+            finish(Object.assign(new Error(`no AAAA for ${hostname}`), { code: "ENOTFOUND" }));
+            return;
+          }
+          callback(null, addresses[0], 6);
+        })
+        .catch((err) => finish(err));
+      return;
+    }
+
+    const baseOpts = { ...(options || {}), verbatim: false };
+    const lookupOpts = preferIpv4 ? { ...baseOpts, family: 4 } : baseOpts;
+    const run = (retriesLeft) => {
+      dns.lookup(hostname, lookupOpts, (err, address, family) => {
+        if (err?.code === "EAI_AGAIN" && retriesLeft > 0) {
+          setTimeout(() => run(retriesLeft - 1), 120 + Math.random() * 180);
+          return;
+        }
+        callback(err, address, family);
+      });
+    };
+    run(3);
+  };
+}
 
 /**
  * Retry DB work when the pool returns a connection the server already closed (common with Supabase transaction pooler).
  */
 export async function withPrismaRetry(operation, opts = {}) {
-  const attempts = Math.max(1, Number(opts.attempts) || 3);
+  const attempts = Math.max(1, Number(opts.attempts) || 4);
   let lastError;
   for (let i = 0; i < attempts; i++) {
     try {
       return await operation();
     } catch (e) {
       lastError = e;
-      const code = e?.code;
-      if (!TRANSIENT_PRISMA_CODES.has(code)) throw e;
+      if (!isTransientDbError(e)) throw e;
       if (i === attempts - 1) throw e;
       await resetPrismaClients();
-      await new Promise((r) => setTimeout(r, 60 + 80 * i));
+      await new Promise((r) => setTimeout(r, retryDelayMs(e, i)));
     }
   }
   throw lastError;

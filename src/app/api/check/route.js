@@ -4,7 +4,6 @@ export const fetchCache = 'force-no-store';
 
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
-import OpenAI from 'openai';
 import https from 'https';
 import http from 'http';
 import { URL as NodeURL } from 'url';
@@ -12,11 +11,26 @@ import {
   IELTS_TASK1_STANDARD_INSTRUCTION,
   buildTask1QuestionPaperText,
 } from '@/lib/task1Prompt.js';
+import {
+  buildGtLetterUserContext,
+  buildTask1LetterRulesBlock,
+  buildLetterChecklistInstruction,
+  buildLetterChecklistOutputExample,
+  buildLetterStrategyOutputExample,
+} from '@/lib/task1LetterPrompt.js';
 import { normalizeSubtopic } from '@/lib/errorSubtopics.js';
 import { writingProfileTag } from '@/lib/writingProfileCache.js';
 import { CREDITS_EXHAUSTED_CODE } from '@/lib/credits';
 import { SUPPORT_EMAIL } from '@/lib/support';
 import { normalizeLexicalUpgradeFromApi } from '@/lib/lexicalUpgrade';
+import {
+  createOpenAIClient,
+  getOpenAIBaseURL,
+  getTrimmedOpenAIKey,
+  getTrimmedOpenAIProjectId,
+  openAIErrorToJsonResponse,
+  validateOpenAIEnvForRoute,
+} from '@/lib/openaiServer.js';
 
 const API_KEY_ERROR_MSG = 'Check API Key. Add a valid OPENAI_API_KEY to .env.local.';
 
@@ -62,15 +76,6 @@ function sanitizeTask1VisionIntro(raw) {
   if (hits >= 2) return '';
   return s;
 }
-/** baseURL ends with /v1. Use OPENAI_BASE_URL in .env for Cloudflare proxy. */
-function getOpenAIBaseURL() {
-  const raw = process.env.OPENAI_BASE_URL;
-  const base = typeof raw === 'string' ? raw.trim() : 'https://api.openai.com/v1';
-  const url = base.length > 0 ? base : 'https://api.openai.com/v1';
-  return url.endsWith('/v1') ? url : url.replace(/\/?$/, '') + '/v1';
-}
-
-/** Uses process.env.OPENAI_API_KEY and OPENAI_PROJECT_ID (server-side). Key is trimmed to remove hidden \\r/spaces. */
 let _openaiKeyLogged = false;
 /** Retries transient Undici/Node "fetch failed" / connection drops when calling OpenAI. */
 async function resilientFetch(input, init) {
@@ -100,31 +105,14 @@ async function resilientFetch(input, init) {
 }
 
 function getOpenAIClient() {
-  const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-  
-  if (!apiKey) {
-    return { error: NextResponse.json({ error: 'Missing API Key' }, { status: 401 }) };
+  if (!_openaiKeyLogged) {
+    _openaiKeyLogged = true;
+    const apiKey = getTrimmedOpenAIKey();
+    console.log(
+      `[DEBUG] OpenAI key: ${apiKey.slice(0, 7)}...${apiKey.slice(-4)} project: ${getTrimmedOpenAIProjectId() || '(none)'}`
+    );
   }
-
-  // ЛОГ ДЛЯ ПРОВЕРКИ (появится в терминале)
-  console.log(`[DEBUG] Using Key: ${apiKey.slice(0, 7)}...${apiKey.slice(-4)}`);
-  
-  const client = new OpenAI({
-    apiKey,
-    baseURL: getOpenAIBaseURL(),
-    maxRetries: 4,
-    timeout: 600_000,
-    fetch: resilientFetch,
-  });
-  
-  return { openai: client };
-}
-function isOpenAIAuthError(err) {
-  if (!err) return false;
-  const status = err.status ?? err.statusCode ?? err.response?.status;
-  const code = err.code ?? err.error?.code;
-  const msg = (err.message || err.error?.message || '').toLowerCase();
-  return status === 401 || code === 'invalid_api_key' || code === 'authentication_error' || msg.includes('api key') || msg.includes('incorrect api key');
+  return createOpenAIClient({ fetch: resilientFetch });
 }
 
 /** Model sometimes wraps JSON in ```json ... ``` despite instructions. */
@@ -251,9 +239,15 @@ function correctionsFromErrors(errorsArr) {
   }));
 }
 
-function buildIeltsCheckSystemPrompt(taskCriteriaName, isT1) {
+function normalizeTask1Kind(raw) {
+  return raw === 'gt_letter' ? 'gt_letter' : 'academic';
+}
+
+function buildIeltsCheckSystemPrompt(taskCriteriaName, isT1, task1Kind = 'academic') {
+  const t1Kind = isT1 ? normalizeTask1Kind(task1Kind) : null;
+  const isGtLetter = isT1 && t1Kind === 'gt_letter';
   const targetBand = isT1 ? 'Task Achievement' : 'Task Response';
-  const targetContext = isT1 ? 'data description' : 'argumentation';
+  const targetContext = isGtLetter ? 'letter (purpose, bullets, tone)' : isT1 ? 'data description' : 'argumentation';
   const sternDataAnalyst = `You are a professional IELTS Data Analyst. Your main task is to identify CONTRADICTIONS in the ${targetContext} (${targetBand}).
 
 Categorize errors strictly into 3 types:
@@ -375,37 +369,70 @@ Do not bloat the essay: improve depth efficiently, without adding new unrelated 
 
 Return a Band 9.0–level "suggested_rewrite" with paragraphs separated by \\n\\n; no bullets or markdown inside the essay body. Rewrite the essay to Band 9.0 level. Wrap every improved phrase, advanced word, or structural change in <mark>...</mark> tags (lowercase only) so the UI can highlight them; do not use any other HTML or markdown inside the essay.`;
 
-  const taskBlock = isT1 ? task1Rules : task2Rules;
+  const taskBlock = isGtLetter
+    ? buildTask1LetterRulesBlock()
+    : isT1
+      ? task1Rules
+      : task2Rules;
 
-  const checklistInstruction = isT1
-    ? `CHECKLIST: Return booleans by evaluating the examiner tips against the student essay.
+  const checklistInstruction = isGtLetter
+    ? buildLetterChecklistInstruction()
+    : isT1
+      ? `CHECKLIST: Return booleans by evaluating the examiner tips against the student essay.
 - overview_included: contains an overview sentence summarizing the main features/trends (Task 1 only).
 - data_accuracy: no contradictions with the chart/table data (no wrong numbers/trends/claims).
 - no_personal_opinion: no personal opinion / no first-person evaluation (Task 1 only).
 - comparisons_made: includes explicit comparisons between categories/trends (higher/lower, more/less, etc.).
 - complex_sentences: uses complex structures (subordination/relative clauses) rather than only simple sentences.`
-    : `CHECKLIST: Return booleans by evaluating the examiner tips against the student essay.
+      : `CHECKLIST: Return booleans by evaluating the examiner tips against the student essay.
 - clear_thesis_statement: introduction clearly states the position/main argument addressing the prompt.
 - paragraph_unity: each paragraph stays focused on one main idea (no mixing/off-topic drift).
 - main_ideas_supported: main ideas are supported with reasons and/or specific examples.
 - academic_register: formal academic tone (no slang/contractions/informal phrases).
 - logical_conclusion: conclusion logically restates key points and answers the prompt.`;
 
-  const checklistOutputExample = isT1
-    ? `"checklist": {
+  const checklistOutputExample = isGtLetter
+    ? buildLetterChecklistOutputExample()
+    : isT1
+      ? `"checklist": {
     "overview_included": false,
     "data_accuracy": false,
     "no_personal_opinion": false,
     "comparisons_made": false,
     "complex_sentences": false
   },`
-    : `"checklist": {
+      : `"checklist": {
     "clear_thesis_statement": false,
     "paragraph_unity": false,
     "main_ideas_supported": false,
     "academic_register": false,
     "logical_conclusion": false
   },`;
+
+  const strategyOutputExample = isGtLetter
+    ? buildLetterStrategyOutputExample()
+    : isT1
+      ? `"task1_strategy": {
+    "recommended_body_count": 2,
+    "paragraph_plan": ["Intro", "Overview", "Body 1", "Body 2"],
+    "grouping_plan": [
+      { "label": "Body 1", "focus": "string", "comparisons_to_make": ["string"] },
+      { "label": "Body 2", "focus": "string", "comparisons_to_make": ["string"] }
+    ],
+    "what_to_fix": ["string"]
+  },`
+      : `"idea_development": {
+    "overall": { "score_0_5": 0, "summary": "string" },
+    "paragraphs": [
+      { "label": "Body 1", "main_idea": "string", "missing": ["mechanism"], "upgrades": ["string"] }
+    ]
+  },`;
+
+  const strategyRuleLine = isGtLetter
+    ? 'For GT Task 1 letter only, you MUST include "letter_strategy" with all required keys. Do NOT include task1_strategy.'
+    : isT1
+      ? 'For Academic Task 1 only, you MUST include "task1_strategy" with the required keys. Do NOT include letter_strategy.'
+      : 'For Task 2 only, you MUST include "idea_development" with the required keys.';
 
   return `${taskBlock}
 
@@ -447,26 +474,64 @@ OUTPUT: Return **ONLY** valid JSON (no markdown fences). Shape:
     "word_repetition": [{ "word": "string", "count": 0, "alternatives": [] }]
   },
   ${checklistOutputExample}
-  "task1_strategy": {
-    "recommended_body_count": 2,
-    "paragraph_plan": ["Intro", "Overview", "Body 1", "Body 2"],
-    "grouping_plan": [
-      { "label": "Body 1", "focus": "string", "comparisons_to_make": ["string"] },
-      { "label": "Body 2", "focus": "string", "comparisons_to_make": ["string"] }
-    ],
-    "what_to_fix": ["string"]
-  },
-  "idea_development": {
-    "overall": { "score_0_5": 0, "summary": "string" },
-    "paragraphs": [
-      { "label": "Body 1", "main_idea": "string", "missing": ["mechanism"], "upgrades": ["string"] }
-    ]
-  },
+  ${strategyOutputExample}
   "suggested_rewrite": "Intro with <mark>improved phrasing</mark>.\\n\\nBody...\\n\\nClosing..."
 }
 
 Rules: Whenever the essay has issues, list them in **errors** with **type** ∈ { grammar, logic, lexical }. Use [] only if the essay is genuinely flawless. You MUST also return the **checklist** object with ALL required boolean keys (no missing keys, no nulls, no strings). You may leave **logical_errors**, **highlights**, and **corrections** as empty arrays — the app merges legacy fields if present. Be rigorous; scores must match official descriptor limits.
-For Task 1 only, you MUST include "task1_strategy" with the required keys. For Task 2 only, you MUST include "idea_development" with the required keys.`; 
+${strategyRuleLine}`;
+}
+
+function normalizeLetterStrategy(result) {
+  const strat = result?.letter_strategy;
+  const cleanList = (arr, max) =>
+    (arr || [])
+      .map((s) => (typeof s === 'string' ? s.trim() : ''))
+      .filter(Boolean)
+      .slice(0, max);
+
+  const bulletsRaw = Array.isArray(strat?.bullets_coverage) ? strat.bullets_coverage : [];
+  const planRaw = Array.isArray(strat?.paragraph_plan) ? strat.paragraph_plan : [];
+  const fixRaw = Array.isArray(strat?.what_to_fix) ? strat.what_to_fix : [];
+  const sal = strat?.salutation_closing && typeof strat.salutation_closing === 'object' ? strat.salutation_closing : {};
+
+  const defaultBullets = [
+    { bullet: 'Bullet 1', covered: false, comment: 'Check the prompt and ensure this point is answered.' },
+    { bullet: 'Bullet 2', covered: false, comment: 'Add a clear sentence addressing this requirement.' },
+    { bullet: 'Bullet 3', covered: false, comment: 'Include a specific detail or request for this bullet.' },
+  ];
+
+  result.letter_strategy = {
+    opening_ok: strat?.opening_ok === true,
+    tone_match: typeof strat?.tone_match === 'string' ? strat.tone_match.trim() : 'formal',
+    bullets_coverage:
+      bulletsRaw.length > 0
+        ? bulletsRaw.slice(0, 6).map((b) => ({
+            bullet: typeof b?.bullet === 'string' ? b.bullet.trim() : 'Requirement',
+            covered: b?.covered === true,
+            comment: typeof b?.comment === 'string' ? b.comment.trim() : '',
+          }))
+        : defaultBullets,
+    closing_ok: strat?.closing_ok === true,
+    salutation_closing: {
+      opening: typeof sal.opening === 'string' ? sal.opening.trim() : '',
+      closing: typeof sal.closing === 'string' ? sal.closing.trim() : '',
+      appropriate: sal.appropriate === true,
+    },
+    paragraph_plan:
+      cleanList(planRaw, 6).length > 0
+        ? cleanList(planRaw, 6)
+        : ['Opening', 'Details', 'Request / information', 'Closing'],
+    what_to_fix:
+      cleanList(fixRaw, 8).length > 0
+        ? cleanList(fixRaw, 8)
+        : [
+            'State your purpose clearly in the opening sentence.',
+            'Address every bullet point from the task with specific detail.',
+            'Use an appropriate formal closing (Yours faithfully / Yours sincerely).',
+          ],
+  };
+  delete result.task1_strategy;
 }
 
 /** Legacy compact API shape → full app shape */
@@ -643,31 +708,18 @@ export async function DELETE(req) {
 export async function POST(req) {
   try {
     // Debug: confirm request reaches this route (never log full secrets).
-    const _rawKey = process.env.OPENAI_API_KEY || '';
-    const _trimKey = typeof _rawKey === 'string' ? _rawKey.trim() : '';
+    const _trimKey = getTrimmedOpenAIKey();
     console.log('[/api/check] POST start', {
       hasKey: _trimKey.length > 0,
       keyLast4: _trimKey ? _trimKey.slice(-4) : null,
+      hasProject: Boolean(getTrimmedOpenAIProjectId()),
       baseURL: getOpenAIBaseURL(),
       nodeEnv: process.env.NODE_ENV,
       time: new Date().toISOString(),
     });
 
-    // Single trimmed key so we never use raw env (avoids hidden \r or spaces). If you still see wrong key, it's from another source.
-    const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-    if (!apiKey) {
-      return NextResponse.json({ error: "Environment variable NOT LOADED" }, { status: 401 });
-    }
-    if (apiKey.slice(-4) === 'nTkA') {
-      const msg = "Invalid or old API key (ends with nTkA). Get a new key at https://platform.openai.com/api-keys, set OPENAI_API_KEY in .env.local, and restart the dev server. If you already updated .env.local, unset the variable in your shell first (PowerShell: $env:OPENAI_API_KEY=''; then npm run dev).";
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(msg);
-      }
-      return NextResponse.json({ error: msg }, { status: 401 });
-    }
-    if (process.env.NODE_ENV !== 'production') {
-      console.log("DEBUG: OpenAI request attempt; project:", process.env.OPENAI_PROJECT_ID || '(none)');
-    }
+    const envError = validateOpenAIEnvForRoute();
+    if (envError) return envError;
     const body = await req.json();
     console.log('[/api/check] request body flags', {
       describeImage: Boolean(body?.describeImage),
@@ -779,9 +831,8 @@ If a safe neutral intro is impossible, reply exactly: NONE`,
           "response?.data:",
           error?.response?.data ?? error?.error
         );
-        if (isOpenAIAuthError(error)) {
-          return NextResponse.json({ error: "INVALID_API_KEY" }, { status: 401 });
-        }
+        const openAiRes = openAIErrorToJsonResponse(error);
+        if (openAiRes) return openAiRes;
         const upstreamStatus = error?.status ?? error?.statusCode ?? error?.response?.status;
         const message =
           typeof error?.message === 'string' && error.message
@@ -830,10 +881,60 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
         return NextResponse.json({ question });
       } catch (err) {
         console.error('Generate Task 1 error:', err, 'response?.data:', err?.response?.data ?? err?.error);
-        if (isOpenAIAuthError(err)) {
-          return NextResponse.json({ error: "INVALID_API_KEY" }, { status: 401 });
-        }
+        const openAiRes = openAIErrorToJsonResponse(err);
+        if (openAiRes) return openAiRes;
         return NextResponse.json({ error: err?.message || 'Topic generation failed.' }, { status: 500 });
+      }
+    }
+
+    // --- 2b. Генерация GT Task 1 (письмо) ---
+    if (body.generateLetterTask) {
+      const clientResult = getOpenAIClient();
+      if (clientResult.error) return clientResult.error;
+      const openai = clientResult.openai;
+      const keyword = typeof body.keyword === 'string' ? body.keyword.trim() : '';
+      try {
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You write an authentic IELTS General Training Writing Task 1 question (letter only).
+
+Return ONLY the task text as it appears on the exam paper:
+- 1–2 sentences of situation (who you are, context)
+- Exactly 3 bullet points starting with "•" or "-" listing what the letter must include
+- End with: "Write at least 150 words. You do not need to write any addresses. Begin your letter as follows:"
+- Then one opening line starter e.g. "Dear Sir or Madam," or "Dear Mr Jones,"
+
+Do NOT write the candidate's letter. Do NOT include band descriptors or examiner notes.`,
+            },
+            {
+              role: 'user',
+              content: keyword
+                ? `Generate a new GT letter task about: ${keyword}`
+                : 'Generate a new GT formal letter task (complaint or request to an organisation).',
+            },
+          ],
+          max_tokens: 400,
+        });
+        const raw = response?.choices?.[0]?.message?.content;
+        const text = (typeof raw === 'string' ? raw : '').trim();
+        if (!text) {
+          return NextResponse.json(
+            { error: 'Could not generate a letter task. Please try again.' },
+            { status: 502 }
+          );
+        }
+        return NextResponse.json({ question: text, task1Kind: 'gt_letter' });
+      } catch (err) {
+        console.error('Generate letter task error:', err);
+        const openAiRes = openAIErrorToJsonResponse(err);
+        if (openAiRes) return openAiRes;
+        return NextResponse.json(
+          { error: err?.message || 'Letter task generation failed.' },
+          { status: 500 }
+        );
       }
     }
 
@@ -862,9 +963,8 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
         return NextResponse.json({ question: text });
       } catch (err) {
         console.error('Generate topic error:', err, 'response?.data:', err?.response?.data ?? err?.error);
-        if (isOpenAIAuthError(err)) {
-          return NextResponse.json({ error: "INVALID_API_KEY" }, { status: 401 });
-        }
+        const openAiRes = openAIErrorToJsonResponse(err);
+        if (openAiRes) return openAiRes;
         return NextResponse.json(
           { error: err?.message || err?.error?.message || 'Topic generation failed.' },
           { status: 500 }
@@ -873,8 +973,10 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
     }
 
     // --- 4. ОСНОВНОЙ РЕЖИМ: Глубокий анализ эссе ---
-    const { essay1, essay2, image, analysisMode, promptText } = body;
+    const { essay1, essay2, image, analysisMode, promptText, task1Kind: rawTask1Kind, letterMeta } = body;
     const isT1 = analysisMode === 'task1';
+    const task1Kind = isT1 ? normalizeTask1Kind(rawTask1Kind) : 'academic';
+    const isGtLetter = isT1 && task1Kind === 'gt_letter';
     const userText = isT1 ? essay1 : essay2;
     const taskCriteriaName = isT1 ? 'Task_Achievement' : 'Task_Response';
 
@@ -913,7 +1015,11 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
     if (clientResult.error) return clientResult.error;
     const openai = clientResult.openai;
 
-    const examinerSystemPrompt = buildIeltsCheckSystemPrompt(taskCriteriaName, isT1);
+    const examinerSystemPrompt = buildIeltsCheckSystemPrompt(taskCriteriaName, isT1, task1Kind);
+
+    const userTextBlock = isGtLetter
+      ? `${buildGtLetterUserContext({ promptText, letterMeta })}\n\nSTUDENT LETTER:\n${userText}`
+      : `TASK: ${analysisMode.toUpperCase()}\nPROMPT: ${promptText}\nSTUDENT ESSAY:\n${userText}`;
 
     let response;
     try {
@@ -927,8 +1033,8 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
           {
             role: "user",
             content: [
-              { type: "text", text: `TASK: ${analysisMode.toUpperCase()}\nPROMPT: ${promptText}\nSTUDENT ESSAY:\n${userText}` },
-              ...(isT1 && image ? [{ type: "image_url", image_url: { url: image } }] : [])
+              { type: "text", text: userTextBlock },
+              ...(isT1 && !isGtLetter && image ? [{ type: "image_url", image_url: { url: image } }] : [])
             ]
           }
         ],
@@ -936,9 +1042,8 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
       });
     } catch (err) {
       console.error('OpenAI error (essay check):', err?.response ?? err?.error ?? err?.message, 'response?.data:', err?.response?.data ?? err?.error);
-      if (isOpenAIAuthError(err)) {
-        return NextResponse.json({ error: "INVALID_API_KEY" }, { status: 401 });
-      }
+      const openAiRes = openAIErrorToJsonResponse(err);
+      if (openAiRes) return openAiRes;
       throw err;
     }
 
@@ -999,8 +1104,15 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
     }));
     if (!Array.isArray(result.errors)) result.errors = [];
 
-    // Task 1: normalize strategy block (backward-compatible).
-    if (isT1) {
+    result.task1Kind = task1Kind;
+
+    // GT Task 1 letter: normalize letter_strategy
+    if (isGtLetter) {
+      normalizeLetterStrategy(result);
+    }
+
+    // Academic Task 1: normalize strategy block (backward-compatible).
+    if (isT1 && !isGtLetter) {
       const strat = result?.task1_strategy;
       const groupingRaw = Array.isArray(strat?.grouping_plan) ? strat.grouping_plan : [];
       const planRaw = Array.isArray(strat?.paragraph_plan) ? strat.paragraph_plan : [];
@@ -1047,6 +1159,7 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
                 'Prioritise comparisons (higher/lower, larger/smaller, overtook, widened/narrowed gap) over pure listing.',
               ],
       };
+      delete result.letter_strategy;
     }
 
     // Task 2: normalize idea development block (optional for older model outputs / backward compatibility).
@@ -1132,9 +1245,8 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
     return NextResponse.json({ ...result, savedId: null });
   } catch (error) {
     console.error("API ERROR:", error);
-    if (isOpenAIAuthError(error)) {
-      return NextResponse.json({ error: "INVALID_API_KEY" }, { status: 401 });
-    }
+    const openAiRes = openAIErrorToJsonResponse(error);
+    if (openAiRes) return openAiRes;
     return NextResponse.json({ error: error?.message || 'Server error.' }, { status: 500 });
   }
 }

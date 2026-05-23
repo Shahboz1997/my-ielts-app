@@ -3,19 +3,24 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import {
+  createOpenAIClient,
+  validateOpenAIEnvForRoute,
+} from "@/lib/openaiServer.js";
 
-function getOpenAIBaseURL() {
-  const raw = process.env.OPENAI_BASE_URL;
-  const base = typeof raw === "string" ? raw.trim() : "https://api.openai.com/v1";
-  const url = base.length > 0 ? base : "https://api.openai.com/v1";
-  return url.endsWith("/v1") ? url : url.replace(/\/?$/, "") + "/v1";
-}
-
-function systemPrompt(taskType) {
+function systemPrompt(taskType, task1Kind) {
   const t = String(taskType || "").toLowerCase();
   const isT1 = t.includes("1");
-  return isT1
+  const isLetter = isT1 && task1Kind === "gt_letter";
+  return isLetter
+    ? [
+        "You are an IELTS General Training Task 1 letter coach.",
+        "Goal: help the user improve tone, bullet coverage, purpose, salutation/closing, and cohesion.",
+        "Be concise and actionable. Use bullet points.",
+        "Priorities: all bullet points addressed, appropriate formal/semi-formal/informal register, clear opening purpose, polite closing.",
+        "When rewriting, keep their situation and requests; improve letter phrases and paragraphing.",
+      ].join("\n")
+    : isT1
     ? [
         "You are an IELTS Writing Task 1 coach.",
         "Goal: help the user improve to a higher band without changing the underlying meaning.",
@@ -44,16 +49,12 @@ function isProbablyDataUrlImage(s) {
 
 export async function POST(req) {
   try {
-    const apiKey = (process.env.OPENAI_API_KEY || "").trim();
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Missing OPENAI_API_KEY on server." },
-        { status: 401 }
-      );
-    }
+    const envError = validateOpenAIEnvForRoute();
+    if (envError) return envError;
 
     const body = await req.json().catch(() => ({}));
     const taskType = body?.taskType || "Task 2";
+    const task1Kind = body?.task1Kind === "gt_letter" ? "gt_letter" : "academic";
     const prompt = clampText(body?.prompt || "", 2500);
     const draft = clampText(body?.draft || "", 12000);
     const image = body?.image;
@@ -71,22 +72,22 @@ export async function POST(req) {
       .slice(-12)
       .map((m) => ({ role: m.role, content: clampText(m.content, 4000) }));
 
-    const openai = new OpenAI({
-      apiKey,
-      baseURL: getOpenAIBaseURL(),
-      project: (process.env.OPENAI_PROJECT_ID || "").trim() || undefined,
-      organization: (process.env.OPENAI_ORG_ID || "").trim() || undefined,
-    });
+    const clientResult = createOpenAIClient();
+    if (clientResult.error) return clientResult.error;
+    const openai = clientResult.openai;
 
     const completion = await openai.chat.completions.create({
       model: (process.env.OPENAI_ASSISTANT_MODEL || "").trim() || "gpt-4o-mini",
       temperature: 0.4,
       messages: [
-        { role: "system", content: systemPrompt(taskType) },
+        { role: "system", content: systemPrompt(taskType, task1Kind) },
         ...sanitized,
         {
           role: "user",
-          content: isProbablyDataUrlImage(image) && String(taskType).toLowerCase().includes("1")
+          content:
+            isProbablyDataUrlImage(image) &&
+            String(taskType).toLowerCase().includes("1") &&
+            task1Kind !== "gt_letter"
             ? [
                 {
                   type: "text",

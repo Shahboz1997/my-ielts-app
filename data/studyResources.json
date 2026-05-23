@@ -1,0 +1,234 @@
+{
+  "criteria": {
+    "ta": [
+      {
+        "title": "Writing an opinion essay",
+        "titleRu": "Эссе с мнением (Task 2)",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/writing/b2/opinion-essay",
+        "source": "British Council",
+        "durationMin": 10,
+        "kind": "read",
+        "inApp": { "tab": "Bank", "taskType": "task2" }
+      },
+      {
+        "title": "Planning your writing",
+        "titleRu": "Планирование письменной работы",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/writing",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ],
+    "cc": [
+      {
+        "title": "Linking words and phrases",
+        "titleRu": "Связующие слова и фразы",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/b1-b2/contrasting-ideas-although-despite-others",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      },
+      {
+        "title": "B2 writing practice",
+        "titleRu": "Письмо уровня B2",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/writing/b2",
+        "source": "British Council",
+        "durationMin": 12,
+        "kind": "read",
+        "inApp": { "tab": "Bank", "taskType": "task2" }
+      }
+    ],
+    "lr": [
+      {
+        "title": "Cambridge Learner's Dictionary",
+        "titleRu": "Словарь Cambridge (Learner's)",
+        "url": "https://dictionary.cambridge.org/dictionary/learner-english/",
+        "source": "Cambridge",
+        "kind": "tool"
+      },
+      {
+        "title": "Vocabulary practice",
+        "titleRu": "Практика лексики",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/vocabulary",
+        "source": "British Council",
+        "durationMin": 10,
+        "kind": "read",
+        "inApp": { "tab": "Bank" }
+      },
+      {
+        "title": "B1–B2 vocabulary topics",
+        "titleRu": "Лексика уровня B1–B2",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/vocabulary/b1-b2",
+        "source": "British Council",
+        "durationMin": 15,
+        "kind": "read",
+        "inApp": { "tab": "Bank", "taskType": "task2" }
+      }
+    ],
+    "gra": [
+      {
+        "title": "English grammar",
+        "titleRu": "Грамматика английского",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar",
+        "source": "British Council",
+        "durationMin": 10,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      },
+      {
+        "title": "Articles: a, an, the",
+        "titleRu": "Артикли: a, an, the",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2-grammar/articles-a-an-the",
+        "source": "British Council",
+        "durationMin": 7,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ]
+  },
+  "subtopics": {
+    "overview": [
+      {
+        "title": "Describing a line graph (overview)",
+        "titleRu": "Описание графика (overview)",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/writing/b2/summary-line-graph",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Bank", "taskType": "task1", "subtype": "graph" }
+      }
+    ],
+    "data_contradiction": [
+      {
+        "title": "Comparing two charts",
+        "titleRu": "Сравнение двух графиков",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/writing/b2/comparing-two-charts",
+        "source": "British Council",
+        "durationMin": 10,
+        "kind": "read",
+        "inApp": { "tab": "Task 1", "task1Kind": "academic" }
+      }
+    ],
+    "task_alignment": [
+      {
+        "title": "Writing an opinion essay",
+        "titleRu": "Эссе с мнением (Task 2)",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/writing/b2/opinion-essay",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ],
+    "articles": [
+      {
+        "title": "Articles: a, an, the",
+        "titleRu": "Артикли: a, an, the",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/a1-a2-grammar/articles-a-an-the",
+        "source": "British Council",
+        "durationMin": 7,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ],
+    "tense_aspect": [
+      {
+        "title": "Present perfect",
+        "titleRu": "Present perfect",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/b1-b2/present-perfect",
+        "source": "British Council",
+        "durationMin": 12,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ],
+    "prepositions": [
+      {
+        "title": "Verbs and prepositions",
+        "titleRu": "Глаголы с предлогами",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/b1-b2/verbs-prepositions",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ],
+    "agreement": [
+      {
+        "title": "Clause structure and verb patterns",
+        "titleRu": "Структура предложения и глаголы",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/grammar/english-grammar-reference/clause-structure-verb-patterns",
+        "source": "British Council",
+        "durationMin": 6,
+        "kind": "read",
+        "inApp": { "tab": "Task 2" }
+      }
+    ],
+    "collocation": [
+      {
+        "title": "B1–B2 vocabulary topics",
+        "titleRu": "Лексика B1–B2",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/vocabulary/b1-b2",
+        "source": "British Council",
+        "durationMin": 10,
+        "kind": "read",
+        "inApp": { "tab": "Bank", "taskType": "task2" }
+      }
+    ],
+    "register": [
+      {
+        "title": "Formal and informal emails",
+        "titleRu": "Формальный и неформальный стиль",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/business/english-emails/unit-4-starting-finishing-emails",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Task 1", "task1Kind": "gt_letter" }
+      }
+    ],
+    "repetition": [
+      {
+        "title": "Vocabulary practice",
+        "titleRu": "Практика лексики",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/vocabulary",
+        "source": "British Council",
+        "durationMin": 8,
+        "kind": "read",
+        "inApp": { "tab": "Bank" }
+      }
+    ],
+    "word_choice": [
+      {
+        "title": "B1–B2 vocabulary topics",
+        "titleRu": "Лексика B1–B2",
+        "url": "https://learnenglish.britishcouncil.org/free-resources/vocabulary/b1-b2",
+        "source": "British Council",
+        "durationMin": 10,
+        "kind": "read",
+        "inApp": { "tab": "Bank", "taskType": "task2" }
+      }
+    ]
+  },
+  "gtLetter": [
+    {
+      "title": "A letter of complaint (formal)",
+      "titleRu": "Формальное письмо (жалоба)",
+      "url": "https://learnenglish.britishcouncil.org/free-resources/writing/b2/letter-complaint",
+      "source": "British Council",
+      "durationMin": 10,
+      "kind": "read",
+      "inApp": { "tab": "Bank", "taskType": "task1", "subtype": "letter" }
+    },
+    {
+      "title": "Formal and informal emails",
+      "titleRu": "Формальные и неформальные письма",
+      "url": "https://learnenglish.britishcouncil.org/free-resources/business/english-emails/unit-4-starting-finishing-emails",
+      "source": "British Council",
+      "durationMin": 8,
+      "kind": "read",
+      "inApp": { "tab": "Task 1", "task1Kind": "gt_letter" }
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+
+/** baseURL ends with /v1. Use OPENAI_BASE_URL in .env for a proxy. */
+export function getOpenAIBaseURL() {
+  const raw = process.env.OPENAI_BASE_URL;
+  const base = typeof raw === 'string' ? raw.trim() : 'https://api.openai.com/v1';
+  const url = base.length > 0 ? base : 'https://api.openai.com/v1';
+  return url.endsWith('/v1') ? url : url.replace(/\/?$/, '') + '/v1';
+}
+
+export function getTrimmedOpenAIKey() {
+  return (process.env.OPENAI_API_KEY || '').trim();
+}
+
+export function getTrimmedOpenAIProjectId() {
+  return (process.env.OPENAI_PROJECT_ID || '').trim();
+}
+
+/**
+ * Validates server OpenAI env before calling the API.
+ * @returns {NextResponse|null} 401 response or null if OK
+ */
+export function validateOpenAIEnvForRoute() {
+  const apiKey = getTrimmedOpenAIKey();
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        error:
+          'OPENAI_API_KEY is not loaded. Add it to .env.local and restart the dev server (npm run dev).',
+        code: 'MISSING_API_KEY',
+      },
+      { status: 401 }
+    );
+  }
+  if (apiKey.slice(-4) === 'nTkA') {
+    return NextResponse.json(
+      {
+        error:
+          'Invalid or old API key (ends with nTkA). Create a new key at https://platform.openai.com/api-keys, update .env.local, then restart the dev server.',
+        code: 'INVALID_API_KEY',
+      },
+      { status: 401 }
+    );
+  }
+  if (apiKey.startsWith('sk-proj-') && !getTrimmedOpenAIProjectId()) {
+    return NextResponse.json(
+      {
+        error:
+          'This key is project-scoped (sk-proj-…). Set OPENAI_PROJECT_ID in .env.local (from https://platform.openai.com/settings/organization/projects) and restart npm run dev.',
+        code: 'MISSING_PROJECT_ID',
+      },
+      { status: 401 }
+    );
+  }
+  return null;
+}
+
+/**
+ * @param {{ fetch?: typeof fetch }} [opts]
+ * @returns {{ openai: OpenAI } | { error: NextResponse }}
+ */
+export function createOpenAIClient(opts = {}) {
+  const envError = validateOpenAIEnvForRoute();
+  if (envError) return { error: envError };
+
+  const apiKey = getTrimmedOpenAIKey();
+  const project = getTrimmedOpenAIProjectId();
+  const organization = (process.env.OPENAI_ORG_ID || '').trim();
+
+  const client = new OpenAI({
+    apiKey,
+    baseURL: getOpenAIBaseURL(),
+    project: project || undefined,
+    organization: organization || undefined,
+    maxRetries: 4,
+    timeout: 600_000,
+    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+  });
+
+  return { openai: client };
+}
+
+export function isOpenAIAuthError(err) {
+  if (!err) return false;
+  const status = err.status ?? err.statusCode ?? err.response?.status;
+  const code = err.code ?? err.error?.code;
+  const msg = (err.message || err.error?.message || '').toLowerCase();
+  return (
+    status === 401 ||
+    code === 'invalid_api_key' ||
+    code === 'authentication_error' ||
+    msg.includes('api key') ||
+    msg.includes('incorrect api key') ||
+    msg.includes('openai-project') ||
+    msg.includes('project')
+  );
+}
+
+function openAIErrorMessage(err) {
+  return String(err?.message ?? err?.error?.message ?? '').trim();
+}
+
+function openAIErrorCode(err) {
+  return err?.code ?? err?.error?.code ?? null;
+}
+
+/**
+ * Map OpenAI SDK / HTTP failures to a JSON response for API routes.
+ * @returns {NextResponse|null}
+ */
+export function openAIErrorToJsonResponse(err) {
+  if (isOpenAIAuthError(err)) {
+    const needsProject =
+      getTrimmedOpenAIKey().startsWith('sk-proj-') && !getTrimmedOpenAIProjectId();
+    return NextResponse.json(
+      {
+        error: needsProject
+          ? 'OpenAI auth failed: set OPENAI_PROJECT_ID in .env.local for sk-proj- keys, then restart npm run dev.'
+          : 'OpenAI rejected the API key. Check OPENAI_API_KEY and OPENAI_PROJECT_ID in .env.local, then restart the dev server.',
+        code: 'INVALID_API_KEY',
+      },
+      { status: 401 }
+    );
+  }
+
+  const code = openAIErrorCode(err);
+  const msg = openAIErrorMessage(err);
+
+  if (
+    code === 'unsupported_country_region_territory' ||
+    /country, region, or territory not supported/i.test(msg)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          'OpenAI is not available from your region. Use a VPN or set OPENAI_BASE_URL in .env.local to a supported proxy endpoint, then restart npm run dev.',
+        code: 'OPENAI_REGION_BLOCKED',
+      },
+      { status: 503 }
+    );
+  }
+
+  if (msg) {
+    return NextResponse.json(
+      {
+        error: msg.replace(/^\d{3}\s+/, ''),
+        code: code || 'OPENAI_ERROR',
+      },
+      { status: 502 }
+    );
+  }
+
+  return null;
+}

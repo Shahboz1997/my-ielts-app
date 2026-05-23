@@ -1,6 +1,7 @@
 'use client';
 
 import { getFirstUpgradeSynonym, normalizeLexicalRow } from '@/lib/lexicalUpgrade';
+import AddToWordListButton from '@/components/AddToWordListButton';
 
 /**
  * Lexical upgrade: weak word → C1 / C2 synonym chips.
@@ -10,6 +11,7 @@ export default function LexicalUpgradePanel({
   onReplaceWord,
   setUserText,
   userText = '',
+  taskType = null,
   className = '',
 }) {
   const list = (Array.isArray(rows) ? rows : [])
@@ -94,6 +96,14 @@ export default function LexicalUpgradePanel({
                     <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-100 italic">
                       {weakWord}
                     </span>
+                    <AddToWordListButton
+                      word={weakWord}
+                      taskType={taskType}
+                      source="lexical_upgrade"
+                      synonyms={[...c1, ...c2]}
+                      compact
+                      className="ml-auto shrink-0"
+                    />
                   </div>
                   {c1.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1">

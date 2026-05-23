@@ -1,3 +1,7 @@
+import LetterStrategyPanel from '@/components/LetterStrategyPanel';
+import CambridgeDictionaryLink from '@/components/CambridgeDictionaryLink';
+import { SUGGESTED_REWRITE_MODEL_LABEL } from '@/lib/suggestedRewrite';
+
 function toBullets(text, max = 8) {
   if (!text || typeof text !== 'string') return [];
   return text
@@ -461,6 +465,7 @@ function DetailedCorrections({ corrections }) {
                   <p className="mt-2 text-sm font-medium leading-relaxed text-white/50 line-through decoration-rose-400/60">
                     {stripMark(err.original) || '—'}
                   </p>
+                  <CambridgeDictionaryLink fromError={stripMark(err.original)} compact className="mt-2 text-indigo-300 hover:text-indigo-200" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-emerald-300/80">Correction</p>
@@ -504,10 +509,10 @@ function ImprovedEssay({ text }) {
             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/50">
               Academic suggested rewrite
             </p>
-            <p className="mt-1 text-xs font-semibold text-white/65">Band 9 target · paragraph structure</p>
+            <p className="mt-1 text-xs font-semibold text-white/65">{SUGGESTED_REWRITE_MODEL_LABEL} · paragraph structure</p>
           </div>
           <span className="inline-flex items-center rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-200">
-            Band 8.5+
+            {SUGGESTED_REWRITE_MODEL_LABEL}
           </span>
         </div>
 
@@ -549,11 +554,17 @@ function ImprovedEssay({ text }) {
 
 export default function SharedReportDetails({ task }) {
   const isTask1 = task.type === 'TASK_1';
+  const isGtLetter = isTask1 && task.task1Kind === 'gt_letter';
 
   return (
     <div className="mt-6 space-y-2">
       <CriteriaBreakdown criteria={task.criteria} isTask1={isTask1} />
-      {isTask1 ? <Task1Strategy strategy={task.task1Strategy} /> : null}
+      {isGtLetter && task.letterStrategy ? (
+        <LetterStrategyPanel strategy={task.letterStrategy} />
+      ) : null}
+      {isTask1 && !isGtLetter && task.task1Strategy ? (
+        <Task1Strategy strategy={task.task1Strategy} />
+      ) : null}
       <ImprovementStrategy text={task.improvementStrategy} />
       <LinguisticInsights insights={task.insights} />
       <DetailedCorrections corrections={task.corrections} />

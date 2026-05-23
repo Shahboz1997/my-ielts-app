@@ -18,15 +18,25 @@ export const TASK2_TIPS = [
   { id: 'logical-conclusion', label: 'Logical Conclusion', icon: 'RefreshCw' },
 ];
 
+/** GT Task 1 letter — examiner checklist (maps to API checklist keys). */
+export const LETTER_TIPS = [
+  { id: 'all-bullets', label: 'All Bullet Points', icon: 'CheckCircle' },
+  { id: 'appropriate-tone', label: 'Appropriate Tone', icon: 'Shield' },
+  { id: 'clear-purpose', label: 'Clear Purpose (Opening)', icon: 'Target' },
+  { id: 'salutation-closing', label: 'Salutation & Closing', icon: 'FileText' },
+  { id: 'paragraphing', label: 'Clear Paragraphing', icon: 'LayoutGrid' },
+];
+
 
 /**
  * Heuristics for Examiner's Checklist: did the user follow each tip?
  * @param { 'Task 1' | 'Task 2' } taskType
  * @param { string } essayText
  * @param { object } result - activeResult (criteria, corrections, analysis)
+ * @param {'academic'|'gt_letter'} [task1Kind]
  * @returns { Record<string, boolean> } tipId -> true if followed, false if missed
  */
-export function getChecklistStatus(taskType, essayText, result) {
+export function getChecklistStatus(taskType, essayText, result, task1Kind = 'academic') {
   const essay = String(essayText || '');
   const text = essay.toLowerCase();
 
@@ -61,6 +71,29 @@ export function getChecklistStatus(taskType, essayText, result) {
     }
     return undefined;
   };
+
+  if (taskType === 'Task 1' && task1Kind === 'gt_letter') {
+    const hasDear = /\bdear\b/i.test(essay);
+    const hasClosing = /\b(yours faithfully|yours sincerely|best regards|kind regards)\b/i.test(text);
+    const hasPurpose =
+      /\b(i am writing to|i write to|i would like to|i wish to|i am writing in connection)\b/i.test(text);
+    const paragraphCount = essay.trim().split(/\n\s*\n/).filter(Boolean).length;
+
+    return {
+      'all-bullets':
+        getChecklistBool('all_bullets_addressed') ??
+        !/(missing bullet|not address|bullet point)/i.test([comments, errorsText].join(' ')),
+      'appropriate-tone':
+        getChecklistBool('appropriate_tone') ??
+        !/(informal|wrong tone|register)/i.test([comments, errorsText].join(' ')),
+      'clear-purpose':
+        getChecklistBool('clear_purpose_opening') ?? hasPurpose,
+      'salutation-closing':
+        getChecklistBool('correct_salutation_closing') ?? (hasDear && hasClosing),
+      paragraphing:
+        getChecklistBool('paragraphing_clear') ?? paragraphCount >= 3,
+    };
+  }
 
   if (taskType === 'Task 1') {
     const hasFirstPerson = /\b(i|my|we|our|me)\b/.test(text);

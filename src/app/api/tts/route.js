@@ -1,24 +1,14 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const apiKey = (process.env.OPENAI_API_KEY || '').trim();
-let _readyLogged = false;
-
-function getOpenAIClient() {
-  if (!apiKey) return null;
-  if (!_readyLogged) {
-    _readyLogged = true;
-    console.log("STRATUM_SYSTEM_READY: API Key Verified.");
-  }
-  return new OpenAI({ apiKey });
-}
+import { createOpenAIClient, validateOpenAIEnvForRoute } from '@/lib/openaiServer.js';
 
 export async function POST(req) {
   try {
-    const openai = getOpenAIClient();
-    if (!openai) {
-      return NextResponse.json({ error: 'Server Configuration Error: Missing API Key' }, { status: 401 });
-    }
+    const envError = validateOpenAIEnvForRoute();
+    if (envError) return envError;
+
+    const clientResult = createOpenAIClient();
+    if (clientResult.error) return clientResult.error;
+    const openai = clientResult.openai;
 
     const { text, filename } = await req.json();
     if (!text || typeof text !== 'string') {

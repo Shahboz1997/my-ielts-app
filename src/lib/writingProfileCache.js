@@ -20,7 +20,7 @@ export async function getCachedWritingProfile(userId, locale) {
       });
       return buildWritingProfile(checks, { locale: loc });
     },
-    ['writing-profile-v2', userId, loc],
+    ['writing-profile-v3', userId, loc],
     { tags: [writingProfileTag(userId)], revalidate: 600 }
   )();
 }

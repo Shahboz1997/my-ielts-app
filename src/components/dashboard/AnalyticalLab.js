@@ -5,6 +5,8 @@ import { Download, ArrowLeft, Zap, BookOpen, GitBranch, ChevronDown, Sparkles } 
 import { generateStratumWritingPdfFromCheck } from '@/lib/stratumWritingPdf';
 import SuggestedRewriteKaraoke from './SuggestedRewriteKaraoke';
 import LexicalUpgradePanel from '@/components/LexicalUpgradePanel';
+import CambridgeDictionaryLink from '@/components/CambridgeDictionaryLink';
+import AddToWordListButton from '@/components/AddToWordListButton';
 import { mergeLexicalUpgrades, getWeakWordsSet } from '@/lib/lexicalUpgrade';
 
 const FEED_LABEL = { grammar: 'Grammar', lexical: 'Vocabulary', cohesion: 'Cohesion', logic: 'Logic' };
@@ -478,13 +480,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   const repetitionAlertsRaw = feedback?.analysis?.word_repetition ?? feedback?.word_repetition ?? [];
   const repetitionAlerts = Array.isArray(repetitionAlertsRaw) ? repetitionAlertsRaw : [];
   const suggestedRewrite = feedback.suggested_rewrite || '';
-  // API prompt targets a Band 9.0-level rewrite; if backend ever returns a dedicated label, prefer it.
-  const rewriteBandLabel =
-    feedback?.suggested_rewrite_band ??
-    feedback?.rewrite_band ??
-    feedback?.model_band ??
-    feedback?.target_band ??
-    '9.0';
   const audioRef = useRef(null);
   const audioFilenameBase = getAudioFilenameBase(taskTypeForAudio);
   const audioDownloadName = `${audioFilenameBase}.mp3`;
@@ -1237,6 +1232,16 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                                 )}
                               </div>
 
+                              <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
+                              <AddToWordListButton
+                                word={err.original}
+                                taskType={taskTypeNormalized}
+                                source="correction"
+                                note={applyText || err.explanation || null}
+                                compact
+                                className="mt-1"
+                              />
+
                               {err.explanation ? (
                                 <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
                                   <span className={`font-bold ${err.type === 'logic' ? 'text-sky-600 dark:text-sky-300' : 'text-slate-800 dark:text-slate-200'}`}>
@@ -1300,6 +1305,15 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                                   <span className="text-sm text-slate-500 dark:text-slate-400">—</span>
                                 )}
                               </div>
+                              <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
+                              <AddToWordListButton
+                                word={err.original}
+                                taskType={taskTypeNormalized}
+                                source="correction"
+                                note={applyText || err.explanation || null}
+                                compact
+                                className="mt-1"
+                              />
                               {err.explanation ? (
                                 <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                                   <span
@@ -1489,6 +1503,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
             onReplaceWord={onReplaceWord}
             setUserText={setUserText}
             userText={userText}
+            taskType={taskTypeNormalized}
           />
 
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-fit">
@@ -1516,7 +1531,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
             {suggestedRewrite && (
               <div className="w-full lg:w-fit min-w-0">
                 <SuggestedRewriteKaraoke
-                  bandScore={rewriteBandLabel}
                   suggestedRewrite={suggestedRewrite}
                   wordTimestamps={suggestedRewriteWordTimestamps}
                   audioRef={audioRef}
@@ -1744,6 +1758,16 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
           )}
         </div>
 
+        <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
+        <AddToWordListButton
+          word={err.original}
+          taskType={taskTypeNormalized}
+          source="correction"
+          note={applyText || err.explanation || null}
+          compact
+          className="mt-1"
+        />
+
         {err.explanation ? (
           <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
             <span className={`font-bold ${err.type === 'logic' ? 'text-sky-600 dark:text-sky-300' : 'text-slate-800 dark:text-slate-200'}`}>
@@ -1763,7 +1787,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
     );
     })}
   </div>
-)}    
+)}
  </div>
               )}
               {rightPanelTab === 'grammar' && (
@@ -1807,6 +1831,15 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                               <span className="text-sm text-slate-500 dark:text-slate-400">—</span>
                             )}
                           </div>
+                          <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
+                          <AddToWordListButton
+                            word={err.original}
+                            taskType={taskTypeNormalized}
+                            source="correction"
+                            note={applyText || err.explanation || null}
+                            compact
+                            className="mt-1"
+                          />
                           {err.explanation ? (
                             <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                               <span
@@ -1827,7 +1860,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                             </p>
                           ) : null}
                         </div>
-                      );
+                        );
                       })}
                     </div>
                   )}

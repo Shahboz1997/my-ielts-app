@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LifeBuoy, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export default function CreditsExhaustedCallout({ className = '', onContactSupport }) {
   return (
@@ -23,30 +23,19 @@ export default function CreditsExhaustedCallout({ className = '', onContactSuppo
             No credits left
           </h3>
           <p className="text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-            You have used your included Task&nbsp;1 and Task&nbsp;2 checks. Further analysis is unavailable until you
-            top up your credits.
+            You have used your included Task&nbsp;1 and Task&nbsp;2 checks. Contact support to request more credits.
           </p>
-          <p className="text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-            For credit purchases, top-ups, and billing questions, contact support.
-          </p>
-          {typeof onContactSupport === 'function' ? (
-            <button
-              type="button"
-              onClick={onContactSupport}
-              className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold tracking-tight text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-400"
-            >
-              <LifeBuoy className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
-              Contact support
-            </button>
-          ) : (
-            <a
-              href="/#pricing"
-              className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold tracking-tight text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-400"
-            >
-              <LifeBuoy className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
-              Contact support
-            </a>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {typeof onContactSupport === 'function' && (
+              <button
+                type="button"
+                onClick={onContactSupport}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/10 px-4 py-3 text-sm font-bold tracking-tight text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5"
+              >
+                Contact support
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

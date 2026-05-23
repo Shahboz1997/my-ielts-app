@@ -43,10 +43,10 @@ import {
   BellRing,
   LineChart,
   BookOpen,
+  Mail,
 } from 'lucide-react';
-import { TASK1_TIPS, TASK2_TIPS } from '@/lib/ieltsGuidelines';
+import { TASK1_TIPS, TASK2_TIPS, LETTER_TIPS } from '@/lib/ieltsGuidelines';
 import { COPYRIGHT_SHORT, BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
-import { useBilling } from '@/components/BillingContext';
 import NeuralSyncShowcase from '@/components/NeuralSyncShowcase';
 
 const appleEase = [0.16, 1, 0.3, 1];
@@ -96,10 +96,10 @@ const VOCAB_BOOSTER = [
 ];
 
 const SUCCESS_PATH_STEPS = [
-  { step: 1, title: 'Generate Topic', desc: 'Pick a prompt from our lab or create one with a keyword. Task 1 & Task 2 ready.', Icon: Sparkles },
-  { step: 2, title: 'Write Essay', desc: 'Compose your answer in the editor. Use the timer and word count like the real test.', Icon: PenTool },
-  { step: 3, title: 'Get Instant Band Score', desc: 'AI Examiner grades you on official criteria and gives a detailed breakdown.', Icon: BarChart3 },
-  { step: 4, title: 'Fix Mistakes', desc: 'Click highlights to see corrections, vocabulary upgrades, and a full suggested rewrite.', Icon: Wrench },
+  { step: 1, title: 'Generate Topic', desc: 'Charts for Academic Task 1, formal letters for GT, or Task 2 essay prompts — from the lab or AI generator.', Icon: Sparkles },
+  { step: 2, title: 'Write Essay', desc: 'Switch Academic chart mode or GT Letter mode. Timer and word count match the real exam.', Icon: PenTool },
+  { step: 3, title: 'Get Instant Band Score', desc: 'AI Examiner grades all four criteria — including bullet coverage and tone for GT letters.', Icon: BarChart3 },
+  { step: 4, title: 'Fix Mistakes', desc: 'Highlights, Letter Strategy (GT), vocabulary upgrades, and a Band 9-style suggested rewrite.', Icon: Wrench },
 ];
 
 const VOCAB_UPGRADES = [
@@ -118,7 +118,11 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Does it support both Academic and General Training?',
-    a: 'Yes. Stratum Intelligence is specifically calibrated to handle the data descriptions of Academic Task 1 and the formal letter structures of General Training.',
+    a: 'Yes. Use Academic mode for charts, graphs, and tables (Vision + overview/grouping strategy). Use GT Letter mode for General Training Task 1: tone (formal/semi-formal), every bullet point, salutation & closing, and a dedicated Letter Strategy panel after each check.',
+  },
+  {
+    q: 'How does GT Letter checking work?',
+    a: 'Choose GT Letter in Task 1, paste or generate a letter task with bullet points, set tone and purpose, then submit. The AI scores Task Achievement on bullet coverage and register — not chart language — and returns letter_strategy with per-bullet feedback and a full model letter rewrite.',
   },
   {
     q: 'Will using Stratum AI help me reach Band 8.0?',
@@ -197,7 +201,6 @@ function BeforeAfterComparison() {
 }
 
 export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
-  const { plans, openPricing } = useBilling();
   const { resolvedTheme } = useTheme();
   const { status } = useSession();
   const [themeMounted, setThemeMounted] = useState(false);
@@ -423,14 +426,20 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               Precision AI Analysis for Writing Task 1 &amp; 2
             </h2>
             <p className="mt-3 text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
-              STRATUM.ai delivers exam-grade AI-evaluation for both Academic and General Training. Our engine scores your Writing Task 1 and Task 2 against official band descriptors so you can improve stratum by stratum.
+              STRATUM.ai delivers exam-grade AI-evaluation for Academic charts, General Training letters, and Task 2 essays — all scored against official band descriptors.
             </p>
           </motion.div>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: FileText, title: 'Grammar & Cohesion Audit', desc: 'Our AI runs a full grammar and cohesion audit on your essay, flagging errors and suggesting linking words so your Writing Task meets Band 7+ standards.' },
-              { icon: Search, title: 'Lexical Resource Upgrade', desc: 'Get precise lexical resource feedback with Band 9-level synonyms and collocations. Replace weak vocabulary and boost your Band Score with every submission.' },
-              { icon: BarChart3, title: 'Real-Time Scoring', desc: 'Receive real-time scoring across Task Achievement, Coherence, Vocabulary, and Grammar. See your Band Score and criterion breakdown instantly after each Writing Task.' },
+              { icon: FileText, title: 'Grammar & Cohesion Audit', desc: 'Full grammar and cohesion audit with linking-word suggestions so your writing meets Band 7+ standards.' },
+              { icon: Search, title: 'Lexical Resource Upgrade', desc: 'Band 9-level synonyms and collocations — chart language for Academic, letter phrases for GT.' },
+              { icon: BarChart3, title: 'Real-Time Scoring', desc: 'Instant bands for Task Achievement, Coherence, Lexical Resource, and Grammar after every submission.' },
+              {
+                icon: Mail,
+                title: 'GT Letter Mode',
+                badge: 'New',
+                desc: 'Dedicated GT Task 1 workflow: tone & purpose controls, bullet checklist, Letter Strategy feedback, and AI-generated formal letter prompts.',
+              },
               {
                 icon: Volume2,
                 title: 'MP3 Audio Models',
@@ -438,7 +447,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                   <>
                     Download AI-generated audio models of Band 9.0-level responses for advanced shadowing practice.
                     <span className="block mt-3">
-                      Master the Sound of Band 9.0. Download AI-generated audio models and perfect your pronunciation with the Stratum Shadowing technique.
+                      Master the Sound of Band 9.0 with Stratum Shadowing on model answers.
                     </span>
                   </>
                 ),
@@ -451,10 +460,21 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                   {...fadeInUp}
                   className="group p-6 rounded-3xl border border-white/5 backdrop-blur-md bg-white/80 dark:bg-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 transition-all duration-300 hover:shadow-2xl hover:shadow-black/10"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-4 [&_svg]:transition-transform [&_svg]:duration-200 group-hover:[&_svg]:scale-110 [&_svg]:[filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]">
-                    <Icon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" strokeWidth={1.5} />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 [&_svg]:transition-transform [&_svg]:duration-200 group-hover:[&_svg]:scale-110 ${
+                    item.badge === 'New'
+                      ? 'bg-teal-100 dark:bg-teal-900/30 [&_svg]:[filter:drop-shadow(0_0_5px_rgba(20,184,166,0.5))]'
+                      : 'bg-indigo-100 dark:bg-indigo-900/30 [&_svg]:[filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]'
+                  }`}>
+                    <Icon className={`w-5 h-5 ${item.badge === 'New' ? 'text-teal-600 dark:text-teal-400' : 'text-indigo-600 dark:text-indigo-400'}`} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-base font-semibold tracking-wide text-slate-900 dark:text-white mb-2">{item.title}</h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-base font-semibold tracking-wide text-slate-900 dark:text-white">{item.title}</h3>
+                    {item.badge && (
+                      <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-teal-500 text-white">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide leading-relaxed">{item.desc}</p>
                 </motion.div>
               );
@@ -493,6 +513,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                   { feature: 'Scoring', generic: 'Inconsistent scoring', booster: 'Real-time Band Descriptors' },
                   { feature: 'Criteria', generic: 'Lacks official criteria', booster: 'Deep Error Mapping' },
                   { feature: 'Tone', generic: 'Informal tone suggestions', booster: 'Academic Register Engine' },
+                  { feature: 'GT Task 1', generic: 'Treats letters like essays', booster: 'Letter Strategy · bullets & tone' },
                 ].map((row, i) => (
                   <tr key={i} className="border-b border-white/5">
                     <td className="p-4 font-medium text-slate-900 dark:text-white">{row.feature}</td>
@@ -736,6 +757,67 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
         </div>
       </section>
 
+      {/* GT Letter — General Training Task 1 */}
+      <section aria-labelledby="section-gt-letter" className="py-12 sm:py-16 bg-gradient-to-b from-teal-50/80 to-[#F9FAFB] dark:from-teal-950/20 dark:to-[#050505] border-b border-white/5">
+        <div className="max-w-5xl mx-auto px-4">
+          <motion.div {...fadeInUp} className="text-center mb-8">
+            <span className="tagline-pill mb-2 block w-fit mx-auto text-teal-700 dark:text-teal-300 font-medium tracking-wide">
+              General Training
+            </span>
+            <h2 id="section-gt-letter" className="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 dark:text-white">
+              GT Task 1 · Formal Letters
+            </h2>
+            <p className="mt-3 text-slate-600 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
+              Not every Task 1 is a chart. Switch to <strong className="font-semibold text-slate-800 dark:text-slate-200">GT Letter</strong> for complaints, requests, and apologies — with examiner feedback on bullets, tone, and salutation.
+            </p>
+          </motion.div>
+          <motion.div
+            {...fadeInUp}
+            className="rounded-3xl border border-teal-200/60 dark:border-teal-800/40 bg-white/90 dark:bg-slate-900/60 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-teal-900/5"
+          >
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-teal-600 dark:text-teal-300" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">Letter Strategy</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Per-bullet coverage</p>
+                  </div>
+                </div>
+                <ul className="space-y-2.5">
+                  {LETTER_TIPS.map((tip) => (
+                    <li key={tip.id} className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-teal-500 shrink-0" strokeWidth={1.5} />
+                      {tip.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-2xl border border-dashed border-teal-300/50 dark:border-teal-700/50 bg-teal-50/50 dark:bg-teal-950/20 p-4 font-mono text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p className="text-teal-800 dark:text-teal-200 font-semibold mb-2 not-italic">Sample task</p>
+                <p className="mb-2">You recently stayed at a hotel where the service was unsatisfactory.</p>
+                <p className="mb-1">• explain what went wrong</p>
+                <p className="mb-1">• say how it affected your stay</p>
+                <p className="mb-2">• request compensation</p>
+                <p className="text-slate-500 dark:text-slate-500 italic">Dear Sir or Madam, …</p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3 justify-center">
+              <button
+                type="button"
+                onClick={onFullAnalysisClick}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-black uppercase tracking-[0.15em] transition-colors shadow-lg shadow-teal-600/25"
+              >
+                Try GT Letter
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Task 2 Comparison Lab — Static Premium Demo (Cathalon.ai style) */}
       <section className="py-8 sm:py-10 bg-white/50 dark:bg-white/5 border-b border-white/5">
         <Task2ComparisonLab darkMode={darkMode} />
@@ -762,7 +844,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                 step: '01',
                 title: 'Neural Generation',
                 Icon: Sparkles,
-                text: 'Generate infinite Task 1 & 2 prompts calibrated to 2026 IELTS standards.',
+                text: 'Generate Academic charts, GT letter tasks with bullets, and Task 2 essay prompts.',
               },
               {
                 step: '02',
@@ -987,14 +1069,14 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               The five principles we use to evaluate and improve your writing for Band 7+.
             </p>
           </motion.div>
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Task 1: Analytical Precision */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Task 1 Academic */}
             <motion.div
               {...fadeInUp}
               className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10"
             >
               <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-indigo-400 mb-6">
-                Task 1: Analytical Precision
+                Task 1 · Academic
               </h3>
               <ul className="space-y-4">
                 {TASK1_TIPS.map((tip, i) => {
@@ -1015,13 +1097,40 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                 })}
               </ul>
             </motion.div>
-            {/* Task 2: Argumentative Mastery */}
+            {/* Task 1 GT Letter */}
+            <motion.div
+              {...fadeInUp}
+              className="rounded-3xl border border-teal-500/20 bg-teal-950/20 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10"
+            >
+              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-teal-400 mb-6">
+                Task 1 · GT Letter
+              </h3>
+              <ul className="space-y-4">
+                {LETTER_TIPS.map((tip, i) => {
+                  const Icon = { CheckCircle, Shield, Target, FileText, LayoutGrid }[tip.icon];
+                  return (
+                    <motion.li
+                      key={tip.id}
+                      initial={{ opacity: 0, x: -12 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true, margin: '-24px' }}
+                      transition={{ delay: i * 0.08, duration: 0.4 }}
+                      className="flex items-center gap-3 text-slate-300"
+                    >
+                      {Icon && <Icon className="w-4 h-4 shrink-0 text-teal-400" strokeWidth={1.5} />}
+                      <span className="text-sm font-medium">{tip.label}</span>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            </motion.div>
+            {/* Task 2 */}
             <motion.div
               {...fadeInUp}
               className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10"
             >
               <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-indigo-400 mb-6">
-                Task 2: Argumentative Mastery
+                Task 2 · Essay
               </h3>
               <ul className="space-y-4">
                 {TASK2_TIPS.map((tip, i) => {
@@ -1148,15 +1257,18 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               Ready to Reach Band 7.5+?
             </h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium tracking-wide mb-6 leading-relaxed max-w-xl mx-auto">
-              Move beyond ineffective practice. Get precision AI-evaluation and Band Score feedback on your Writing Task 1 and Task 2. Your first five checks are free with STRATUM.ai.
+              Move beyond ineffective practice. Get precision AI-evaluation and Band Score feedback on your Writing Task 1 and Task 2. Your first three checks are free with STRATUM.ai.
             </p>
             <button
               type="button"
-              onClick={onFullAnalysisClick}
+              onClick={() => {
+                onLoginClick?.();
+                onFullAnalysisClick?.();
+              }}
               className="btn-stratum px-8 py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
             >
               <div className="shimmer-layer animate-shimmer" aria-hidden />
-              <span className="btn-stratum-text">GET CREDITS · STRATUM</span>
+              <span className="btn-stratum-text">START FREE · 3 CHECKS</span>
             </button>
           </motion.div>
         </div>

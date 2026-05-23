@@ -1,17 +1,33 @@
 "use client";
 
 import { useEffect } from "react";
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { Toaster } from "react-hot-toast";
-import { BillingProvider } from "@/components/BillingContext";
 import { BankTopicsNavProvider } from "@/context/BankTopicsNavContext";
+import { WordListProvider } from "@/context/WordListContext";
+import AddToHomeScreenBanner from "@/components/AddToHomeScreenBanner";
 
 const isDev = process.env.NODE_ENV === "development";
 
 function AuthDbWarm() {
+  const { data: session, status } = useSession();
+
   useEffect(() => {
-    void fetch("/api/auth/warm-db", { cache: "no-store" }).catch(() => {});
-  }, []);
+    if (status !== "authenticated" || !session?.user) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    void fetch("/api/auth/warm-db", { cache: "no-store", signal: controller.signal })
+      .catch(() => {})
+      .finally(() => clearTimeout(timer));
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [status, session?.user?.id]);
+
   return null;
 }
 
@@ -29,11 +45,12 @@ export function Providers({ children, session }) {
     >
       <AuthDbWarm />
       <Toaster position="top-center" />
-      <BillingProvider>
+      <WordListProvider>
         <BankTopicsNavProvider>
           {children}
+          <AddToHomeScreenBanner />
         </BankTopicsNavProvider>
-      </BillingProvider>
+      </WordListProvider>
     </SessionProvider>
   );
 }

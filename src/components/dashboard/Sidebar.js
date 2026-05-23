@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Layers,
-  BarChart3,
-  PenTool,
+  Home,
   Clock,
   Sliders,
   LogOut,
@@ -15,12 +14,13 @@ import {
   Target,
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import CambridgeSidebarLookup from '@/components/CambridgeSidebarLookup';
+import WordListPanel from '@/components/WordListPanel';
 
 const mainNavItems = [
-  { name: 'Overview', href: '/dashboard', icon: BarChart3 },
+  { name: 'Home', href: '/', icon: Home, isHome: true },
   { name: 'Study plan', href: '/study-plan', icon: Target },
   { name: 'My Checks', href: '/history', icon: Clock },
-  { name: 'Writer', href: '/', icon: PenTool },
 ];
 
 const bottomNavItems = [
@@ -40,9 +40,30 @@ const itemVariants = {
   visible: { opacity: 1, x: 0 },
 };
 
+function isNavItemActive(item, pathname) {
+  if (item.isHome) return pathname === '/';
+  if (item.href === '/history') {
+    return pathname === '/history' || pathname.startsWith('/history/');
+  }
+  if (item.href === '/word-list') {
+    return pathname === '/word-list';
+  }
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
 export default function Sidebar({ user, credits }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [confirmLogout, setConfirmLogout] = useState(false);
+
+  const goHome = useCallback(() => {
+    try {
+      sessionStorage.setItem('stratum_nav_tab', 'Home');
+    } catch {
+      /* ignore */
+    }
+    router.push('/');
+  }, [router]);
 
   useEffect(() => {
     if (!confirmLogout) return;
@@ -82,7 +103,11 @@ export default function Sidebar({ user, credits }) {
         {!isMobile && <span className="hidden sm:inline">{item.name}</span>}
       </motion.div>
     );
-    return (
+    return item.isHome ? (
+      <button type="button" onClick={goHome} className="block w-full text-left">
+        {content}
+      </button>
+    ) : (
       <Link href={item.href} className="block">
         {content}
       </Link>
@@ -105,11 +130,14 @@ export default function Sidebar({ user, credits }) {
         "
       >
         {/* Logo: STRATUM.ai — Layers icon + bold, wide-tracked */}
-        <motion.div
-          className="flex items-center gap-2 mb-8 px-2 group"
+        <motion.button
+          type="button"
+          onClick={goHome}
+          className="flex items-center gap-2 mb-8 px-2 group text-left w-full"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          aria-label="Go to Home"
         >
           <Layers className="w-5 h-5 shrink-0 text-indigo-500 dark:text-indigo-400 transition-transform duration-200 group-hover:scale-110 [filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]" strokeWidth={1.5} />
           <motion.span
@@ -120,7 +148,7 @@ export default function Sidebar({ user, credits }) {
           >
             STRATUM<span className="text-indigo-500 dark:text-indigo-400">.</span>ai
           </motion.span>
-        </motion.div>
+        </motion.button>
 
         {/* Main nav */}
         <motion.nav
@@ -130,13 +158,19 @@ export default function Sidebar({ user, credits }) {
           animate="visible"
         >
           {mainNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isNavItemActive(item, pathname);
             return (
-              <motion.div key={item.href} variants={itemVariants}>
+              <motion.div key={item.name} variants={itemVariants}>
                 <NavLink item={item} isActive={isActive} />
               </motion.div>
             );
           })}
+          <motion.div variants={itemVariants}>
+            <CambridgeSidebarLookup />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <WordListPanel />
+          </motion.div>
         </motion.nav>
 
         {/* Bottom: User profile + Settings + Sign out */}
@@ -164,9 +198,9 @@ export default function Sidebar({ user, credits }) {
             </div>
           )}
           {bottomNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isNavItemActive(item, pathname);
             return (
-              <motion.div key={item.href} variants={itemVariants}>
+              <motion.div key={item.name} variants={itemVariants}>
                 <NavLink item={item} isActive={isActive} />
               </motion.div>
             );
@@ -222,11 +256,33 @@ export default function Sidebar({ user, credits }) {
         </div>
         <div className="flex items-center justify-center gap-2 w-full max-w-md px-2 pb-2">
           {mainNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isNavItemActive(item, pathname);
             const Icon = item.icon;
+
+            if (item.isHome) {
+              return (
+                <button
+                  key={item.name}
+                  type="button"
+                  onClick={goHome}
+                  className="flex flex-1 flex-col items-center justify-center min-h-[56px] rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  <motion.span
+                    whileTap={{ scale: 0.92 }}
+                    className={`group flex items-center justify-center w-10 h-10 rounded-xl transition-transform duration-200 hover:scale-110 ${isActive ? 'bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 [&_svg]:[filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]' : ''}`}
+                  >
+                    <Icon className="w-5 h-5" strokeWidth={1.5} />
+                  </motion.span>
+                  <span className="text-[10px] font-medium mt-0.5 truncate max-w-[72px]">
+                    {item.name}
+                  </span>
+                </button>
+              );
+            }
+
             return (
               <Link
-                key={item.href}
+                key={item.name}
                 href={item.href}
                 className="flex-1 flex flex-col items-center justify-center min-h-[56px] rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               >
@@ -242,6 +298,8 @@ export default function Sidebar({ user, credits }) {
               </Link>
             );
           })}
+          <CambridgeSidebarLookup isMobile />
+          <WordListPanel isMobile />
           <Link
             href="/settings"
             className="flex-1 flex flex-col items-center justify-center min-h-[56px] rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"

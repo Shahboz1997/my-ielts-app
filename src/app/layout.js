@@ -56,6 +56,12 @@ export const metadata = {
     description: 'Get instant Band 9.0 feedback and AI-powered essay analysis.',
     images: ['/og-image.png'],
   },
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'STRATUM.ai',
+    statusBarStyle: 'black-translucent',
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', type: 'image/x-icon' },
@@ -64,7 +70,7 @@ export const metadata = {
       { url: '/favicon.png', type: 'image/png', sizes: '512x512' },
     ],
     shortcut: [{ url: '/favicon.ico', type: 'image/x-icon' }],
-    apple: [{ url: '/favicon.png', type: 'image/png', sizes: '180x180' }],
+    apple: [{ url: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
   },
   robots: { index: true, follow: true },
 };

@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   BarChart,
   Bar,
@@ -11,7 +12,44 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { BookOpen, Bell, TrendingDown, ExternalLink } from 'lucide-react';
+import { BookOpen, Bell, TrendingDown, ExternalLink, PenLine, ListChecks } from 'lucide-react';
+
+const BANK_NAV_KEY = 'stratum_bank_topics_nav';
+
+function openStratumPractice(router, inApp) {
+  if (!inApp?.tab) return;
+  try {
+    if (inApp.taskType) {
+      const prev = (() => {
+        try {
+          const raw = localStorage.getItem(BANK_NAV_KEY);
+          return raw ? JSON.parse(raw) : {};
+        } catch {
+          return {};
+        }
+      })();
+      localStorage.setItem(
+        BANK_NAV_KEY,
+        JSON.stringify({
+          ...prev,
+          taskType: inApp.taskType,
+          subtype: inApp.subtype || '',
+          page: 1,
+        })
+      );
+    }
+    sessionStorage.setItem(
+      'stratum_study_plan_nav',
+      JSON.stringify({
+        tab: inApp.tab,
+        task1Kind: inApp.task1Kind || null,
+      })
+    );
+  } catch {
+    /* ignore */
+  }
+  router.push(`/?tab=${encodeURIComponent(inApp.tab)}`);
+}
 
 const BAR_CRIT = '#6366f1';
 const BAR_ERR = '#f43f5e';
@@ -19,6 +57,8 @@ const BAR_SUB = '#0d9488';
 
 export default function StudyPlanClient({ profile, locale }) {
   const isRu = locale === 'ru';
+  const router = useRouter();
+  const practice = useCallback((inApp) => openStratumPractice(router, inApp), [router]);
   const critData = (profile.criteriaSeries || []).map((r) => ({
     ...r,
     display: r.value != null ? Number(r.value.toFixed(2)) : null,
@@ -44,6 +84,27 @@ export default function StudyPlanClient({ profile, locale }) {
           </div>
         </div>
       </section>
+
+      {profile.weeklySteps?.length > 0 && (
+        <section className="rounded-3xl border border-indigo-200/60 dark:border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/20 backdrop-blur-md p-6 sm:p-8">
+          <div className="flex items-center gap-2 mb-4">
+            <ListChecks className="w-5 h-5 text-indigo-500" strokeWidth={1.5} />
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">
+              {isRu ? 'На эту неделю' : 'This week'}
+            </h2>
+          </div>
+          <ol className="space-y-3">
+            {profile.weeklySteps.map((s) => (
+              <li key={s.step} className="flex gap-3 text-sm text-slate-700 dark:text-slate-300">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white text-xs font-semibold">
+                  {s.step}
+                </span>
+                <span className="leading-relaxed pt-0.5">{s.text}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <section className="rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/90 dark:bg-slate-900/60 backdrop-blur-md p-6 sm:p-8">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 tracking-tight">
@@ -163,18 +224,52 @@ export default function StudyPlanClient({ profile, locale }) {
           </h2>
         </div>
         {profile.recommendations?.length ? (
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {profile.recommendations.map((r, i) => (
-              <li key={`${r.url}-${i}`}>
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 hover:border-indigo-500/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-colors group"
-                >
-                  <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{r.title}</span>
-                  <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 shrink-0" strokeWidth={1.5} />
-                </a>
+              <li
+                key={`${r.url}-${i}`}
+                className="p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-slate-950/30"
+              >
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  {r.badgeLabel && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                      {r.badgeLabel}
+                    </span>
+                  )}
+                  {r.source && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{r.source}</span>
+                  )}
+                  {r.durationMin != null && (
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      {isRu ? `${r.durationMin} мин` : `${r.durationMin} min`}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{r.title}</p>
+                {r.reason && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{r.reason}</p>
+                )}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:border-indigo-500/40 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors"
+                  >
+                    {r.kind === 'tool' ? (isRu ? 'Открыть' : 'Open') : (isRu ? 'Читать' : 'Read')}
+                    <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  </a>
+                  {r.inApp?.tab && (
+                    <button
+                      type="button"
+                      onClick={() => practice(r.inApp)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                    >
+                      {isRu ? 'Практика в STRATUM' : 'Practice in STRATUM'}
+                      <PenLine className="w-3.5 h-3.5" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

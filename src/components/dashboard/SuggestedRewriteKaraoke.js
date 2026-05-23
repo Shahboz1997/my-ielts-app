@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { Headphones, Loader2, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SUGGESTED_REWRITE_MODEL_LABEL } from '@/lib/suggestedRewrite';
 
 /**
  * Smart Word-Highlighting Karaoke: word timings with punctuation-based pause tuning.
@@ -262,7 +263,6 @@ function buildLinkingWordMask(wordTimingList) {
 const WAVEFORM = Array.from({ length: 34 }, (_, i) => 0.28 + Math.abs(Math.sin(i * 0.92 + 0.7)) * 0.72);
 
 export default function SuggestedRewriteKaraoke({
-  bandScore,
   suggestedRewrite,
   wordTimestamps,
   audioRef,
@@ -365,9 +365,6 @@ export default function SuggestedRewriteKaraoke({
     };
   }, [audioUrl, wordTimings]);
 
-  const bandLabel =
-    bandScore != null && String(bandScore).trim() !== '' ? String(bandScore).trim() : '—';
-
   useEffect(() => {
     if (activeWordIndex >= 0 && activeWordRef.current && karaokeScrollRef.current) {
       activeWordRef.current.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
@@ -385,12 +382,12 @@ export default function SuggestedRewriteKaraoke({
   const inner = (
     <>
         <div className="flex w-full items-center justify-between gap-4 border-b border-slate-100 bg-white/60 px-6 py-4 dark:border-slate-800/50 dark:bg-slate-900/60 sm:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1 font-black text-xl tabular-nums text-white shadow-lg shadow-indigo-500/20">
-              {bandLabel}
-            </div>
-            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 sm:inline">
-              Target band
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+              Academic suggested rewrite
+            </span>
+            <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-300">
+              {SUGGESTED_REWRITE_MODEL_LABEL}
             </span>
           </div>
           {audioTime > 0 ? (
@@ -400,12 +397,6 @@ export default function SuggestedRewriteKaraoke({
           ) : null}
         </div>
         <div className="p-6 sm:p-8">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">
-              Academic suggested rewrite
-            </span>
-            <span className="h-px flex-1 bg-slate-200/70 dark:bg-slate-800/60" aria-hidden />
-          </div>
         <div className="mb-8 bg-slate-900 dark:bg-black/50 rounded-2xl p-3 flex items-center gap-4 border border-white/5">
           <audio ref={audioRef} src={audioUrl || undefined} className="hidden" preload="metadata" />
 

@@ -1,6 +1,7 @@
 'use client';
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { SUGGESTED_REWRITE_MODEL_LABEL } from '@/lib/suggestedRewrite';
 
 function normalizeErrorType(t) {
   const s = String(t || '')
@@ -612,7 +613,7 @@ export default function ComparisonLab({ activeTab, activeResult, darkMode, class
     return activeTab === 'Task 1' ? 'Band 5.0' : 'Band 5.5';
   }, [payload, activeTab]);
 
-  const rewriteBandLabel = 'Band 8.5+';
+  const rewriteBandLabel = SUGGESTED_REWRITE_MODEL_LABEL;
 
   const borderTone = darkMode ? 'border-slate-800' : 'border-slate-200';
 

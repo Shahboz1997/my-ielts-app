@@ -131,6 +131,33 @@ export default function TopicDetails({ topicId, darkMode }) {
               ))}
             </div>
           </div>
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                const isLetter = String(data.subtype || '').toLowerCase() === 'letter';
+                const prompt = data.promptText || data.title || '';
+                try {
+                  sessionStorage.setItem(
+                    'stratum_workspace_prefill',
+                    JSON.stringify({
+                      activeTab: 'Task 1',
+                      task1Kind: isLetter ? 'gt_letter' : 'academic',
+                      ...(isLetter ? { promptT1Letter: prompt } : { promptT1Academic: prompt }),
+                      letterMeta: isLetter ? { tone: 'formal', purpose: 'complaint', bulletCount: 3 } : undefined,
+                    })
+                  );
+                } catch {
+                  /* ignore */
+                }
+                router.push('/?tab=Task%201');
+              }}
+              className="inline-flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-5 py-2.5 transition-colors"
+            >
+              Open in Task 1 {String(data.subtype || '').toLowerCase() === 'letter' ? '(Letter)' : ''}
+            </button>
+          </div>
         </div>
       )}
     </section>

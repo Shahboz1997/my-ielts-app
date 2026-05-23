@@ -3,72 +3,10 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from 'next-themes';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { 
   Zap, Sun, Moon, Menu, X, 
-  CreditCard, ShieldCheck, ChevronDown, LogOut,
+  ChevronDown, LogOut,
 } from 'lucide-react';
-import { useBilling } from '@/components/BillingContext';
-
-// --- ФОРМА ОПЛАТЫ STRIPE ---
-const CheckoutForm = ({ plan, darkMode, onClose, isAgreed }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [error, setError] = useState(null);
-  const [processing, setProcessing] = useState(false);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!stripe || !elements || !isAgreed) return;
-    setProcessing(true);
-    setError(null);
-
-    const cardElement = elements.getElement(CardElement);
-    const { error, paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card', card: cardElement,
-    });
-
-    if (error) {
-      setError(error.message);
-      setProcessing(false);
-    } else {
-      if (typeof window !== 'undefined' && typeof window.gtagSendEvent === 'function') {
-        window.gtagSendEvent();
-      }
-      alert(`Success! ${plan.name} activated.`);
-      setProcessing(false);
-      onClose();
-    }
-  };
-
-  const canSubmit = isAgreed && !processing;
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-        <CardElement options={{
-          style: {
-            base: { fontSize: '16px', color: darkMode ? '#fff' : '#000', '::placeholder': { color: '#64748b' } },
-          },
-        }} />
-      </div>
-      {error && <div className="text-red-500 text-[10px] font-black uppercase text-center">{error}</div>}
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className={`w-full min-h-[44px] py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 ${
-            canSubmit
-              ? 'btn-stratum hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]'
-              : 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 opacity-50 cursor-not-allowed'
-          }`}
-        >
-        {canSubmit && <div className="shimmer-layer animate-shimmer" aria-hidden />}
-        <span className={canSubmit ? 'btn-stratum-text' : ''}>{processing ? 'PROCESSING...' : plan.price === '3.99$' ? 'START TRIAL · STRATUM' : `PAY ${plan?.price} · STRATUM`}</span>
-      </button>
-    </form>
-  );
-};
 const Navbar = ({ 
   activeTab, setActiveTab, darkMode: darkModeProp, setDarkMode: setDarkModeProp, 
   isMenuOpen, setIsMenuOpen, onLoginClick,
@@ -85,52 +23,19 @@ const Navbar = ({
     typeof creditsProp === 'number'
       ? creditsProp
       : (session?.user?.credits || 0);
-  const [isPricingOpen, setIsPricingOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [confirmLogoutMobile, setConfirmLogoutMobile] = useState(false);
-  const [isAgreed, setIsAgreed] = useState(false);
-  const [stripePromise, setStripePromise] = useState(null);
-  const [stripeLoadError, setStripeLoadError] = useState(null);
-
-  useEffect(() => {
-    const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    if (!pk || !pk.startsWith('pk_')) {
-      setStripeLoadError('Stripe key not configured');
-      return;
-    }
-    let cancelled = false;
-    loadStripe(pk)
-      .then((stripe) => {
-        if (!cancelled && stripe) setStripePromise(Promise.resolve(stripe));
-      })
-      .catch(() => {
-        if (!cancelled) setStripeLoadError('Failed to load Stripe.js');
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (selectedPlan) setIsAgreed(false);
-  }, [selectedPlan]);
 
   useEffect(() => {
     if (!isMenuOpen) setConfirmLogoutMobile(false);
   }, [isMenuOpen]);
 
-  const menuItems = ['Topics', 'Bank', 'Task 1', 'Task 2', 'Archive'];
+  const menuItems = ['Home', 'Bank', 'Task 1', 'Task 2', 'Archive'];
   const handleThemeToggle = () => {
     if (!themeMounted) return;
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
   
-  const plans = [
-    { name: 'Trial', price: '3.99$', desc: '3 Days FREE, then 3.99$ per 5 days' },
-    { name: 'Monthly', price: '14.99$', desc: 'Full access for 30 days' },
-    { name: 'Yearly', price: '39.99$', desc: 'Best value - Save 70% yearly' },
-  ];
-
-  // ... остальной код
   return (
     <>
       <nav className={`sticky top-0 z-50 p-4 border-b border-white/5 backdrop-blur-md transition-colors duration-300 ${
@@ -141,9 +46,9 @@ const Navbar = ({
           {/* Logo: STRATUM.ai — bold, wide-tracked, accent on dot */}
           <button
             type="button"
-            onClick={() => setActiveTab('Topics')}
+            onClick={() => setActiveTab('Home')}
             className="group flex items-center gap-2 text-xl sm:text-2xl font-black tracking-[0.15em] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded uppercase"
-            aria-label="Go to Topics"
+            aria-label="Go to Home"
           >
             <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-indigo-500 dark:text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110 [filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]" strokeWidth={1.5} />
             <span className={darkMode ? 'text-white' : 'text-slate-900'}>
@@ -183,7 +88,6 @@ const Navbar = ({
               </div> */}
             {isLoggedIn ? (
         <div className="flex items-center gap-3">
-          {/* Кредиты */}
           <div className="flex items-center gap-1 font-semibold text-xs text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight">
             {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={1.5} />
           </div>
@@ -355,68 +259,6 @@ const Navbar = ({
         </AnimatePresence>
       </nav>
 
-      {/* STRIPE PAYMENT MODAL */}
-      <AnimatePresence>
-        {selectedPlan && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedPlan(null)} className="absolute inset-0 z-[100] bg-slate-900/90 backdrop-blur-md" aria-hidden="true" />
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className={`relative z-[101] w-full max-w-md p-4 sm:p-8 rounded-3xl shadow-2xl shadow-black/15 my-auto max-h-[100dvh] overflow-y-auto border border-white/5 backdrop-blur-md ${darkMode ? 'bg-slate-900/95 text-white' : 'bg-white/95 text-slate-900'}`}>
-              <div className="flex justify-between items-center mb-8">
-                <div className="italic font-black uppercase text-2xl tracking-tighter">
-                  <h3>{selectedPlan.price === '0$' ? 'Start Trial' : 'Checkout'}</h3>
-                </div>
-                <button type="button" onClick={() => setSelectedPlan(null)} className="group flex items-center justify-center min-h-[44px] min-w-[44px] p-2 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-600 rounded-full transition-colors" aria-label="Close"><X className="w-6 h-6 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} /></button>
-              </div>
-
-              <div className={`mb-8 p-5 rounded-2xl border-2 border-dashed ${darkMode ? 'border-slate-700 bg-slate-800/40' : 'border-slate-100 bg-slate-50'}`}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-black text-xs uppercase text-slate-500">{selectedPlan.name} Plan</span>
-                  <span className="text-2xl font-semibold text-indigo-600">{selectedPlan.price}</span>
-                </div>
-                <p className="text-[9px] font-bold uppercase text-slate-400 tracking-tight">{selectedPlan.desc}</p>
-              </div>
-
-              <label className={`flex items-start gap-3 mb-6 cursor-pointer select-none ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                <input
-                  type="checkbox"
-                  checked={isAgreed}
-                  onChange={(e) => setIsAgreed(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-red-600 focus:ring-red-500 focus:ring-offset-0 dark:focus:ring-offset-slate-900 accent-red-600"
-                />
-                <span className="text-sm font-medium tracking-tight">
-                  I agree to the{' '}
-                  <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-red-600 dark:text-red-400 hover:underline">
-                    Terms of Service
-                  </Link>
-                  {' '}and{' '}
-                  <Link href="/refund" target="_blank" rel="noopener noreferrer" className="text-red-600 dark:text-red-400 hover:underline">
-                    Refund Policy
-                  </Link>
-                  .
-                </span>
-              </label>
-
-              {stripeLoadError && (
-                <div className="py-4 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-sm text-center">
-                  {stripeLoadError}. Add <code className="text-xs bg-black/10 dark:bg-white/10 px-1 rounded">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> to <code className="text-xs bg-black/10 dark:bg-white/10 px-1 rounded">.env.local</code> with your Stripe publishable key (pk_test_... or pk_live_...).
-                </div>
-              )}
-              {!stripeLoadError && !stripePromise && (
-                <div className="py-8 text-slate-500 dark:text-slate-400 text-sm text-center">Loading payment form…</div>
-              )}
-              {!stripeLoadError && stripePromise && (
-                <Elements stripe={stripePromise}>
-                  <CheckoutForm plan={selectedPlan} darkMode={darkMode} onClose={() => setSelectedPlan(null)} isAgreed={isAgreed} />
-                </Elements>
-              )}
-
-              <div className="mt-8 flex justify-center items-center gap-2 text-[9px] font-black uppercase text-slate-500 opacity-50 italic">
-                <ShieldCheck className="w-4 h-4" strokeWidth={1.5} /> 256-bit Encrypted Secure Payment
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </>
   );
 };

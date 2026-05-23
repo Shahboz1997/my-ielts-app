@@ -4,6 +4,7 @@
  */
 
 import { normalizeSubtopic, labelSubtopic } from '@/lib/errorSubtopics.js';
+import { buildStudyRecommendations, buildWeeklySteps } from '@/lib/studyResources.js';
 
 function normalizeExaminerErrorType(t) {
   const s = String(t || '')
@@ -51,26 +52,6 @@ const CRITERIA_DEF = [
   { key: 'lr', field: () => 'Lexical_Resource', labelEn: 'Lexical resource', labelRu: 'Лексика' },
   { key: 'gra', field: () => 'Grammatical_Range_and_Accuracy', labelEn: 'Grammar', labelRu: 'Грамматика' },
 ];
-
-/** Curated free resources — extend as needed */
-export const RESOURCE_HINTS = {
-  ta: [
-    { title: 'IELTS Writing task achievement', titleRu: 'IELTS: выполнение задания', url: 'https://takeielts.britishcouncil.org/take-ielts/prepare/free-ielts-practice-tests/writing' },
-    { title: 'Planning your essay', titleRu: 'План эссе', url: 'https://learnenglish.britishcouncil.org/skills/writing' },
-  ],
-  cc: [
-    { title: 'Cohesion and linking words', titleRu: 'Связность и связующие слова', url: 'https://learnenglish.britishcouncil.org/grammar/english-grammar-reference/linking-words-and-phrases' },
-  ],
-  lr: [
-    { title: 'Vocabulary for IELTS', titleRu: 'Лексика для IELTS', url: 'https://learnenglish.britishcouncil.org/vocabulary' },
-  ],
-  gra: [
-    { title: 'English grammar reference', titleRu: 'Справочник по грамматике', url: 'https://learnenglish.britishcouncil.org/grammar' },
-  ],
-  grammar: [{ title: 'Grammar practice', titleRu: 'Практика грамматики', url: 'https://learnenglish.britishcouncil.org/grammar' }],
-  logic: [{ title: 'Critical reading & argument', titleRu: 'Аргументация', url: 'https://learnenglish.britishcouncil.org/skills/writing' }],
-  lexical: [{ title: 'Vocabulary topics', titleRu: 'Лексические темы', url: 'https://learnenglish.britishcouncil.org/vocabulary/a1-a2-vocabulary' }],
-};
 
 function avg(arr) {
   if (!arr.length) return null;
@@ -125,6 +106,7 @@ export function buildWritingProfile(checks, opts = {}) {
   const errorTypes = { grammar: 0, logic: 0, lexical: 0 };
   /** @type {Record<string, number>} */
   const subtopicCounts = {};
+  let hasGtLetters = false;
 
   for (const check of checks || []) {
     let fb = {};
@@ -133,6 +115,7 @@ export function buildWritingProfile(checks, opts = {}) {
     } catch {
       continue;
     }
+    if (fb.task1Kind === 'gt_letter' || fb.letter_strategy) hasGtLetters = true;
     const isT1 = (check.type || 'TASK_2') === 'TASK_1';
     const c = fb.criteria || {};
     for (const def of CRITERIA_DEF) {
@@ -189,32 +172,16 @@ export function buildWritingProfile(checks, opts = {}) {
   const headline = headlineCopy(weakKeys, locale);
   const plan = buildPlanCopy(weakKeys, locale);
 
-  /** De-duplicate resource URLs */
-  const seen = new Set();
-  const recommendations = [];
-  for (const k of weakKeys) {
-    for (const r of RESOURCE_HINTS[k] || []) {
-      if (seen.has(r.url)) continue;
-      seen.add(r.url);
-      recommendations.push({
-        criterionKey: k,
-        title: locale === 'ru' ? r.titleRu : r.title,
-        url: r.url,
-      });
-    }
-  }
-  const topErr = Object.entries(errorTypes).sort((a, b) => b[1] - a[1])[0]?.[0];
-  if (topErr && RESOURCE_HINTS[topErr]) {
-    for (const r of RESOURCE_HINTS[topErr]) {
-      if (seen.has(r.url)) continue;
-      seen.add(r.url);
-      recommendations.push({
-        criterionKey: topErr,
-        title: locale === 'ru' ? r.titleRu : r.title,
-        url: r.url,
-      });
-    }
-  }
+  const recommendations = buildStudyRecommendations({
+    weakCriteriaKeys: weakKeys,
+    criteriaSeries,
+    subtopicSeries,
+    errorTypes,
+    hasGtLetters,
+    locale,
+  });
+
+  const weeklySteps = buildWeeklySteps(weakKeys, subtopicSeries, locale);
 
   return {
     checkCount: checks?.length ?? 0,
@@ -227,6 +194,8 @@ export function buildWritingProfile(checks, opts = {}) {
     weakCriteriaKeys: weakKeys,
     headline,
     plan,
-    recommendations: recommendations.slice(0, 8),
+    recommendations,
+    weeklySteps,
+    hasGtLetters,
   };
 }

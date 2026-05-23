@@ -41,11 +41,11 @@ export default function PrivacyPage() {
       </section>
 
       <section>
-        <h2>Payments (Stripe)</h2>
+        <h2>Credits</h2>
         <p>
-          All payment data is handled exclusively by Stripe, the world&apos;s leading payment processor.
-          We never store your credit card number or full card details. Stripe is PCI-DSS compliant.
-          We only store the fact that you have a subscription and your credit balance where relevant.
+          We store your credit balance so you can use AI writing checks. We do not store payment card
+          details on our servers. If you need more credits, contact us using the support email in the
+          site footer.
         </p>
       </section>
 

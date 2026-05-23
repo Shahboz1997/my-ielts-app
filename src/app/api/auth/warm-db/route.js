@@ -1,18 +1,31 @@
 import util from "node:util";
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { getPrisma, withPrismaRetry } from "@/lib/prisma";
 import { formatAuthErrorCause } from "@/lib/formatAuthErrorCause";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const isDev = process.env.NODE_ENV === "development";
+const WARM_DB_TIMEOUT_MS = 12_000;
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("warm-db timeout")), ms);
+    }),
+  ]);
+}
 
 /** Wakes Postgres (Supabase pool) / first pg pool connection before OAuth (reduces cold stalls). */
 export async function GET() {
   const t0 = Date.now();
   try {
-    await getPrisma().$queryRaw`SELECT 1`;
+    await withTimeout(
+      withPrismaRetry(() => getPrisma().$queryRaw`SELECT 1`, { attempts: 2 }),
+      WARM_DB_TIMEOUT_MS
+    );
     return NextResponse.json({ ok: true, ms: Date.now() - t0 });
   } catch (e) {
     const chain = formatAuthErrorCause(e);

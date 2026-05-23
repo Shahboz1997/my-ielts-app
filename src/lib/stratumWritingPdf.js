@@ -1,10 +1,11 @@
 /**
  * Full STRATUM Writing analysis PDF (home page Task 1/2): mirrors on-screen analysis
- * (criteria, linguistic insights, lexical refinement, corrections, model response).
+ * (criteria, linguistic insights, lexical upgrade C1/C2, corrections, model response).
  */
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PDF_BRAND_TAGLINE, PDF_CONTACT_LINE, PDF_LEGAL_LINE } from '@/lib/support';
+import { mergeLexicalUpgrades } from '@/lib/lexicalUpgrade';
 
 function getLinkingWords(result) {
   return result?.analysis?.linking_words ?? result?.linking_words ?? null;
@@ -115,6 +116,17 @@ function formatSynonymsField(syn) {
   return sanitizePdfText(String(syn)) || '—';
 }
 
+function formatSynonymList(synonyms) {
+  if (!Array.isArray(synonyms) || synonyms.length === 0) return '—';
+  return (
+    synonyms
+      .map((x) => sanitizePdfText(String(x)))
+      .filter(Boolean)
+      .slice(0, 8)
+      .join(', ') || '—'
+  );
+}
+
 /**
  * @param {Object} opts
  * @param {boolean} opts.isT1
@@ -122,8 +134,18 @@ function formatSynonymsField(syn) {
  * @param {string} opts.essay
  * @param {string|null} [opts.chartImage] - data URL for Task 1 chart
  * @param {string} [opts.promptText]
+ * @param {'academic'|'gt_letter'} [opts.task1Kind]
  */
-export function generateStratumWritingPdf({ isT1, result, essay, chartImage = null, promptText = '' }) {
+export function generateStratumWritingPdf({
+  isT1,
+  result,
+  essay,
+  chartImage = null,
+  promptText = '',
+  task1Kind = 'academic',
+}) {
+  const isGtLetter =
+    isT1 && (task1Kind === 'gt_letter' || result?.task1Kind === 'gt_letter');
   if (!result) return;
 
   const doc = new jsPDF();
@@ -187,7 +209,13 @@ export function generateStratumWritingPdf({ isT1, result, essay, chartImage = nu
     MARGIN + 8,
     y + 10
   );
-  doc.text(`Task Type: ${isT1 ? 'Task 1 (Academic)' : 'Task 2 (Essay)'}`, MARGIN + 8, y + 18);
+  doc.text(
+    `Task Type: ${
+      isGtLetter ? 'Task 1 (GT Letter)' : isT1 ? 'Task 1 (Academic)' : 'Task 2 (Essay)'
+    }`,
+    MARGIN + 8,
+    y + 18
+  );
   doc.setFontSize(22);
   doc.text(`Overall Band: ${result.overall_band != null ? result.overall_band : '—'}`, MARGIN + 8, y + 26);
   y += 34 + SECTION_GAP;
@@ -237,7 +265,13 @@ export function generateStratumWritingPdf({ isT1, result, essay, chartImage = nu
     });
   }
 
-  if (isT1 && chartImage && typeof chartImage === 'string' && chartImage.startsWith('data:image')) {
+  if (
+    isT1 &&
+    !isGtLetter &&
+    chartImage &&
+    typeof chartImage === 'string' &&
+    chartImage.startsWith('data:image')
+  ) {
     try {
       const format = chartImage.includes('png') ? 'PNG' : 'JPEG';
       y = ensureSpace(y, CHART_IMAGE_MAX_HEIGHT + 12);
@@ -380,6 +414,31 @@ export function generateStratumWritingPdf({ isT1, result, essay, chartImage = nu
     y += SECTION_GAP;
   }
 
+  const letterStrat = isGtLetter ? result?.letter_strategy : null;
+  if (letterStrat && typeof letterStrat === 'object') {
+    y = ensureSpace(y, 36);
+    doc.setTextColor(...indigo);
+    doc.setFontSize(12);
+    doc.text('3b. Letter structure', MARGIN, y);
+    y += 8;
+    doc.setFontSize(9);
+    doc.setTextColor(...greyText);
+    const toneLine = `Tone: ${letterStrat.tone_match || 'formal'}`;
+    doc.text(toneLine, MARGIN, y);
+    y += 6;
+    const bullets = Array.isArray(letterStrat.bullets_coverage) ? letterStrat.bullets_coverage : [];
+    bullets.slice(0, 6).forEach((b) => {
+      const line = `${b.covered ? '[OK]' : '[MISS]'} ${b.bullet || 'Bullet'}${b.comment ? ` — ${b.comment}` : ''}`;
+      const lines = doc.splitTextToSize(sanitizePdfText(line), CONTENT_WIDTH);
+      lines.forEach((ln) => {
+        y = ensureSpace(y, 5);
+        doc.text(ln, MARGIN, y);
+        y += 4.5;
+      });
+    });
+    y += SECTION_GAP;
+  }
+
   const lw = getLinkingWords(result);
   const repetitions = getWordRepetition(result);
   const hasInsights =
@@ -487,55 +546,50 @@ export function generateStratumWritingPdf({ isT1, result, essay, chartImage = nu
     y += SECTION_GAP;
   }
 
-  y = ensureSpace(y, 22);
+  y = ensureSpace(y, 28);
   doc.setTextColor(...indigo);
   doc.setFontSize(12);
-  doc.text('5. Lexical refinement', MARGIN, y);
-  y += 7;
+  doc.text('5. Lexical upgrade', MARGIN, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(...greyText);
+  doc.text('Swap weak words for sharper choices (C1 / C2)', MARGIN, y);
+  y += 8;
 
-  const lexicalUpgrade = Array.isArray(result.lexical_upgrade) ? result.lexical_upgrade : [];
-  if (lexicalUpgrade.length > 0) {
-    const tableBody = lexicalUpgrade
-      .map((item) => {
-        const basic = sanitizePdfText(item.band_56_word || item.original || '—');
-        const c1 = formatSynonymsField(item.c1_synonyms);
-        const c2 = formatSynonymsField(item.c2_synonyms);
-        const academic =
-          c1 !== '—' || c2 !== '—'
-            ? [c1 !== '—' ? `C1: ${c1}` : '', c2 !== '—' ? `C2: ${c2}` : ''].filter(Boolean).join(' · ')
-            : formatSynonymsField(item.band_89_synonyms ?? item.synonyms);
-        if (basic === '—' && academic === '—') return null;
-        return [basic, academic];
-      })
-      .filter(Boolean);
+  const lexicalRows = mergeLexicalUpgrades({
+    apiRows: Array.isArray(result.lexical_upgrade) ? result.lexical_upgrade : [],
+    essayText: essay || '',
+    isT1: isT1 && !isGtLetter,
+  });
 
-    if (tableBody.length > 0) {
-      autoTable(doc, {
-        startY: y,
-        head: [['Weaker / Band 5–6 choice', 'Band 8+ alternatives']],
-        body: tableBody,
-        theme: 'striped',
-        headStyles: { fillColor: indigo, fontSize: 9, textColor: 255, fontStyle: 'bold' },
-        styles: {
-          fontSize: 8.5,
-          cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
-          overflow: 'linebreak',
-          valign: 'top',
-        },
-        columnStyles: {
-          0: { cellWidth: CONTENT_WIDTH * 0.38 },
-          1: { cellWidth: CONTENT_WIDTH * 0.62 - 0.5 },
-        },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        margin: { left: MARGIN, right: MARGIN },
-      });
-      y = (doc.lastAutoTable?.finalY ?? y) + SECTION_GAP;
-    } else {
-      doc.setFontSize(9);
-      doc.setTextColor(...greyText);
-      doc.text('No lexical upgrades for this submission.', MARGIN, y);
-      y += 8;
-    }
+  if (lexicalRows.length > 0) {
+    const tableBody = lexicalRows.map((row) => [
+      sanitizePdfText(row.band_56_word) || '—',
+      formatSynonymList(row.c1_synonyms),
+      formatSynonymList(row.c2_synonyms),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Band 5–6 (weak)', 'C1 — sharper choice', 'C2 — sharper choice']],
+      body: tableBody,
+      theme: 'striped',
+      headStyles: { fillColor: indigo, fontSize: 8.5, textColor: 255, fontStyle: 'bold' },
+      styles: {
+        fontSize: 8,
+        cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+        overflow: 'linebreak',
+        valign: 'top',
+      },
+      columnStyles: {
+        0: { cellWidth: CONTENT_WIDTH * 0.26, fontStyle: 'italic' },
+        1: { cellWidth: CONTENT_WIDTH * 0.37 },
+        2: { cellWidth: CONTENT_WIDTH * 0.37 - 0.5 },
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: MARGIN, right: MARGIN },
+    });
+    y = (doc.lastAutoTable?.finalY ?? y) + SECTION_GAP;
   } else {
     doc.setFontSize(9);
     doc.setTextColor(...greyText);
@@ -630,7 +684,7 @@ export function generateStratumWritingPdf({ isT1, result, essay, chartImage = nu
     doc.setPage(p);
     addFooter(doc, p, totalPages);
   }
-  doc.save(`STRATUM_Report_${isT1 ? 'T1' : 'T2'}_${Date.now()}.pdf`);
+  doc.save(`STRATUM_Report_${isGtLetter ? 'GT_Letter' : isT1 ? 'T1' : 'T2'}_${Date.now()}.pdf`);
 }
 
 /** Payload shape used by archive export helper. */
@@ -641,6 +695,7 @@ export function generateStratumWritingPdfFromArchivePayload({ isT1, result, essa
     essay,
     chartImage: image || null,
     promptText: prompt || question || '',
+    task1Kind: result?.task1Kind || 'academic',
   });
 }
 

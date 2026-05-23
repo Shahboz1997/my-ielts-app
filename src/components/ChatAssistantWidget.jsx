@@ -47,6 +47,7 @@ export default function ChatAssistantWidget() {
 
   const [open, setOpen] = useState(false);
   const [taskType, setTaskType] = useState("Task 2");
+  const [task1Kind, setTask1Kind] = useState("academic");
   const [prompt, setPrompt] = useState("");
   const [draft, setDraft] = useState("");
   const [chartImage, setChartImage] = useState("");
@@ -74,16 +75,13 @@ export default function ChatAssistantWidget() {
       setTaskType((prev) => inferred || prev);
       setPrompt((prev) => {
         if (prev && prev.trim().length > 0) return prev;
+        const kind = w?.task1Kind === "gt_letter" ? "gt_letter" : "academic";
         const p =
-          inferred === "Task 1"
-            ? w?.promptT1
-            : inferred === "Task 2"
-              ? w?.promptT2
-              : w?.activeTab === "Task 1"
-                ? w?.promptT1
-                : w?.activeTab === "Task 2"
-                  ? w?.promptT2
-                  : w?.promptT2 || w?.promptT1;
+          inferred === "Task 1" || w?.activeTab === "Task 1"
+            ? kind === "gt_letter"
+              ? w?.promptT1Letter || w?.promptT1
+              : w?.promptT1Academic || w?.promptT1
+            : w?.promptT2;
         return typeof p === "string" ? p : prev;
       });
       setDraft((prev) => {
@@ -100,8 +98,12 @@ export default function ChatAssistantWidget() {
                   : w?.t2 || w?.t1;
         return typeof d === "string" ? d : prev;
       });
+      if (w?.task1Kind === "gt_letter" || w?.task1Kind === "academic") {
+        setTask1Kind(w.task1Kind);
+      }
       setChartImage((prev) => {
         if (prev && prev.trim().length > 0) return prev;
+        if (w?.task1Kind === "gt_letter") return "";
         const img = w?.image;
         return typeof img === "string" ? img : prev;
       });
@@ -156,9 +158,10 @@ export default function ChatAssistantWidget() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           taskType,
+          task1Kind: taskType === "Task 1" ? task1Kind : undefined,
           prompt,
           draft,
-          image: chartImage,
+          image: task1Kind === "gt_letter" ? null : chartImage,
           messages: next,
         }),
       });
