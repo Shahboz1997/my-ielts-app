@@ -1,4 +1,5 @@
 import withPWAInit from '@ducanh2912/next-pwa';
+import { getAllowedImageRemotePatterns } from './src/lib/allowedImageHosts.js';
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -23,17 +24,13 @@ const nextConfig = {
   turbopack: {}, 
 
   experimental: {
-    // 2. ЖЕСТКОЕ ОГРАНИЧЕНИЕ (для исправления Call retries were exceeded)
-    workerThreads: false,
-    cpus: 1,
-    
     serverActions: {
       allowedOrigins: ["10.165.239.173", "10.187.95.173", "localhost:3000"],
     },
   },
   
   images: {
-    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    remotePatterns: getAllowedImageRemotePatterns(),
   },
 };
 
