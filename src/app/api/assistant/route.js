@@ -59,6 +59,8 @@ export async function POST(req) {
     const draft = clampText(body?.draft || "", 12000);
     const image = body?.image;
     const messages = Array.isArray(body?.messages) ? body.messages : [];
+    const rewriteMode = body?.mode === "rewrite";
+    const rewriteMode = body?.mode === "rewrite";
 
     const userContextParts = [];
     if (prompt.trim()) userContextParts.push(`TASK PROMPT:\n${prompt}`);
@@ -97,8 +99,16 @@ export async function POST(req) {
                 },
                 { type: "image_url", image_url: { url: image } },
               ]
-            : "Help me improve my IELTS writing. Give: (1) a quick diagnosis, (2) 5 targeted fixes, (3) one improved paragraph example, (4) 5 band-8+ vocabulary upgrades. Do not change the underlying meaning." +
-              contextBlock,
+            : rewriteMode
+            ? "Rewrite the user's full draft for a higher band. Keep the same meaning, facts, and stance. Return ONLY the improved full essay (wrap it in a markdown code fence). After the fence, add exactly one short line telling them to apply it in the editor. No diagnosis or bullet lists." +
+              contextBlock
+            : rewriteMode
+              ? "Rewrite the user's full draft for a higher band. Keep the same meaning, facts, and stance. Return ONLY the improved complete essay (no diagnosis, no bullet lists). Use a clear essay structure for " +
+                taskType +
+                "." +
+                contextBlock
+              : "Help me improve my IELTS writing. Give: (1) a quick diagnosis, (2) 5 targeted fixes, (3) one improved paragraph example, (4) 5 band-8+ vocabulary upgrades. Do not change the underlying meaning." +
+                contextBlock,
         },
       ],
     });

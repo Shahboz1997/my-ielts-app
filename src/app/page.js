@@ -1183,6 +1183,19 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     workspaceStorageKey,
     draftStorageKey,
   ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onWorkspacePatch = (e) => {
+      const w = e?.detail;
+      if (!w || typeof w !== 'object') return;
+      if (typeof w.t1 === 'string') setEssayT1(w.t1);
+      if (typeof w.t2 === 'string') setEssayT2(w.t2);
+    };
+    window.addEventListener('ielts-stratum-workspace-patch', onWorkspacePatch);
+    return () => window.removeEventListener('ielts-stratum-workspace-patch', onWorkspacePatch);
+  }, []);
+
     useEffect(() => {
   if (editorRef.current) {
     // Сбрасываем высоту, чтобы корректно рассчитать scrollHeight
