@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createOpenAIClient, validateOpenAIEnvForRoute } from '@/lib/openaiServer.js';
+import {
+  alignTextTokensToWhisper,
+  tokenizePlainText,
+} from '@/lib/karaokeWordAlign.js';
 
 export async function POST(req) {
   try {
@@ -34,13 +38,18 @@ export async function POST(req) {
         model: 'whisper-1',
         response_format: 'verbose_json',
         timestamp_granularities: ['word'],
+        // Guide Whisper with the source script so word boundaries match the TTS input.
+        prompt: text.slice(0, 800),
       });
       if (transcription?.words?.length) {
-        wordTimestamps = transcription.words.map((w) => ({
+        const whisperWords = transcription.words.map((w) => ({
           word: w.word,
           start: Number(w.start),
           end: Number(w.end),
         }));
+        const inputTokens = tokenizePlainText(text);
+        const aligned = alignTextTokensToWhisper(inputTokens, whisperWords);
+        wordTimestamps = aligned.length > 0 ? aligned : whisperWords;
       }
     } catch (whisperErr) {
       console.warn('Whisper word timestamps failed, continuing without:', whisperErr?.message);

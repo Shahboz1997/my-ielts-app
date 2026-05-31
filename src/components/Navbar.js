@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from "next-auth/react";
-import { useTheme } from 'next-themes';
+import { useTheme } from '@wrksz/themes/client';
 import { 
   Zap, Sun, Moon, Menu, X, 
   ChevronDown, LogOut,

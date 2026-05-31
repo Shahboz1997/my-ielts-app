@@ -622,7 +622,7 @@ export default function ComparisonLab({ activeTab, activeResult, darkMode, class
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className={`overflow-hidden rounded-[3rem] border ${borderTone} bg-white dark:bg-slate-950 ${className}`}
+      className={`w-full overflow-hidden rounded-[3rem] border ${borderTone} bg-white dark:bg-slate-950 ${className}`}
     >
       <div className="p-8 sm:p-12">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">

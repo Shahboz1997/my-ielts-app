@@ -1,21 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-
-function sanitizeTextForTts(input) {
-  const s = String(input || '');
-  if (!s) return '';
-  return (
-    s
-      // remove mark tags (keeps inner text)
-      .replace(/<\/?mark>/gi, '')
-      // remove any other HTML-like tags (keeps inner text)
-      .replace(/<\/?[^>]+>/g, '')
-      // normalize whitespace
-      .replace(/\s+/g, ' ')
-      .trim()
-  );
-}
+import { getPlainTextForKaraoke } from '@/components/dashboard/SuggestedRewriteKaraoke';
 
 function base64ToBlob(base64, mimeType) {
   const binary = atob(base64);
@@ -61,7 +47,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
 
   const handleGenerateAudio = useCallback(async () => {
     if (!suggestedRewrite || isAudioLoading) return;
-    const cleanText = sanitizeTextForTts(suggestedRewrite);
+    const cleanText = getPlainTextForKaraoke(suggestedRewrite);
     if (!cleanText) return;
     setIsAudioLoading(true);
     setAudioError('');

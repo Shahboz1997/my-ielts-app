@@ -1,9 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
-import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
+import AppThemeProvider from "@/components/AppThemeProvider";
 import { Providers } from "../components/Providers";
+import { getServerHtmlThemeClass, getServerInitialTheme } from "@/lib/themeBootstrapScript";
 import { auth } from "@/app/api/auth/[...nextauth]/route";
 import { getMetadataBaseUrl } from "@/lib/publicSiteUrl";
 import { LEGAL_COMPANY_NAME } from "@/lib/support";
@@ -89,9 +90,22 @@ export default async function RootLayout({ children }) {
     console.error("[layout] auth():", e?.message ?? e);
   }
 
+  const htmlClass = await getServerHtmlThemeClass();
+  const storedTheme = await getServerInitialTheme();
+  const initialTheme = storedTheme && storedTheme !== 'system' ? storedTheme : undefined;
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
+    <html lang="en" suppressHydrationWarning className={htmlClass || undefined}>
+      <body
+        suppressHydrationWarning
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-[#F9FAFB] text-slate-900 dark:bg-[#050505] dark:text-slate-100 transition-colors duration-500 min-h-screen`}
+      >
+        <AppThemeProvider initialTheme={initialTheme}>
+          <Providers session={session}>
+            {children}
+          </Providers>
+        </AppThemeProvider>
+        <Analytics />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-KEPXR00JYF"
           strategy="afterInteractive"
@@ -106,8 +120,6 @@ export default async function RootLayout({ children }) {
         </Script>
         <Script id="google-gtag-conversion-helper" strategy="afterInteractive">
           {`
-            // Delayed navigation helper for Google Ads/GA4 conversions.
-            // Usage: window.gtagSendEvent('/some-url') or window.gtagSendEvent('https://...')
             window.gtagSendEvent = function (url) {
               var callback = function () {
                 if (typeof url === 'string') {
@@ -115,7 +127,7 @@ export default async function RootLayout({ children }) {
                 }
               };
               if (typeof window.gtag === 'function') {
-                window.gtag('event', 'conversion_event_purchase', {
+                gtag('event', 'conversion_event_purchase', {
                   event_callback: callback,
                   event_timeout: 2000
                 });
@@ -126,14 +138,6 @@ export default async function RootLayout({ children }) {
             };
           `}
         </Script>
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-[#F9FAFB] text-slate-900 dark:bg-[#050505] dark:text-slate-100 transition-colors duration-500 min-h-screen`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Providers session={session}>
-            {children}
-          </Providers>
-        </ThemeProvider>
-        <Analytics />
       </body>
     </html>
   );

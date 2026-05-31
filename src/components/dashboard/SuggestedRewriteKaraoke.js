@@ -4,11 +4,26 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { Headphones, Loader2, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SUGGESTED_REWRITE_MODEL_LABEL } from '@/lib/suggestedRewrite';
+import {
+  normalizeWordToken,
+  alignTextTokensToWhisper,
+  findActiveWordIndexFromTimings,
+  tokenizePlainText,
+} from '@/lib/karaokeWordAlign';
 
 /**
- * Smart Word-Highlighting Karaoke: word timings with punctuation-based pause tuning.
- * Base duration per word; +20% for words ending in ",", +40% for "." or "?".
+ * Plain text shared by TTS generation and karaoke word indexing.
+ * Smart Word-Highlighting Karaoke fallback: punctuation-based pause tuning (+20% comma, +40% period).
  */
+export function getPlainTextForKaraoke(text) {
+  const segmented = insertLogicalParagraphBreaks(text || '');
+  return segmented
+    .replace(/<\/?mark>/gi, '')
+    .replace(/<\/?[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function getWordTimings(text, totalDuration) {
   const words = (text || '').split(' ').filter(Boolean);
   if (words.length === 0 || !Number.isFinite(totalDuration) || totalDuration <= 0) return [];
@@ -79,116 +94,52 @@ const LINKING_PHRASES = [
   'From',
 ];
 
-function normalizeWordToken(w) {
-  return String(w || '')
-    .replace(/^[.,!?;:'"()[\]]+|[.,!?;:'"()[\]]+$/g, '')
-    .toLowerCase();
+function isPreAlignedWordTimings(inputTokens, ts) {
+  if (!Array.isArray(ts) || ts.length !== inputTokens.length) return false;
+  for (let i = 0; i < ts.length; i++) {
+    const start = Number(ts[i]?.start);
+    const end = Number(ts[i]?.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return false;
+    if (i > 0 && start < Number(ts[i - 1]?.start)) return false;
+  }
+  return true;
 }
 
-function buildLcsPairs(a, b) {
-  const n = a.length;
-  const m = b.length;
-  if (n === 0 || m === 0) return [];
-  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
-  for (let i = 1; i <= n; i++) {
-    const ai = a[i - 1];
-    for (let j = 1; j <= m; j++) {
-      dp[i][j] = ai === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
-    }
-  }
-  const pairs = [];
-  let i = n;
-  let j = m;
-  while (i > 0 && j > 0) {
-    if (a[i - 1] === b[j - 1]) {
-      pairs.push([i - 1, j - 1]);
-      i -= 1;
-      j -= 1;
-    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
-      i -= 1;
+/** Keep Whisper start/end; only extend the last word if the file is slightly longer. */
+function finalizeWhisperTimings(timings, duration) {
+  if (!timings?.length || !Number.isFinite(duration) || duration <= 0) return timings;
+  const lastEnd = Number(timings[timings.length - 1]?.end);
+  if (!Number.isFinite(lastEnd) || lastEnd >= duration || duration - lastEnd > 2) return timings;
+  return timings.map((t, i) =>
+    i === timings.length - 1 ? { ...t, end: duration } : { ...t }
+  );
+}
+
+export function resolveWordTimings({ plainText, wordTimestamps, audioDuration }) {
+  const inputTokens = tokenizePlainText(plainText);
+  const ts = Array.isArray(wordTimestamps) ? wordTimestamps : [];
+  let timings = [];
+  let fromWhisper = false;
+
+  if (ts.length > 0 && inputTokens.length > 0) {
+    if (isPreAlignedWordTimings(inputTokens, ts)) {
+      timings = ts.map((t, i) => ({
+        word: inputTokens[i],
+        start: Number(t.start),
+        end: Number(t.end),
+      }));
     } else {
-      j -= 1;
+      timings = alignTextTokensToWhisper(inputTokens, ts);
     }
+    fromWhisper = timings.length > 0;
   }
-  pairs.reverse();
-  return pairs;
-}
-
-function deriveAlignedTimingsFromTimestamps(inputTokens, ts) {
-  const inNorm = inputTokens.map(normalizeWordToken);
-  const tsNorm = ts.map((t) => normalizeWordToken(t?.word));
-  const pairs = buildLcsPairs(inNorm, tsNorm).filter(([i, j]) => inNorm[i] && tsNorm[j]);
-  if (pairs.length < Math.max(3, Math.floor(inputTokens.length * 0.35))) return [];
-
-  const aligned = new Array(inputTokens.length).fill(null);
-  for (const [i, j] of pairs) {
-    const start = Number(ts[j]?.start);
-    const end = Number(ts[j]?.end);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
-    aligned[i] = { word: inputTokens[i], start, end };
+  if (timings.length === 0 && Number.isFinite(audioDuration) && audioDuration > 0) {
+    timings = getWordTimings(plainText, audioDuration);
   }
-
-  const matchedIdx = [];
-  for (let i = 0; i < aligned.length; i++) if (aligned[i]) matchedIdx.push(i);
-  if (matchedIdx.length < Math.max(3, Math.floor(inputTokens.length * 0.35))) return [];
-
-  // Interpolate gaps between matched tokens.
-  for (let mi = 0; mi < matchedIdx.length - 1; mi++) {
-    const a = matchedIdx[mi];
-    const b = matchedIdx[mi + 1];
-    const gap = b - a - 1;
-    if (gap <= 0) continue;
-    const left = aligned[a];
-    const right = aligned[b];
-    const t0 = left.end;
-    const t1 = right.start;
-    if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 <= t0) continue;
-    const step = (t1 - t0) / (gap + 1);
-    for (let k = 1; k <= gap; k++) {
-      const idx = a + k;
-      const s = t0 + step * (k - 1);
-      const e = t0 + step * k;
-      aligned[idx] = { word: inputTokens[idx], start: s, end: e };
-    }
+  if (fromWhisper && timings.length > 0 && Number.isFinite(audioDuration) && audioDuration > 0) {
+    timings = finalizeWhisperTimings(timings, audioDuration);
   }
-
-  // Fill leading unmatched tokens.
-  const first = matchedIdx[0];
-  if (first > 0) {
-    const right = aligned[first];
-    const span = Math.max(0.08, (right.end - right.start) || 0.2);
-    const step = span / (first + 1);
-    const baseEnd = right.start;
-    for (let i = first - 1; i >= 0; i--) {
-      const e = baseEnd - step * (first - i - 0);
-      const s = e - step;
-      aligned[i] = { word: inputTokens[i], start: Math.max(0, s), end: Math.max(0, e) };
-    }
-  }
-
-  // Fill trailing unmatched tokens.
-  const last = matchedIdx[matchedIdx.length - 1];
-  if (last < aligned.length - 1) {
-    const left = aligned[last];
-    const span = Math.max(0.08, (left.end - left.start) || 0.2);
-    const remain = aligned.length - 1 - last;
-    const step = span / (remain + 1);
-    let cur = left.end;
-    for (let i = last + 1; i < aligned.length; i++) {
-      const s = cur;
-      const e = cur + step;
-      aligned[i] = { word: inputTokens[i], start: s, end: e };
-      cur = e;
-    }
-  }
-
-  // Final sanity: must be all filled and monotonic-ish.
-  const out = aligned.filter(Boolean);
-  if (out.length !== inputTokens.length) return [];
-  for (let i = 1; i < out.length; i++) {
-    if (out[i].start < out[i - 1].start) return [];
-  }
-  return out;
+  return timings;
 }
 
 function phraseToRegexPattern(phrase) {
@@ -278,6 +229,8 @@ export default function SuggestedRewriteKaraoke({
   onSeek,
   formatTime,
   fullBleedLayout = false,
+  /** Archive / dashboard: stretch to parent column (no max-w shrink). */
+  fillWidth = false,
 }) {
   const [activeWordIndex, setActiveWordIndex] = useState(-1);
   const activeWordIndexRef = useRef(-1);
@@ -287,24 +240,18 @@ export default function SuggestedRewriteKaraoke({
   const segmentedRewrite = useMemo(() => insertLogicalParagraphBreaks(suggestedRewrite || ''), [suggestedRewrite]);
 
   const plainTextForTimings = useMemo(
-    () => segmentedRewrite.replace(/<\/?mark>/gi, '').replace(/\s+/g, ' ').trim(),
-    [segmentedRewrite]
+    () => getPlainTextForKaraoke(suggestedRewrite || ''),
+    [suggestedRewrite]
   );
-
-  const alignedWordTimings = useMemo(() => {
-    const ts = Array.isArray(wordTimestamps) ? wordTimestamps : [];
-    if (ts.length === 0) return [];
-    const inputTokens = plainTextForTimings.split(' ').filter(Boolean);
-    if (inputTokens.length === 0) return [];
-    return deriveAlignedTimingsFromTimestamps(inputTokens, ts);
-  }, [plainTextForTimings, wordTimestamps]);
 
   const wordTimings = useMemo(
     () =>
-      alignedWordTimings.length > 0
-        ? alignedWordTimings
-        : getWordTimings(plainTextForTimings, audioDuration),
-    [plainTextForTimings, audioDuration, alignedWordTimings]
+      resolveWordTimings({
+        plainText: plainTextForTimings,
+        wordTimestamps,
+        audioDuration,
+      }),
+    [plainTextForTimings, wordTimestamps, audioDuration]
   );
 
   const karaokeParagraphRanges = useMemo(() => {
@@ -335,31 +282,62 @@ export default function SuggestedRewriteKaraoke({
   useEffect(() => {
     const el = audioRef?.current;
     if (!el || !audioUrl) return;
-    const onTimeUpdate = () => {
+
+    let rafId = null;
+    const syncHighlightToAudio = () => {
       const current = el.currentTime || 0;
-      if (wordTimings.length > 0) {
-        const tolerance = 0.05;
-        let idx = -1;
-        for (let i = 0; i < wordTimings.length; i++) {
-          const w = wordTimings[i];
-          if (current >= w.start && current < w.end + tolerance) {
-            idx = i;
-            break;
-          }
-        }
-        if (idx !== activeWordIndexRef.current) {
-          activeWordIndexRef.current = idx;
-          setActiveWordIndex(idx);
-        }
+      if (wordTimings.length === 0) return;
+      const idx = findActiveWordIndexFromTimings(wordTimings, current);
+      if (idx !== activeWordIndexRef.current) {
+        activeWordIndexRef.current = idx;
+        setActiveWordIndex(idx);
       }
     };
+
+    const stopRaf = () => {
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    };
+
+    const tick = () => {
+      syncHighlightToAudio();
+      if (!el.paused && !el.ended) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        rafId = null;
+      }
+    };
+
+    const onPlay = () => {
+      stopRaf();
+      rafId = requestAnimationFrame(tick);
+    };
+    const onPause = () => {
+      stopRaf();
+      syncHighlightToAudio();
+    };
+    const onSeeked = () => syncHighlightToAudio();
+    const onTimeUpdate = () => syncHighlightToAudio();
     const onEnded = () => {
+      stopRaf();
       activeWordIndexRef.current = -1;
       setActiveWordIndex(-1);
     };
+
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', onPause);
+    el.addEventListener('seeked', onSeeked);
     el.addEventListener('timeupdate', onTimeUpdate);
     el.addEventListener('ended', onEnded);
+    if (!el.paused && !el.ended) onPlay();
+
     return () => {
+      stopRaf();
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', onPause);
+      el.removeEventListener('seeked', onSeeked);
       el.removeEventListener('timeupdate', onTimeUpdate);
       el.removeEventListener('ended', onEnded);
     };
@@ -376,8 +354,15 @@ export default function SuggestedRewriteKaraoke({
   const paraClass =
     'mb-6 text-lg leading-[1.8] font-serif text-slate-700 dark:text-slate-300 last:mb-0 whitespace-pre-wrap';
 
-  const sectionClass =
-    'relative z-20 w-full max-w-none h-auto overflow-visible rounded-2xl border border-slate-200/60 bg-white/70 shadow-xl backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-900/80 [&_mark]:rounded [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:bg-amber-200/70 [&_mark]:text-slate-900 dark:[&_mark]:bg-amber-400/20 dark:[&_mark]:text-amber-200';
+  const sectionClass = [
+    'relative z-20 block w-full max-w-none h-auto overflow-visible rounded-2xl border border-slate-200/60 bg-white/70 shadow-xl backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-900/80',
+    '[&_mark]:rounded [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:bg-amber-200/70 [&_mark]:text-slate-900 dark:[&_mark]:bg-amber-400/20 dark:[&_mark]:text-amber-200',
+    fillWidth ? 'min-w-0' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const innerWrapClass = fillWidth ? 'w-full min-w-0' : 'mx-auto w-full max-w-6xl';
 
   const inner = (
     <>
@@ -544,7 +529,7 @@ export default function SuggestedRewriteKaraoke({
           animate={{ y: 0, opacity: 1 }}
           className={sectionClass}
         >
-          <div className="mx-auto w-full max-w-6xl">{inner}</div>
+          <div className={innerWrapClass}>{inner}</div>
         </motion.section>
       </div>
     );
@@ -556,8 +541,9 @@ export default function SuggestedRewriteKaraoke({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       className={sectionClass}
+      style={fillWidth ? { width: '100%' } : undefined}
     >
-      <div className="mx-auto w-full max-w-6xl">{inner}</div>
+      <div className={innerWrapClass}>{inner}</div>
     </motion.section>
   );
 }

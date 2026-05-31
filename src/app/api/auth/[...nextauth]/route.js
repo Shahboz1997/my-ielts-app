@@ -3,8 +3,8 @@ import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { getPrisma, withPrismaRetry } from "@/lib/prisma";
+import { createLazyPrismaAdapter } from "@/lib/lazyPrismaAdapter";
 import bcrypt from "bcryptjs";
 import { ensureAuthPublicUrl } from "@/lib/ensureAuthPublicUrl";
 import { formatAuthErrorCause } from "@/lib/formatAuthErrorCause";
@@ -58,7 +58,7 @@ export const authOptions = {
   trustHost: true,
   basePath: "/api/auth",
   secret: getSecret(),
-  adapter: PrismaAdapter(getPrisma()),
+  adapter: createLazyPrismaAdapter(),
   logger: {
     error(code, ...message) {
       const extra = message

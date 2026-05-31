@@ -3,7 +3,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link';
 import { Download, ArrowLeft, Zap, BookOpen, GitBranch, ChevronDown, Sparkles } from 'lucide-react';
 import { generateStratumWritingPdfFromCheck } from '@/lib/stratumWritingPdf';
-import SuggestedRewriteKaraoke from './SuggestedRewriteKaraoke';
+import SuggestedRewriteKaraoke, { getPlainTextForKaraoke } from './SuggestedRewriteKaraoke';
 import LexicalUpgradePanel from '@/components/LexicalUpgradePanel';
 import CambridgeDictionaryLink from '@/components/CambridgeDictionaryLink';
 import AddToWordListButton from '@/components/AddToWordListButton';
@@ -155,10 +155,10 @@ const CEFR_LEVEL_LABELS = { A1: 'A1 - Beginner', A2: 'A2 - Elementary', B1: 'B1 
 const PLACEHOLDER_CEFR = { A1: 54, A2: 20, B1: 16, B2: 5, C1: 3, C2: 2 };
 
 const RIGHT_PANEL_TABS = [
-  { key: 'task', labelTask1: 'Task Achievement', labelTask2: 'Task Response' },
-  { key: 'coherence', label: 'Coherence' },
   { key: 'vocabulary', label: 'Vocabulary' },
   { key: 'grammar', label: 'Grammar' },
+  { key: 'task', labelTask1: 'Task Achievement', labelTask2: 'Task Response' },
+  { key: 'coherence', label: 'Coherence' },
 ];
 
 function getAudioFilenameBase(taskType) {
@@ -170,12 +170,6 @@ function base64ToBlob(base64, mimeType) {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mimeType || 'audio/mpeg' });
-}
-
-function sanitizeTextForTts(input) {
-  const s = String(input || '');
-  if (!s) return '';
-  return s.replace(/<\/?mark>/gi, '').replace(/<\/?[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 }
 
 async function fetchTtsWithTimestamps({ text, filenameBase }) {
@@ -413,7 +407,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
       document.getElementById('archive-feedback-insights')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
   }, []);
-  const [rightPanelTab, setRightPanelTab] = useState('task');
+  const [rightPanelTab, setRightPanelTab] = useState('vocabulary');
   const [focusedId, setFocusedId] = useState(null);
   const [promptSaved, setPromptSaved] = useState(false);
   /** Краткая подсветка карточки после клика по подсветке в тексте (click-to-focus). */
@@ -664,7 +658,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
 
   const handleGenerateAudio = useCallback(async () => {
     if (!suggestedRewrite || isAudioLoading) return;
-    const cleanText = sanitizeTextForTts(suggestedRewrite);
+    const cleanText = getPlainTextForKaraoke(suggestedRewrite);
     if (!cleanText) return;
     setIsAudioLoading(true);
     setAudioError('');
@@ -908,7 +902,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   if (isLoading || (!check && !analysisProp)) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32 xl:pb-12" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div className="flex flex-col gap-10 max-w-[1400px] mx-auto min-w-0 px-3 sm:px-5 md:px-6 py-4 sm:py-6">
+        <div className="flex flex-col gap-10 max-w-none mx-auto min-w-0 w-full px-3 sm:px-5 md:px-6 py-4 sm:py-6">
           <div className="h-10 w-32 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
           <div className="flex flex-col xl:flex-row gap-8">
             <div className="flex-grow xl:w-3/5 space-y-4">
@@ -936,9 +930,9 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-32 xl:pb-12" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <div className="flex flex-col xl:flex-row gap-8 w-full min-w-0 max-w-[1400px] mx-auto px-3 sm:px-5 md:px-6 py-4 sm:py-6 items-start">
+      <div className="flex flex-col xl:flex-row gap-8 w-full min-w-0 max-w-none mx-auto px-3 sm:px-5 md:px-6 py-4 sm:py-6 items-start">
         {/* Center: Main Content — Your Answer + Lexical + Action Bar */}
-        <div className="flex-grow w-full xl:w-3/5 order-1 xl:order-1 flex flex-col gap-8 min-w-0">
+        <div className="order-1 flex min-w-0 w-full flex-1 flex-col gap-8 xl:order-1">
           <div className="flex items-center">
             <Link
               href="/history"
@@ -1506,8 +1500,8 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
             taskType={taskTypeNormalized}
           />
 
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-fit">
-            <div className="flex flex-wrap gap-2">
+          <div className="w-full min-w-0 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={handleDownloadMp3}
@@ -1529,30 +1523,29 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
               </button>
             </div>
             {suggestedRewrite && (
-              <div className="w-full lg:w-fit min-w-0">
-                <SuggestedRewriteKaraoke
-                  suggestedRewrite={suggestedRewrite}
-                  wordTimestamps={suggestedRewriteWordTimestamps}
-                  audioRef={audioRef}
-                  audioUrl={audioUrl}
-                  audioDuration={audioDuration}
-                  isAudioLoading={isAudioLoading}
-                  isPlaying={isPlaying}
-                  audioProgress={audioProgress}
-                  audioTime={audioTime}
-                  audioError={audioError}
-                  onGenerateAudio={handleGenerateAudio}
-                  onTogglePlay={handleTogglePlay}
-                  onSeek={handleSeek}
-                  formatTime={formatTime}
-                />
-              </div>
+              <SuggestedRewriteKaraoke
+                fillWidth
+                suggestedRewrite={suggestedRewrite}
+                wordTimestamps={suggestedRewriteWordTimestamps}
+                audioRef={audioRef}
+                audioUrl={audioUrl}
+                audioDuration={audioDuration}
+                isAudioLoading={isAudioLoading}
+                isPlaying={isPlaying}
+                audioProgress={audioProgress}
+                audioTime={audioTime}
+                audioError={audioError}
+                onGenerateAudio={handleGenerateAudio}
+                onTogglePlay={handleTogglePlay}
+                onSeek={handleSeek}
+                formatTime={formatTime}
+              />
             )}
           </div>
         </div>
 
         {/* Right: Detailed Analytics Panel — Band, pill tabs, CEFR bars, errors */}
-        <div className="hidden xl:flex flex-col gap-6 w-full xl:w-[400px] xl:sticky xl:top-24 xl:self-start order-2 xl:order-2">
+        <div className="order-2 hidden w-full shrink-0 flex-col gap-6 xl:order-2 xl:flex xl:w-[400px] xl:sticky xl:top-24 xl:self-start">
           <div className="rounded-3xl bg-white dark:bg-slate-900/40 border border-slate-100 dark:border-white/5 shadow-sm p-6">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-4">Band score</h2>
             <div className="flex items-center gap-4">

@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@wrksz/themes/client';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -11,6 +11,7 @@ import GlowFollow from '../components/GlowFollow';
 import ChatAssistantWidget from '../components/ChatAssistantWidget';
 import { LoadingState, EmptyState, ErrorState, SuccessState } from '../components/stratum';
 import CreditsExhaustedCallout from '../components/CreditsExhaustedCallout';
+import PaymentMethodsBadges from '@/components/PaymentMethodsBadges';
 import {
   BUSINESS_ADDRESS,
   COPYRIGHT_LINE,
@@ -103,7 +104,6 @@ import {
 } from 'lucide-react';
 import { TASK1_TIPS, TASK2_TIPS, LETTER_TIPS } from '@/lib/ieltsGuidelines';
 import LetterStrategyPanel from '@/components/LetterStrategyPanel';
-import CambridgeDictionaryLink from '@/components/CambridgeDictionaryLink';
 import AddToWordListButton from '@/components/AddToWordListButton';
 import WordListPanel from '@/components/WordListPanel';
 import {
@@ -344,6 +344,7 @@ import 'react-medium-image-zoom/dist/styles.css';
   const [isDescribing, setIsDescribing] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(null);
   const activeResultsRef = useRef(null);
+  const scrollToScoreAfterAnalyzeRef = useRef(false);
   // Prevent double-submits (fast double-click before loading state applies).
   const analyzeInFlightRef = useRef(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -581,6 +582,7 @@ import 'react-medium-image-zoom/dist/styles.css';
      }
      };
   const activeResult = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
+  const activeAnalyzeLoading = activeTab === 'Task 1' ? loadingT1 : loadingT2;
   const isGtLetter = activeTab === 'Task 1' && task1Kind === 'gt_letter';
   const isSaved =
     activeTab === 'Task 1'
@@ -708,6 +710,17 @@ import 'react-medium-image-zoom/dist/styles.css';
     setArchiveSavedT2(false);
   }, [activeResultT2]);
 
+  useEffect(() => {
+    if (!scrollToScoreAfterAnalyzeRef.current) return;
+    if (activeAnalyzeLoading || !activeResult) return;
+    scrollToScoreAfterAnalyzeRef.current = false;
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 1279px)').matches) return;
+    window.setTimeout(() => {
+      document.getElementById('stratum-results-score')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  }, [activeResult, activeAnalyzeLoading]);
+
   // После Google OAuth редирект иногда приходит с ?error=OAuthAccountNotLinked, хотя связка аккаунта и сессия уже созданы — обновляем сессию и убираем ошибку из URL
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -784,6 +797,7 @@ import 'react-medium-image-zoom/dist/styles.css';
         }
       }
       if (typeof playSuccessSound === 'function') playSuccessSound();
+      scrollToScoreAfterAnalyzeRef.current = true;
     } catch (err) {
       const { status, dataError, message: baseMsg } = interpretAnalyzeFailure(err);
       let msg = baseMsg;
@@ -961,11 +975,11 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
   const sortedHighlights = highlights ? [...highlights].sort((a, b) => b.text.length - a.text.length) : [];
   let parts = [text];
 
-  sortedHighlights.forEach((h) => {
+  sortedHighlights.forEach((h, hi) => {
     if (excludedWords.includes(h.text.toLowerCase().trim())) return;
 
     let newParts = [];
-    parts.forEach((part) => {
+    parts.forEach((part, pi) => {
       if (typeof part !== 'string') {
         newParts.push(part);
         return;
@@ -973,6 +987,7 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
       
       const regex = new RegExp(`(${h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
       const segments = part.split(regex);
+      let segIdx = 0;
       
       segments.forEach((seg) => {
         if (seg && seg.toLowerCase() === h.text.toLowerCase()) {
@@ -981,7 +996,7 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
 
           newParts.push(
             <span 
-              key={Math.random()} 
+              key={`hl-${hi}-${pi}-${segIdx++}-${h.text}`} 
               className={`px-0.5 rounded cursor-help transition-all border-b-[3px] inline-block -mb-[1px] 
                 ${isSearchMatch ? 'search-match bg-yellow-400/40 dark:bg-yellow-500/30' : ''} 
                 ${h.type === 'linking' 
@@ -1007,17 +1022,18 @@ const renderHighlightedText = (text, highlights, searchState) => { // Добав
     let finalParts = [];
     const searchRegex = new RegExp(`(${searchState.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
 
-    parts.forEach((part) => {
+    parts.forEach((part, pi) => {
       if (typeof part !== 'string') {
         finalParts.push(part);
         return;
       }
 
       const segments = part.split(searchRegex);
+      let segIdx = 0;
       segments.forEach((seg) => {
         if (seg && seg.toLowerCase() === searchState.word.toLowerCase().trim()) {
           finalParts.push(
-            <span key={Math.random()} className="search-match bg-yellow-400/40 dark:bg-yellow-500/30 border-b-[3px] border-yellow-500 inline-block -mb-[1px]">
+            <span key={`search-${pi}-${segIdx++}-${searchState.word}`} className="search-match bg-yellow-400/40 dark:bg-yellow-500/30 border-b-[3px] border-yellow-500 inline-block -mb-[1px]">
               {seg}
             </span>
           );
@@ -2194,7 +2210,8 @@ const insertLinkingWord = (word) => {
     {(activeTab === 'Task 1' || activeTab === 'Task 2') && (
       <>
       <div className="flex flex-col gap-6 lg:gap-8">
-        <div className="min-w-0 w-full">
+        <div className="flex flex-col gap-6 lg:gap-8 xl:grid xl:grid-cols-[1fr_min(380px,32%)] xl:items-start xl:gap-6">
+        <div className="order-1 flex min-w-0 w-full flex-col gap-6 lg:gap-8 xl:col-start-1 xl:row-start-1">
           <div className="p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             
             <div className="flex flex-col gap-6 mb-8">
@@ -2561,51 +2578,6 @@ const insertLinkingWord = (word) => {
         </div>
       </div>
     </div>
-    {(() => {
-      const cheatTips =
-        activeTab === 'Task 1'
-          ? isGtLetter
-            ? LETTER_TIPS
-            : TASK1_TIPS
-          : TASK2_TIPS;
-      const IconMapT1 = isGtLetter
-        ? { CheckCircle, Shield, Target, FileText, LayoutGrid }
-        : { Eye, Target, Shield, Filter, Zap };
-      const IconMapT2 = { RefreshCw, LayoutGrid, Crown, Shield, Target };
-      const cheatIconMap = activeTab === 'Task 1' ? IconMapT1 : IconMapT2;
-      const cheatSheetListVariants = {
-        hidden: { opacity: 0 },
-        show: {
-          opacity: 1,
-          transition: { staggerChildren: 0.07, delayChildren: 0.1 },
-        },
-      };
-      const cheatSheetItemVariants = {
-        hidden: { opacity: 0, y: 10 },
-        show: {
-          opacity: 1,
-          y: 0,
-          transition: { type: 'spring', stiffness: 420, damping: 26 },
-        },
-      };
-      return (
-        <div className="mt-4 w-full min-w-0 sm:mt-5">
-          <AnimatePresence initial={false}>
-            {showCheatSheet && (
-              <motion.div
-                key="cheat-sheet-panel"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                className="overflow-hidden"
-              >
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      );
-    })()}
 
           <div className="mt-6 flex flex-col gap-4 border-t border-slate-200 pt-6 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
             <button
@@ -2664,95 +2636,362 @@ const insertLinkingWord = (word) => {
             </button>
           </div>
           </div>
+
         </div>
 
-        {/* Results: отдельная строка под эссе — без пустоты из-за высокой боковой колонки в одном grid-row */}
-        <div
-          className="grid grid-cols-1 gap-6 lg:gap-8 xl:grid-cols-12 xl:items-start"
-          ref={activeResultsRef}
-        >
          <aside
-          className="order-2 flex h-auto w-full min-w-0 max-w-full flex-col gap-5 sm:gap-6 xl:order-none xl:col-span-4 xl:sticky xl:top-20 xl:self-start"
+          id="stratum-results-score"
+          ref={activeResultsRef}
+          className="order-2 flex h-auto w-full min-w-0 max-w-full scroll-mt-24 flex-col gap-5 sm:gap-6 xl:col-start-2 xl:row-start-1 xl:sticky xl:top-20 xl:self-start"
         >
       {(activeTab === 'Task 1' ? loadingT1 : loadingT2) ? (
         <div className={`min-h-0 overflow-hidden rounded-3xl border border-slate-200/80 dark:border-white/5 ${darkMode ? 'bg-slate-900/30' : 'bg-white shadow-sm'}`}>
           <LoadingState />
         </div>
       ) : !activeResult ? (
-        <div className={`min-h-0 border border-dashed border-white/5 rounded-3xl transition-all ${darkMode ? 'bg-slate-900/20' : 'bg-slate-50/80'}`}>
+        <div className={`min-h-0 rounded-3xl border border-dashed transition-all ${darkMode ? 'border-slate-700 bg-slate-900/20' : 'border-slate-200 bg-slate-50/80'}`}>
           <EmptyState
             message="Submit your essay to receive instant AI feedback and band score."
             className="text-slate-500 dark:text-slate-400"
           />
         </div>
       ) : (
-             <div
-        className="flex h-auto min-w-0 w-full flex-1 flex-col gap-5 overflow-visible sm:gap-6 md:gap-8"
-        >
-          <div className="relative group min-w-0 w-full max-w-full overflow-hidden rounded-2xl bg-slate-950 p-0.5 shadow-xl shadow-slate-950/30 sm:rounded-3xl sm:p-1 sm:shadow-2xl xl:rounded-[2.5rem]">
-  <div className="group relative z-10 min-w-0 w-full rounded-[1.25rem] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4 text-white shadow-lg shadow-black/20 sm:rounded-[1.75rem] sm:p-6 md:rounded-[2.5rem] md:p-8 sm:shadow-xl">
-    
-    {/* Эффект блеска при наведении */}
-    <div className="pointer-events-none absolute inset-0 translate-x-[-150%] bg-gradient-to-tr from-white/0 via-white/20 to-white/0 transition-transform duration-1000 group-hover:translate-x-[150%]" />
+        <div className="flex h-auto min-w-0 w-full flex-1 flex-col gap-5 overflow-visible sm:gap-6">
+          <section
+            className={`min-w-0 overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
+              darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
+            }`}
+          >
+            <header
+              className={`border-b px-4 py-5 sm:px-6 sm:py-6 ${
+                darkMode ? 'border-slate-800 bg-slate-900' : 'border-indigo-100 bg-indigo-50/40'
+              }`}
+            >
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+                    Results
+                  </p>
+                  <h4 className="mt-1 text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
+                    Band Score
+                  </h4>
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                    <span className="font-black leading-none tracking-tighter text-indigo-600 dark:text-indigo-400 text-[2.75rem] min-[380px]:text-5xl sm:text-6xl">
+                      {activeResult.overall_band}
+                    </span>
+                    <span className="text-base font-light text-slate-400 dark:text-slate-500 min-[380px]:text-lg sm:text-xl">
+                      / 9.0
+                    </span>
+                  </div>
+                </div>
+                <div className="flex w-full shrink-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:w-auto sm:justify-end sm:text-right dark:border-slate-700 dark:bg-slate-800 md:px-4">
+                  <p className="text-[8px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    AI Engine
+                  </p>
+                  <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200">v4.2 PRO</p>
+                </div>
+              </div>
+            </header>
 
-    <div className="relative z-20 flex min-w-0 flex-col gap-4 sm:gap-5 md:gap-6">
-      {/* ВЕРХНЯЯ ЧАСТЬ: Балл и Версия ИИ */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
-            <p className="text-[8px] font-extrabold uppercase tracking-[0.25em] text-white/80 sm:text-[9px] sm:tracking-[0.35em] md:tracking-[0.4em]">
-              Performance Index
-            </p>
+            <div className="border-b border-slate-100 px-4 py-4 dark:border-white/5 sm:px-6">
+              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[1fr_auto]">
+                <button
+                  type="button"
+                  onClick={() => downloadReport()}
+                  className="group/btn flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-white transition-all hover:bg-indigo-500 active:scale-[0.97] sm:min-h-0 sm:py-3.5 sm:text-xs"
+                >
+                  <Download className="h-4 w-4 shrink-0 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" />
+                  <span className="truncate">Official PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => shareReport()}
+                  disabled={shareLoading}
+                  className="flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 min-[400px]:w-auto min-[400px]:min-w-[3.25rem] min-[400px]:max-w-[3.25rem] min-[400px]:px-0 sm:min-h-0 sm:min-w-0 sm:max-w-none sm:px-5"
+                  title={(activeResultT1?.savedId || activeResultT2?.savedId) ? 'Share full analysis' : 'Sign in and analyze to get a share link'}
+                  aria-label="Share analysis"
+                >
+                  {shareLoading ? (
+                    <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
+                  ) : (
+                    <Share2 className="h-5 w-5 shrink-0" aria-hidden />
+                  )}
+                  <span className="text-[11px] font-black uppercase tracking-widest min-[400px]:hidden sm:inline sm:text-xs">
+                    {shareLoading ? 'Loading…' : 'Share'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+              <div>
+                <h3 className="mb-4 text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                  Criteria Breakdown
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {Object.entries(activeResult.criteria || {}).map(([key, data]) => (
+                    <article
+                      key={key}
+                      className="flex flex-col rounded-2xl border border-slate-100 bg-slate-50/80 p-4 shadow-sm transition-all duration-300 hover:border-indigo-200 dark:border-white/5 dark:bg-slate-950/40 dark:hover:border-indigo-500/30 sm:p-5"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold tracking-tight text-slate-800 dark:text-slate-100">
+                          {key.replace(/_/g, ' ').replace('Task Achievement', 'TA').replace('Task Response', 'Task Response')}
+                        </span>
+                        <div className="rounded-xl bg-indigo-600 px-3 py-1 shadow-sm">
+                          <span className="text-base font-semibold tabular-nums text-white">{data.score}</span>
+                        </div>
+                      </div>
+                      <p className="border-t border-slate-100 pt-3 text-xs font-medium leading-relaxed text-slate-600 dark:border-white/5 dark:text-slate-400 sm:text-sm">
+                        {data.comment}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+      </aside>
+
+        {activeResult && !activeAnalyzeLoading && (
+        <div className="order-3 min-w-0 w-full space-y-6 xl:col-span-2 xl:col-start-1 xl:row-start-2">
+
+      {activeTab === 'Task 2' && activeResult?.idea_development && (
+        <section
+          className={`w-full overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
+            darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
+          }`}
+        >
+          <div className="space-y-4 p-4 sm:space-y-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+                Idea Development
+              </h3>
+              <div className="shrink-0 rounded-xl border border-indigo-200/70 bg-white/80 px-3 py-2 text-center dark:border-indigo-500/30 dark:bg-slate-950/40">
+                <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
+                  Depth
+                </div>
+                <div className="text-lg font-black tracking-tight text-indigo-600 tabular-nums dark:text-indigo-300">
+                  {Number.isFinite(Number(activeResult.idea_development?.overall?.score_0_5))
+                    ? `${Math.max(0, Math.min(5, Number(activeResult.idea_development.overall.score_0_5)))}/5`
+                    : '—'}
+                </div>
+              </div>
+            </div>
+
+            {typeof activeResult.idea_development?.overall?.summary === 'string' &&
+              activeResult.idea_development.overall.summary.trim() && (
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 dark:border-white/5 dark:bg-slate-950/40 sm:p-5">
+                  <p className="text-xs font-medium leading-relaxed text-slate-600 dark:text-slate-400 sm:text-sm">
+                    {activeResult.idea_development.overall.summary}
+                  </p>
+                </div>
+              )}
+
+            {Array.isArray(activeResult.idea_development?.paragraphs) &&
+              activeResult.idea_development.paragraphs.length > 0 && (
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {activeResult.idea_development.paragraphs.slice(0, 6).map((p, idx) => {
+                    const label = typeof p?.label === 'string' ? p.label : `Paragraph ${idx + 1}`;
+                    const mainIdea = typeof p?.main_idea === 'string' ? p.main_idea : '';
+                    const missing = Array.isArray(p?.missing) ? p.missing : [];
+                    const upgrades = Array.isArray(p?.upgrades) ? p.upgrades : [];
+                    return (
+                      <div
+                        key={`${label}-${idx}`}
+                        className="rounded-xl border border-slate-200/70 bg-white/70 p-3 dark:border-slate-800/60 dark:bg-slate-950/30 sm:p-4"
+                      >
+                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                            {label}
+                          </span>
+                          {missing.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {missing.slice(0, 5).map((m, mi) => (
+                                <span
+                                  key={`${label}-m-${mi}`}
+                                  className="inline-flex items-center rounded-full border border-amber-200/70 bg-amber-50/60 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:border-amber-600/30 dark:bg-amber-900/10 dark:text-amber-200"
+                                  title="Missing piece to add depth"
+                                >
+                                  {String(m).replace(/_/g, ' ')}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {mainIdea ? (
+                          <p className="text-xs leading-relaxed text-slate-700 dark:text-slate-300 sm:text-sm">
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">Main idea:</span>{' '}
+                            {mainIdea}
+                          </p>
+                        ) : null}
+                        {upgrades.length > 0 && (
+                          <ul className="mt-3 list-inside list-disc space-y-1.5 text-xs text-slate-600 dark:text-slate-400 sm:text-sm">
+                            {upgrades.slice(0, 2).map((u, ui) => (
+                              <li key={`${label}-u-${ui}`}>{u}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
           </div>
-          <h4 className="flex flex-wrap items-baseline gap-x-2 gap-y-0 font-black leading-none tracking-tighter text-white text-[2.75rem] min-[380px]:text-5xl sm:text-6xl lg:text-7xl">
-            {activeResult.overall_band}
-            <span className="text-base font-light text-white/30 min-[380px]:text-lg sm:text-xl">/ 9.0</span>
-          </h4>
-        </div>
+        </section>
+      )}
 
-        <div className="flex w-full shrink-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/30 px-3 py-2.5 backdrop-blur-md sm:w-auto sm:justify-end sm:py-2 sm:text-right md:px-4">
-          <p className="text-[7px] font-extrabold uppercase tracking-widest text-indigo-200 dark:text-indigo-300 sm:text-[8px]">AI Engine</p>
-          <p className="text-[10px] font-bold sm:text-[10px]">v4.2 PRO</p>
+        {!(activeTab === 'Task 1' ? loadingT1 : loadingT2) && (
+      <div className="space-y-6 w-full min-w-0">
+        <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100 ml-2">
+          Detailed Corrections
+        </h3>
+        <div className="grid grid-cols-1 gap-8 w-full">
+          <AnimatePresence mode="popLayout">
+            {activeResult.corrections && activeResult.corrections.length > 0 ? (
+              activeResult.corrections.map((err, i) => {
+                if (appliedCorrections.includes(i)) return null;
+                const typeLabel = err.category || err.rule || 'Grammar';
+                const recommended = String(err.fixed || err.suggestion || '').trim();
+                const canApply =
+                  recommended.length > 0 &&
+                  recommended.toLowerCase() !== String(err.original || '').trim().toLowerCase();
+                return (
+                  <motion.div
+                    key={err.original + i}
+                    initial={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, x: 50, scale: 0.9, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.4, ease: 'circOut' }}
+                    layout
+                    className="group w-full p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 hover:border-indigo-200 dark:hover:border-indigo-800/30 overflow-hidden"
+                  >
+                    <div className="flex min-w-0 w-full flex-col gap-6 sm:flex-row sm:items-stretch sm:gap-6">
+                      <div className="min-w-0 flex-1 space-y-8">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-indigo-600 uppercase px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-full border border-indigo-100 dark:border-indigo-800/30">
+                              Original Text
+                            </span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+                              {typeLabel}
+                            </span>
+                          </div>
+                          <p className="text-sm sm:text-base font-medium text-slate-400 dark:text-slate-500 line-through decoration-indigo-400/50 leading-relaxed">
+                            {err.original}
+                          </p>
+                          <AddToWordListButton
+                            word={err.original}
+                            taskType={activeTab === 'Task 1' ? 'task1' : 'task2'}
+                            source="correction"
+                            note={recommended || err.explanation || null}
+                            className="mt-1 ml-0.5"
+                          />
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-[10px] font-black text-green-600 uppercase px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-100 dark:border-green-800/30">
+                              Recommended Correction
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => speak(recommended || err.explanation || '')}
+                              className="group/btn p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-green-500 transition-all active:scale-90 shadow-sm"
+                            >
+                              <svg xmlns="http://www.w3.org" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors">
+                                <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
+                                <path d="M15.932 7.757a.75.75 0 011.061 0 4.5 4.5 0 010 6.364.75.75 0 01-1.06-1.06 3 3 0 000-4.242.75.75 0 010-1.062z" />
+                              </svg>
+                            </button>
+                          </div>
+                          <p className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-[1.6]">
+                            {recommended || '—'}
+                          </p>
+                          {!canApply && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                              No direct replacement — use the band-score explanation on the right to revise.
+                            </p>
+                          )}
+                          {canApply ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const occurrenceIndex = err.occurrenceIndex || 1;
+                                handleReplaceWord(err.original, recommended, occurrenceIndex, i);
+                              }}
+                              className={`mt-4 group/apply flex items-center gap-3 px-6 py-3 rounded-2xl text-sm font-extrabold tracking-tight transition-all active:scale-95 shadow-lg
+                                ${darkMode
+                                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'
+                                  : 'bg-slate-900 hover:bg-indigo-600 text-white shadow-slate-300'
+                                }`}
+                            >
+                              <span className="w-5 h-5 flex items-center justify-center bg-white/20 rounded-lg group-hover/apply:rotate-12 transition-transform">
+                                <svg xmlns="http://www.w3.org" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                  <path fillRule="evenodd" d="M15.312 11.424a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 13.586V4a1 1 0 012 0v9.586l1.899-1.899a1 1 0 011.413 0z" clipRule="evenodd" />
+                                </svg>
+                              </span>
+                              Apply & Dismiss
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="flex min-w-0 flex-col justify-between p-7 sm:p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[280px] sm:w-[42%] sm:shrink-0">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-4 mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                              <span className="font-extrabold uppercase text-[10px] text-indigo-600 dark:text-indigo-400 tracking-widest">
+                                Type: {typeLabel}
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-black border border-purple-200 dark:border-purple-800">
+                              {err.level || 'B2'}
+                            </span>
+                          </div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-200 leading-[1.7] text-[13px] sm:text-[14px]">
+                            <span className="font-extrabold text-indigo-700 dark:text-indigo-300 not-italic">Why? </span>
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">{err.explanation || '—'}</span>
+                          </p>
+                        </div>
+
+                        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-[9px] font-extrabold text-slate-700 dark:text-slate-400 uppercase tracking-widest">Complexity Scale</span>
+                            <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-400 uppercase">Mastery: {err.level === 'C2' ? 'Native' : 'Advanced'}</span>
+                          </div>
+                          <div className="flex gap-1 h-1">
+                            {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
+                              <div
+                                key={lvl}
+                                className={`flex-1 rounded-full transition-all duration-500 ${
+                                  err.level === lvl || (lvl === 'B2' && !err.level)
+                                    ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)] scale-y-150'
+                                    : 'bg-slate-200 dark:bg-slate-800 opacity-30'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })
+            ) : (
+              <div className="py-10">
+                <SuccessState message="No corrections found." className="py-0" />
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-      {/* НИЖНЯЯ ЧАСТЬ: Кнопки управления */}
-      <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[1fr_auto] sm:mt-1">
-        <button 
-          type="button"
-          onClick={() => downloadReport()}
-          className="group/btn flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-slate-900 transition-all hover:bg-slate-100 active:scale-[0.97] sm:min-h-0 sm:py-4 sm:text-xs md:py-5"
-        >
-          <Download className="h-4 w-4 shrink-0 text-slate-700 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" /> 
-          <span className="truncate">Official PDF</span>
-        </button>
+    )}
 
-        <button 
-          type="button"
-          onClick={() => shareReport()}
-          disabled={shareLoading}
-          className="flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3.5 text-white transition-all hover:bg-white/20 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 min-[400px]:w-auto min-[400px]:min-w-[3.25rem] min-[400px]:max-w-[3.25rem] min-[400px]:px-0 sm:min-h-0 sm:min-w-0 sm:max-w-none sm:px-5"
-          title={(activeResultT1?.savedId || activeResultT2?.savedId) ? "Share full analysis" : "Sign in and analyze to get a share link"}
-          aria-label="Share analysis"
-        >
-          {shareLoading ? (
-            <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
-          ) : (
-            <Share2 className="h-5 w-5 shrink-0" aria-hidden />
-          )}
-          <span className="text-[11px] font-black uppercase tracking-widest min-[400px]:hidden sm:inline sm:text-xs">
-            {shareLoading ? 'Loading…' : 'Share'}
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  {/* Background Decor */}
-  <div className="pointer-events-none absolute top-0 right-0 -mr-8 -mt-8 h-40 w-40 rounded-full bg-indigo-500/5 blur-[72px] sm:-mr-16 sm:-mt-16 sm:h-52 sm:w-52 sm:blur-[88px] md:-mr-20 md:-mt-20 md:h-64 md:w-64 md:blur-[100px]" />
-</div>
-
-          {/* --- 3. DEEP LINGUISTIC ANALYSIS --- */}
+        <div className="min-w-0 w-full space-y-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start w-full">
           <section
             className={`min-w-0 overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
               darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white dark:border-slate-800'
@@ -2768,7 +3007,7 @@ const insertLinkingWord = (word) => {
                     Linguistic Insights
                   </h5>
                   <p className="mt-1 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                    Linking, repetition, and lexical upgrades for your draft.
+                    Linking words and repetition alerts for your draft.
                   </p>
                 </div>
                 {activeResult.analysis?.linking_words?.score != null && (
@@ -2967,15 +3206,6 @@ const insertLinkingWord = (word) => {
                 </article>
               )}
 
-              <LexicalUpgradePanel
-                rows={mergedLexicalUpgrade}
-                onReplaceWord={(word, syn) => replaceNext(word, syn)}
-                setUserText={(text) => (activeTab === 'Task 1' ? setEssayT1(text) : setEssayT2(text))}
-                userText={activeTab === 'Task 1' ? essayT1 : essayT2}
-                taskType={activeTab === 'Task 1' ? 'task1' : 'task2'}
-                className="shadow-none"
-              />
-
               <WordListPanel variant="inline" />
 
               {activeResult.plagiarism && (
@@ -3002,131 +3232,52 @@ const insertLinkingWord = (word) => {
             </div>
           </section>
 
-
-        </div>
-      )}
-      </aside>
-
-        <div className="order-1 min-w-0 space-y-6 xl:order-none xl:col-span-8">
-    {activeResult && !loading && activeResult.suggested_rewrite && (
-      <div className="relative w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="mb-4 flex w-full items-center gap-3 sm:mb-6">
-          <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" strokeWidth={1.5} />
-          <h4 className="shrink-0 text-sm font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-100 sm:text-base">
-            Comparison Lab
-          </h4>
-          <div className="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden />
-        </div>
-        <ComparisonLab activeTab={activeTab} activeResult={activeResult} darkMode={darkMode} />
-      </div>
-    )}
-    {activeResult && !loading && (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-4">
-      <section className="space-y-4">
-        <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100 ml-2">
-          Criteria Breakdown
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(activeResult.criteria || {}).map(([key, data]) => (
-            <div key={key} className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col group hover:border-indigo-200 dark:hover:border-indigo-800/50 transition-all duration-300">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-xs font-semibold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                  {key.replace(/_/g, ' ').replace('Task Achievement', 'TA').replace('Task Response', 'Task Response')}
-                </span>
-                <div className="bg-indigo-600 px-4 py-1.5 rounded-xl shadow-sm">
-                  <span className="text-xl font-semibold text-white">{data.score}</span>
+          <section
+            className={`min-w-0 overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
+              darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white dark:border-slate-800'
+            }`}
+          >
+            <header className="border-b border-slate-100 px-4 py-4 dark:border-white/5 sm:px-6 sm:py-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+                    Vocabulary
+                  </p>
+                  <h5 className="mt-1 text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
+                    Lexical Upgrade
+                  </h5>
+                  <p className="mt-1 max-w-md text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    Swap weak words for sharper choices (C1 / C2).
+                  </p>
                 </div>
+                {mergedLexicalUpgrade.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleApplyAllUpgrades}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-400/50 bg-amber-500/90 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-amber-500"
+                    title="Replace first occurrence of each weak word with the top C2/C1 synonym"
+                  >
+                    <span aria-hidden>🪄</span>
+                    Apply all
+                  </button>
+                )}
               </div>
-              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium pt-4 border-t border-slate-200 dark:border-slate-800">
-                {data.comment}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+            </header>
 
-      {/* Idea Development (Task 2 only): depth + missing pieces + upgrades */}
-      {activeTab === 'Task 2' && activeResult?.idea_development && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100 ml-2">
-              Idea Development
-            </h3>
-            <div className="shrink-0 rounded-2xl border border-indigo-200/70 dark:border-indigo-500/30 bg-white/80 dark:bg-slate-900/50 px-4 py-2 shadow-sm">
-              <div className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-slate-400">
-                Depth
-              </div>
-              <div className="text-lg font-black tracking-tight text-indigo-600 dark:text-indigo-300 tabular-nums">
-                {Number.isFinite(Number(activeResult.idea_development?.overall?.score_0_5))
-                  ? `${Math.max(0, Math.min(5, Number(activeResult.idea_development.overall.score_0_5)))}/5`
-                  : '—'}
-              </div>
+            <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+              <LexicalUpgradePanel
+                embedded
+                rows={mergedLexicalUpgrade}
+                onReplaceWord={(word, syn) => replaceNext(word, syn)}
+                setUserText={(text) => (activeTab === 'Task 1' ? setEssayT1(text) : setEssayT2(text))}
+                userText={activeTab === 'Task 1' ? essayT1 : essayT2}
+                taskType={activeTab === 'Task 1' ? 'task1' : 'task2'}
+              />
             </div>
+          </section>
           </div>
 
-          {typeof activeResult.idea_development?.overall?.summary === 'string' &&
-            activeResult.idea_development.overall.summary.trim() && (
-              <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-                <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
-                  {activeResult.idea_development.overall.summary}
-                </p>
-              </div>
-            )}
-
-          {Array.isArray(activeResult.idea_development?.paragraphs) &&
-            activeResult.idea_development.paragraphs.length > 0 && (
-              <div className="grid grid-cols-1 gap-4">
-                {activeResult.idea_development.paragraphs.slice(0, 6).map((p, idx) => {
-                  const label = typeof p?.label === 'string' ? p.label : `Paragraph ${idx + 1}`;
-                  const mainIdea = typeof p?.main_idea === 'string' ? p.main_idea : '';
-                  const missing = Array.isArray(p?.missing) ? p.missing : [];
-                  const upgrades = Array.isArray(p?.upgrades) ? p.upgrades : [];
-                  return (
-                    <div
-                      key={`${label}-${idx}`}
-                      className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                          {label}
-                        </span>
-                        {missing.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {missing.slice(0, 5).map((m, mi) => (
-                              <span
-                                key={`${label}-m-${mi}`}
-                                className="inline-flex items-center rounded-full border border-amber-200/70 dark:border-amber-600/30 bg-amber-50/60 dark:bg-amber-900/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-200"
-                                title="Missing piece to add depth"
-                              >
-                                {String(m).replace(/_/g, ' ')}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {mainIdea ? (
-                        <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                          <span className="font-semibold text-slate-900 dark:text-slate-100">Main idea:</span>{' '}
-                          {mainIdea}
-                        </p>
-                      ) : null}
-
-                      {upgrades.length > 0 && (
-                        <ul className="mt-3 space-y-1.5 text-sm text-slate-700 dark:text-slate-300 list-disc list-inside">
-                          {upgrades.slice(0, 2).map((u, ui) => (
-                            <li key={`${label}-u-${ui}`}>{u}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-        </section>
-      )}
-
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-4">
       {activeTab === 'Task 1' && isGtLetter && activeResult?.letter_strategy && (
         <LetterStrategyPanel strategy={activeResult.letter_strategy} />
       )}
@@ -3223,161 +3374,30 @@ const insertLinkingWord = (word) => {
             )}
         </section>
       )}
-      <div className="space-y-6">
-  <h3 className="text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-100 ml-2">
-    Detailed Corrections
-  </h3>
-     <div className="grid grid-cols-1 gap-8">
-  <AnimatePresence mode="popLayout">
-    {activeResult.corrections && activeResult.corrections.length > 0 ? (
-      activeResult.corrections.map((err, i) => {
-        // Пропускаем рендер, если этот блок уже был применен
-        if (appliedCorrections.includes(i)) return null;
-         const isExpanded = expandedIndex === i;
-        const typeLabel = err.category || err.rule || 'Grammar';
-        const recommended = String(err.fixed || err.suggestion || '').trim();
-        const canApply =
-          recommended.length > 0 &&
-          recommended.toLowerCase() !== String(err.original || '').trim().toLowerCase();
-        return (
-          <motion.div 
-            key={err.original + i}
-            initial={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, x: 50, scale: 0.9, height: 0, marginBottom: 0 }}
-            transition={{ duration: 0.4, ease: "circOut" }}
-            layout
-            className="group p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 hover:border-indigo-200 dark:hover:border-indigo-800/30 overflow-hidden"
-          >
-            <div className="flex flex-col lg:flex-row gap-10">
-              {/* ЛЕВАЯ ЧАСТЬ: Оригинал и Исправление */}
-              <div className="flex-1 space-y-8">
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold text-indigo-600 uppercase px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 rounded-full border border-indigo-100 dark:border-indigo-800/30">
-                      Original Text
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
-                      {typeLabel}
-                    </span>
-                  </div>
-                  <p className="text-sm sm:text-base font-medium text-slate-400 dark:text-slate-500 line-through decoration-indigo-400/50 leading-relaxed">
-                    {err.original}
-                  </p>
-                  <CambridgeDictionaryLink fromError={err.original} className="mt-2" />
-                  <AddToWordListButton
-                    word={err.original}
-                    taskType={activeTab === 'Task 1' ? 'task1' : 'task2'}
-                    source="correction"
-                    note={recommended || err.explanation || null}
-                    className="mt-1 ml-0.5"
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-[10px] font-black text-green-600 uppercase px-3 py-1 bg-green-50 dark:bg-green-900/20 rounded-full border border-green-100 dark:border-green-800/30">
-                      Recommended Correction
-                    </span>
-                    <button 
-                      type="button"
-                      onClick={() => speak(recommended || err.explanation || '')} 
-                      className="group/btn p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-green-500 transition-all active:scale-90 shadow-sm"
-                    >
-                      <svg xmlns="http://www.w3.org" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors">
-                        <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
-                        <path d="M15.932 7.757a.75.75 0 011.061 0 4.5 4.5 0 010 6.364.75.75 0 01-1.06-1.06 3 3 0 000-4.242.75.75 0 010-1.062z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <p className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 leading-[1.6]">
-                    {recommended || '—'}
-                  </p> 
-                  {!canApply && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                      No direct replacement — use the band-score explanation on the right to revise.
-                    </p>
-                  )}
-
-                  {/* КНОПКА ЗАМЕНЫ С ФУНКЦИЕЙ СКРЫТИЯ */}
-                  {canApply ? (
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      const occurrenceIndex = err.occurrenceIndex || 1;
-                      handleReplaceWord(err.original, recommended, occurrenceIndex, i);
-                    }}
-                    className={`mt-4 group/apply flex items-center gap-3 px-6 py-3 rounded-2xl text-sm font-extrabold tracking-tight transition-all active:scale-95 shadow-lg
-                      ${darkMode 
-                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20' 
-                        : 'bg-slate-900 hover:bg-indigo-600 text-white shadow-slate-300'
-                      }`}
-                  >
-                    <span className="w-5 h-5 flex items-center justify-center bg-white/20 rounded-lg group-hover/apply:rotate-12 transition-transform">
-                      <svg xmlns="http://www.w3.org" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
-                        <path fillRule="evenodd" d="M15.312 11.424a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L9 13.586V4a1 1 0 012 0v9.586l1.899-1.899a1 1 0 011.413 0z" clipRule="evenodd" />
-                      </svg>
-                    </span>
-                    Apply & Dismiss
-                  </button>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* ПРАВАЯ ЧАСТЬ (Оставляем без изменений) */}
-              <div className="lg:w-[40%] flex flex-col justify-between p-7 sm:p-8 rounded-[2.5rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-inner min-h-[280px]">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                      <span className="font-extrabold uppercase text-[10px] text-indigo-600 dark:text-indigo-400 tracking-widest">
-                        Type: {typeLabel}
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[9px] font-black border border-purple-200 dark:border-purple-800">
-                      {err.level || 'B2'}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 leading-[1.7] text-[13px] sm:text-[14px]">
-                    <span className="font-extrabold text-indigo-700 dark:text-indigo-300 not-italic">Why? </span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">{err.explanation || '—'}</span>
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-extrabold text-slate-700 dark:text-slate-400 uppercase tracking-widest">Complexity Scale</span>
-                    <span className="text-[9px] font-semibold text-slate-600 dark:text-slate-400 uppercase">Mastery: {err.level === 'C2' ? 'Native' : 'Advanced'}</span>
-                  </div>
-                  <div className="flex gap-1 h-1">
-                    {['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((lvl) => (
-                      <div 
-                        key={lvl} 
-                        className={`flex-1 rounded-full transition-all duration-500 ${
-                          err.level === lvl || (lvl === 'B2' && !err.level) 
-                            ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)] scale-y-150' 
-                            : 'bg-slate-200 dark:bg-slate-800 opacity-30'
-                        }`} 
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-      })
-    ) : (
-      <div className="py-10">
-        <SuccessState message="No corrections found." className="py-0" />
-      </div>
-    )}
-  </AnimatePresence>
-     </div>
-     </div>
     </div>
+        </div>
+        </div>
+        )}
+        </div>
+
+      {activeResult && !activeAnalyzeLoading && activeResult.suggested_rewrite && (
+        <div className="relative w-full min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="mb-4 flex w-full items-center gap-3 sm:mb-6">
+            <CheckCircle className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400" strokeWidth={1.5} />
+            <h4 className="shrink-0 text-sm font-extrabold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-100 sm:text-base">
+              Comparison Lab
+            </h4>
+            <div className="h-[1px] flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden />
+          </div>
+          <ComparisonLab
+            activeTab={activeTab}
+            activeResult={activeResult}
+            darkMode={darkMode}
+            className="w-full"
+          />
+        </div>
       )}
-        </div>
-        </div>
+
       {showCreditsExhausted && (
         <CreditsExhaustedCallout
           className="w-full"
@@ -3394,7 +3414,7 @@ const insertLinkingWord = (word) => {
         />
       )}
       </div>
-      {activeResult && !loading && activeResult.suggested_rewrite && (
+      {activeResult && !activeAnalyzeLoading && activeResult.suggested_rewrite && (
         <SuggestedRewriteKaraoke
           fullBleedLayout
           suggestedRewrite={activeResult.suggested_rewrite}
@@ -3620,16 +3640,6 @@ const insertLinkingWord = (word) => {
                     <span className="btn-stratum-text">EMAIL · STRATUM</span>
                   </button>
                 </form>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Opens your email app with a draft to{' '}
-                  <a
-                    href={SUPPORT_MAILTO}
-                    className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                  >
-                    {SUPPORT_EMAIL}
-                  </a>
-                  .
-                </p>
               </div>
 
               {/* Legal & Contact */}
@@ -3650,7 +3660,6 @@ const insertLinkingWord = (word) => {
                 {COPYRIGHT_LINE}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {BUSINESS_ADDRESS} ·{' '}
                 <button
                   type="button"
                   onClick={() => setShowSupportModal(true)}
@@ -3659,7 +3668,7 @@ const insertLinkingWord = (word) => {
                   Contact support
                 </button>
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 pt-1">We accept Visa, Mastercard, Apple Pay</p>
+              <PaymentMethodsBadges className="pt-1" />
             </div>
           </div>
           <AnimatePresence>

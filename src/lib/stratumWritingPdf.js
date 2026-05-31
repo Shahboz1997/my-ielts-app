@@ -105,8 +105,100 @@ function splitEssayParagraphs(essayText) {
     .filter(Boolean);
 }
 
+/**
+ * Paragraphs for model response: respect newlines; split long single blocks by sentence groups.
+ */
+function splitModelResponseParagraphs(text) {
+  const paras = splitEssayParagraphs(text);
+  if (paras.length > 1) return paras;
+  const block = (paras[0] || sanitizePdfText(String(text)) || '').trim();
+  if (!block) return ['—'];
+  if (block.length < 220) return [block];
+  const sentences = block
+    .match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g)
+    ?.map((s) => s.trim())
+    .filter(Boolean);
+  if (!sentences || sentences.length <= 2) return [block];
+  const targetParas = Math.min(5, Math.max(2, Math.ceil(sentences.length / 2)));
+  const chunkSize = Math.ceil(sentences.length / targetParas);
+  const out = [];
+  for (let i = 0; i < sentences.length; i += chunkSize) {
+    out.push(sentences.slice(i, i + chunkSize).join(' '));
+  }
+  return out.length ? out : [block];
+}
+
+function modelParagraphLabel(paraIdx, total, isGtLetter) {
+  if (total <= 1) return null;
+  if (isGtLetter) {
+    if (paraIdx === 0) return 'OPENING';
+    if (paraIdx === total - 1) return 'CLOSING';
+    return `PARAGRAPH ${paraIdx + 1}`;
+  }
+  if (total === 2) return paraIdx === 0 ? 'INTRODUCTION' : 'CONCLUSION';
+  if (paraIdx === 0) return 'INTRODUCTION';
+  if (paraIdx === total - 1) return 'CONCLUSION';
+  return `BODY ${paraIdx}`;
+}
+
 const CHART_IMAGE_MAX_HEIGHT = 95;
 const ESSAY_PARAGRAPH_GAP = 9;
+
+/** Collect unique error phrases from corrections / errors (whole phrases, not tokenized). */
+function collectErrorPhrases(result) {
+  const seen = new Set();
+  const phrases = [];
+  const add = (raw) => {
+    const phrase = sanitizePdfText(raw || '').trim();
+    if (phrase.length < 2) return;
+    const key = phrase.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    phrases.push(phrase);
+  };
+  (Array.isArray(result?.corrections) ? result.corrections : []).forEach((c) => add(c.original));
+  (Array.isArray(result?.errors) ? result.errors : []).forEach((e) => {
+    if (typeof e === 'string') add(e);
+    else add(e?.original ?? e?.word ?? e?.text);
+  });
+  return phrases.sort((a, b) => b.length - a.length);
+}
+
+/** Character ranges in `text` where an error phrase appears (case-insensitive). */
+function buildErrorRangesInText(text, phrases) {
+  if (!text || !phrases.length) return [];
+  const lower = text.toLowerCase();
+  const ranges = [];
+  for (const phrase of phrases) {
+    const needle = phrase.toLowerCase();
+    if (!needle) continue;
+    let from = 0;
+    while (from <= lower.length - needle.length) {
+      const idx = lower.indexOf(needle, from);
+      if (idx === -1) break;
+      ranges.push({ start: idx, end: idx + phrase.length });
+      from = idx + 1;
+    }
+  }
+  if (!ranges.length) return [];
+  ranges.sort((a, b) => a.start - b.start);
+  const merged = [{ ...ranges[0] }];
+  for (let i = 1; i < ranges.length; i++) {
+    const r = ranges[i];
+    const last = merged[merged.length - 1];
+    if (r.start <= last.end) {
+      last.end = Math.max(last.end, r.end);
+    } else {
+      merged.push({ ...r });
+    }
+  }
+  return merged;
+}
+
+function partOverlapsErrorRanges(partStart, partEnd, ranges) {
+  if (!ranges.length || partEnd <= partStart) return false;
+  return ranges.some((r) => partStart < r.end && partEnd > r.start);
+}
 
 function formatSynonymsField(syn) {
   if (syn == null) return '—';
@@ -243,17 +335,7 @@ export function generateStratumWritingPdf({
   doc.text('1. The Draft', MARGIN, y);
   y += 7;
 
-  const errorMap = {};
-  if (result?.corrections) {
-    result.corrections.forEach((c) => {
-      const cleanOriginal = sanitizePdfText(c.original || '')
-        .toLowerCase()
-        .replace(/[.,!?;:]/g, '');
-      cleanOriginal.split(/\s+/).forEach((word) => {
-        if (word.length > 0) errorMap[word] = 'error';
-      });
-    });
-  }
+  const errorPhrases = collectErrorPhrases(result);
   const linkingMap = {};
   const lwForMap = getLinkingWords(result);
   if (lwForMap?.found) {
@@ -291,12 +373,17 @@ export function generateStratumWritingPdf({
   const lineHeight = 6;
 
   const renderEssayWords = (paragraphText) => {
+    const errorRanges = buildErrorRangesInText(paragraphText, errorPhrases);
+    let charIndex = 0;
     const wordsInParagraph = paragraphText.split(/(\s+)/);
     wordsInParagraph.forEach((part) => {
       if (!part) return;
+      const partStart = charIndex;
+      const partEnd = charIndex + part.length;
+      charIndex = partEnd;
+      const isError = partOverlapsErrorRanges(partStart, partEnd, errorRanges);
       const clean = part.toLowerCase().trim().replace(/[.,!?;:()]/g, '');
-      const isError = errorMap[clean];
-      const isLink = linkingMap[clean];
+      const isLink = !isError && linkingMap[clean];
       const wordWidth = doc.getTextWidth(part);
 
       if (currentX + wordWidth > PAGE_WIDTH - MARGIN) {
@@ -639,45 +726,61 @@ export function generateStratumWritingPdf({
   }
 
   const rawModel = result.suggested_rewrite || 'Not available.';
-  const modelParagraphs = splitEssayParagraphs(String(rawModel));
-  const modelLines =
-    modelParagraphs.length === 0
-      ? ['—']
-      : modelParagraphs.flatMap((para, idx) => {
-          const lines = doc.splitTextToSize(para || '—', CONTENT_WIDTH - 14);
-          return idx > 0 ? ['', ...lines] : lines;
-        });
-  const modelBlockHeight = Math.min(modelLines.length * 5.2 + 22, BODY_BOTTOM - MARGIN);
+  const modelParagraphs = splitModelResponseParagraphs(String(rawModel));
+  const MODEL_INSET = 9;
+  const MODEL_LINE_H = 5.35;
+  const MODEL_PARA_GAP = 7;
+  const MODEL_TEXT_W = CONTENT_WIDTH - MODEL_INSET * 2;
+  const modelSlate = [30, 41, 59];
 
-  y = ensureSpace(y, Math.min(modelBlockHeight + 20, BODY_BOTTOM - y));
-  if (y + modelBlockHeight > BODY_BOTTOM - 15) {
-    doc.addPage();
-    y = MARGIN + 12;
-  }
-
+  y = ensureSpace(y, 26);
   doc.setTextColor(...indigo);
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('7. The model response (Band 9 target)', MARGIN, y);
-  y += 9;
+  doc.text('7. The model response', MARGIN, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...greyText);
+  doc.text('Band 9 target · examiner-style rewrite', MARGIN, y + 5);
+  y += 15;
 
-  doc.setFillColor(...indigoLight);
-  doc.setDrawColor(...greyBorder);
-  doc.setLineWidth(0.25);
-  const boxTop = y;
-  doc.roundedRect(MARGIN, boxTop, CONTENT_WIDTH, BODY_BOTTOM - boxTop - 8, 2, 2, 'FD');
-  y += 7;
-  doc.setFontSize(10);
-  doc.setTextColor(30, 30, 30);
-  modelLines.forEach((line) => {
-    if (y > BODY_BOTTOM - 12) {
-      doc.addPage();
-      doc.setFillColor(...indigoLight);
-      doc.roundedRect(MARGIN, MARGIN, CONTENT_WIDTH, BODY_BOTTOM - MARGIN - 8, 2, 2, 'FD');
-      y = MARGIN + 7;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10.5);
+
+  modelParagraphs.forEach((para, paraIdx) => {
+    const safePara = sanitizePdfText(para) || '—';
+    const lines = doc.splitTextToSize(safePara, MODEL_TEXT_W);
+    const label = modelParagraphLabel(paraIdx, modelParagraphs.length, isGtLetter);
+    const labelOffset = label ? 5.5 : 0;
+    const boxH = lines.length * MODEL_LINE_H + MODEL_INSET * 2 + labelOffset;
+
+    y = ensureSpace(y, boxH + MODEL_PARA_GAP);
+
+    doc.setFillColor(...indigoLight);
+    doc.setDrawColor(...greyBorder);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, boxH, 2.5, 2.5, 'FD');
+
+    if (label) {
+      doc.setFontSize(7);
+      doc.setTextColor(...indigo);
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, MARGIN + MODEL_INSET, y + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
     }
-    doc.text(line, MARGIN + 7, y);
-    y += 5.1;
+
+    let textY = y + MODEL_INSET + 3.5 + labelOffset;
+    doc.setTextColor(...modelSlate);
+    lines.forEach((line) => {
+      doc.text(line, MARGIN + MODEL_INSET, textY);
+      textY += MODEL_LINE_H;
+    });
+
+    y += boxH + MODEL_PARA_GAP;
   });
+
+  y += SECTION_GAP - MODEL_PARA_GAP;
 
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {

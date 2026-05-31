@@ -13,6 +13,7 @@ export default function LexicalUpgradePanel({
   userText = '',
   taskType = null,
   className = '',
+  embedded = false,
 }) {
   const list = (Array.isArray(rows) ? rows : [])
     .map((row) => normalizeLexicalRow(row))
@@ -41,6 +42,80 @@ export default function LexicalUpgradePanel({
     });
     setUserText(result);
   };
+
+  const gridContent =
+    list.length === 0 ? (
+      <p className="text-[11px] text-slate-500 dark:text-slate-400 italic py-4 text-center">
+        No upgrades needed yet. Use more academic language to see suggestions.
+      </p>
+    ) : (
+      <div className={`grid grid-cols-1 gap-3 ${embedded ? '' : 'xl:grid-cols-2'}`}>
+        {list.map((row, i) => {
+          const { band_56_word: weakWord, c1_synonyms: c1, c2_synonyms: c2 } = row;
+          return (
+            <div
+              key={`${weakWord}-${i}`}
+              className="flex flex-col gap-2 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-slate-900/60 px-2.5 py-2"
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-medium shrink-0">
+                  B5–6
+                </span>
+                <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-100 italic">
+                  {weakWord}
+                </span>
+                <AddToWordListButton
+                  word={weakWord}
+                  taskType={taskType}
+                  source="lexical_upgrade"
+                  synonyms={[...c1, ...c2]}
+                  compact
+                  className="ml-auto shrink-0"
+                />
+              </div>
+              {c1.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 shrink-0 w-6">
+                    C1
+                  </span>
+                  {c1.map((syn, idx) => (
+                    <SynonymChip
+                      key={`c1-${weakWord}-${syn}-${idx}`}
+                      weakWord={weakWord}
+                      syn={syn}
+                      tier="c1"
+                      rowIndex={i}
+                      onReplaceWord={onReplaceWord}
+                    />
+                  ))}
+                </div>
+              )}
+              {c2.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 shrink-0 w-6">
+                    C2
+                  </span>
+                  {c2.map((syn, idx) => (
+                    <SynonymChip
+                      key={`c2-${weakWord}-${syn}-${idx}`}
+                      weakWord={weakWord}
+                      syn={syn}
+                      tier="c2"
+                      rowIndex={i}
+                      onReplaceWord={onReplaceWord}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+
+  if (embedded) {
+    return <div className={className}>{gridContent}</div>;
+  }
 
   return (
     <div
@@ -75,76 +150,7 @@ export default function LexicalUpgradePanel({
           </button>
         )}
       </div>
-      <div className="p-3 sm:p-4">
-        {list.length === 0 ? (
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 italic py-4 text-center">
-            No upgrades needed yet. Use more academic language to see suggestions.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            {list.map((row, i) => {
-              const { band_56_word: weakWord, c1_synonyms: c1, c2_synonyms: c2 } = row;
-              return (
-                <div
-                  key={`${weakWord}-${i}`}
-                  className="flex flex-col gap-2 rounded-xl border border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-slate-900/60 px-2.5 py-2"
-                >
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-medium shrink-0">
-                      B5–6
-                    </span>
-                    <span className="truncate text-xs font-medium text-slate-800 dark:text-slate-100 italic">
-                      {weakWord}
-                    </span>
-                    <AddToWordListButton
-                      word={weakWord}
-                      taskType={taskType}
-                      source="lexical_upgrade"
-                      synonyms={[...c1, ...c2]}
-                      compact
-                      className="ml-auto shrink-0"
-                    />
-                  </div>
-                  {c1.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1">
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 shrink-0 w-6">
-                        C1
-                      </span>
-                      {c1.map((syn, idx) => (
-                        <SynonymChip
-                          key={`c1-${weakWord}-${syn}-${idx}`}
-                          weakWord={weakWord}
-                          syn={syn}
-                          tier="c1"
-                          rowIndex={i}
-                          onReplaceWord={onReplaceWord}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {c2.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1">
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400 shrink-0 w-6">
-                        C2
-                      </span>
-                      {c2.map((syn, idx) => (
-                        <SynonymChip
-                          key={`c2-${weakWord}-${syn}-${idx}`}
-                          weakWord={weakWord}
-                          syn={syn}
-                          tier="c2"
-                          rowIndex={i}
-                          onReplaceWord={onReplaceWord}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <div className="p-3 sm:p-4">{gridContent}</div>
     </div>
   );
 }

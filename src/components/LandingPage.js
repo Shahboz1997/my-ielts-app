@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useTheme } from 'next-themes';
+import { useTheme } from '@wrksz/themes/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import TransformationSlider from '@/components/TransformationSlider';
@@ -48,6 +48,7 @@ import {
 import { TASK1_TIPS, TASK2_TIPS, LETTER_TIPS } from '@/lib/ieltsGuidelines';
 import { COPYRIGHT_SHORT, BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 import NeuralSyncShowcase from '@/components/NeuralSyncShowcase';
+import PaymentMethodsBadges from '@/components/PaymentMethodsBadges';
 
 const appleEase = [0.16, 1, 0.3, 1];
 const fadeInUp = {
@@ -1382,14 +1383,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
             <p className="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
               Don&apos;t just practice. Evolve. Start your Stratum journey today.
             </p>
-            <div className="flex flex-wrap justify-center items-center gap-4 pt-2 text-xs font-medium tracking-tight text-slate-400 dark:text-slate-500">
-              <span>We accept</span>
-              <span className="inline-flex items-center gap-3">
-                <span>Visa</span>
-                <span>Mastercard</span>
-                <span>Apple Pay</span>
-              </span>
-            </div>
+            <PaymentMethodsBadges className="pt-2" />
           </motion.div>
         </div>
       </footer>
