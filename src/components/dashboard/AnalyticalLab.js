@@ -5,7 +5,6 @@ import { Download, ArrowLeft, Zap, BookOpen, GitBranch, ChevronDown, Sparkles } 
 import { generateStratumWritingPdfFromCheck } from '@/lib/stratumWritingPdf';
 import SuggestedRewriteKaraoke, { getPlainTextForKaraoke } from './SuggestedRewriteKaraoke';
 import LexicalUpgradePanel from '@/components/LexicalUpgradePanel';
-import CambridgeDictionaryLink from '@/components/CambridgeDictionaryLink';
 import AddToWordListButton from '@/components/AddToWordListButton';
 import { mergeLexicalUpgrades, getWeakWordsSet } from '@/lib/lexicalUpgrade';
 
@@ -1226,7 +1225,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                                 )}
                               </div>
 
-                              <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
                               <AddToWordListButton
                                 word={err.original}
                                 taskType={taskTypeNormalized}
@@ -1299,7 +1297,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                                   <span className="text-sm text-slate-500 dark:text-slate-400">—</span>
                                 )}
                               </div>
-                              <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
                               <AddToWordListButton
                                 word={err.original}
                                 taskType={taskTypeNormalized}
@@ -1751,7 +1748,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
           )}
         </div>
 
-        <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
         <AddToWordListButton
           word={err.original}
           taskType={taskTypeNormalized}
@@ -1824,7 +1820,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                               <span className="text-sm text-slate-500 dark:text-slate-400">—</span>
                             )}
                           </div>
-                          <CambridgeDictionaryLink fromError={err.original} compact className="mt-1" />
                           <AddToWordListButton
                             word={err.original}
                             taskType={taskTypeNormalized}
