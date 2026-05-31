@@ -60,7 +60,6 @@ export async function POST(req) {
     const image = body?.image;
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const rewriteMode = body?.mode === "rewrite";
-    const rewriteMode = body?.mode === "rewrite";
 
     const userContextParts = [];
     if (prompt.trim()) userContextParts.push(`TASK PROMPT:\n${prompt}`);
