@@ -42,7 +42,7 @@ import {
 import { shouldUseDevOpenAiMock } from '@/lib/openaiServer.js';
 
 const e2eMockOpenAI = () => process.env.E2E_MOCK_OPENAI === '1';
-const useOpenAiMock = () => e2eMockOpenAI() || shouldUseDevOpenAiMock();
+const shouldUseOpenAiMock = () => e2eMockOpenAI() || shouldUseDevOpenAiMock();
 
 export async function DELETE(req) {
   return NextResponse.json({ message: "Archive cleared" }, { status: 200 });
@@ -62,7 +62,7 @@ export async function POST(req) {
     });
 
     const body = await req.json();
-    if (!useOpenAiMock()) {
+    if (!shouldUseOpenAiMock()) {
       const envError = validateOpenAIEnvForRoute();
       if (envError) return envError;
     }
@@ -205,7 +205,7 @@ export async function POST(req) {
 
     // --- 2. РЕЖИМ: Генерация случайного Task 1 (Текст) ---
     if (body.generateTask1) {
-      if (useOpenAiMock()) {
+      if (shouldUseOpenAiMock()) {
         return NextResponse.json({ question: buildDevMockGeneratedTask1Text() });
       }
       const clientResult = getOpenAIClient();
@@ -243,7 +243,7 @@ Do NOT include "Summarize the information" or "Write at least 150 words".`,
 
     // --- 2b. Генерация GT Task 1 (письмо) ---
     if (body.generateLetterTask) {
-      if (useOpenAiMock()) {
+      if (shouldUseOpenAiMock()) {
         return NextResponse.json({ question: buildDevMockLetterTask(), task1Kind: 'gt_letter' });
       }
       const clientResult = getOpenAIClient();
@@ -297,7 +297,7 @@ Do NOT write the candidate's letter. Do NOT include band descriptors or examiner
 
     // --- 3. РЕЖИМ: Генерация темы Task 2 ---
     if (body.generateTopic) {
-      if (useOpenAiMock()) {
+      if (shouldUseOpenAiMock()) {
         const keyword = typeof body.keyword === 'string' ? body.keyword.trim() : '';
         return NextResponse.json({ question: buildDevMockTask2Question(keyword) });
       }
@@ -375,7 +375,7 @@ Do NOT write the candidate's letter. Do NOT include band descriptors or examiner
     }
     let result;
 
-    if (useOpenAiMock()) {
+    if (shouldUseOpenAiMock()) {
       result = normalizeCheckResult(
         buildE2eMockCheckResult({ userText, promptText, isT1 }),
         { taskCriteriaName, userText, isT1, isGtLetter, task1Kind }
