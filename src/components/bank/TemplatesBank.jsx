@@ -6,13 +6,9 @@ import { Loader2, Search, AlertCircle, Star } from 'lucide-react';
 import { useBank } from '@/context/BankContext';
 import TemplateDetail from './TemplateDetail';
 import styles from './TemplatesBank.module.css';
+import { bankApiUrl } from '@/lib/bankClient.js';
 
 const PAGE_SIZE = 10;
-
-function bankUrl(path) {
-  const base = process.env.NEXT_PUBLIC_BANK_API_URL || '';
-  return `${base}${path}`;
-}
 
 const T1_SUB = [
   { value: '', label: 'All Task 1 types' },
@@ -58,7 +54,7 @@ export default function TemplatesBank({ darkMode }) {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
       if (appliedSearch.trim()) params.set('q', appliedSearch.trim());
-      const { data } = await axios.get(bankUrl(`/api/templates?${params.toString()}`));
+      const { data } = await axios.get(bankApiUrl(`/api/templates?${params.toString()}`));
       setItems(Array.isArray(data.data) ? data.data : []);
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Failed to load templates');

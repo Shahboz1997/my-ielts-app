@@ -3,10 +3,12 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
+import { safeAuth } from "@/lib/safeAuth";
 import {
   createOpenAIClient,
   validateOpenAIEnvForRoute,
 } from "@/lib/openaiServer.js";
+import { requireAuthenticatedAiAccess } from "@/lib/aiRouteGuard.js";
 
 function systemPrompt(taskType, task1Kind) {
   const t = String(taskType || "").toLowerCase();
@@ -51,6 +53,10 @@ export async function POST(req) {
   try {
     const envError = validateOpenAIEnvForRoute();
     if (envError) return envError;
+
+    const session = await safeAuth();
+    const access = await requireAuthenticatedAiAccess(req, session, "assistant");
+    if (!access.ok) return access.response;
 
     const body = await req.json().catch(() => ({}));
     const taskType = body?.taskType || "Task 2";
@@ -120,4 +126,3 @@ export async function POST(req) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
-

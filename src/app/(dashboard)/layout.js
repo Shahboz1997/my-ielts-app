@@ -1,11 +1,11 @@
 // Dashboard layout — Cathalon.ai–style: deep slate/black dark, crisp off-white light, slim sidebar alignment
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { safeAuth } from "@/lib/safeAuth";
 import { redirect } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import DashboardContentWrapper from "@/components/dashboard/DashboardContentWrapper";
 
 export default async function DashboardLayout({ children }) {
-  const session = await auth();
+  const session = await safeAuth();
 
   if (!session) {
     redirect("/");

@@ -5,15 +5,24 @@ import { SessionProvider, useSession } from "next-auth/react";
 import { Toaster } from "react-hot-toast";
 import { BankTopicsNavProvider } from "@/context/BankTopicsNavContext";
 import { WordListProvider } from "@/context/WordListContext";
+import UserLibrarySync from "@/components/UserLibrarySync";
 import AddToHomeScreenBanner from "@/components/AddToHomeScreenBanner";
 
 const isDev = process.env.NODE_ENV === "development";
+
+/** Avoid parallel warm-db calls when session re-renders (reduces Supabase pool churn). */
+let warmDbLastAt = 0;
+const WARM_DB_COOLDOWN_MS = 45_000;
 
 function AuthDbWarm() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
     if (status !== "authenticated" || !session?.user) return;
+
+    const now = Date.now();
+    if (now - warmDbLastAt < WARM_DB_COOLDOWN_MS) return;
+    warmDbLastAt = now;
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
@@ -44,6 +53,7 @@ export function Providers({ children, session }) {
       refetchOnWindowFocus={!isDev}
     >
       <AuthDbWarm />
+      <UserLibrarySync />
       <Toaster position="top-center" />
       <WordListProvider>
         <BankTopicsNavProvider>

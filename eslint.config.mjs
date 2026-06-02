@@ -4,7 +4,7 @@ import next from "eslint-config-next";
 const config = [
   ...next,
   {
-    ignores: ["bank-server/**", "src/generated/**", "generated/**"],
+    ignores: ["src/generated/**", "generated/**"],
   },
   {
     rules: {

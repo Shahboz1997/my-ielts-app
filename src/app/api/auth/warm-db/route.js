@@ -1,6 +1,6 @@
 import util from "node:util";
 import { NextResponse } from "next/server";
-import { getPrisma } from "@/lib/prisma";
+import { getPrisma, withPrismaRetry } from "@/lib/prisma";
 import { formatAuthErrorCause } from "@/lib/formatAuthErrorCause";
 
 export const runtime = "nodejs";
@@ -22,7 +22,10 @@ function withTimeout(promise, ms) {
 export async function GET() {
   const t0 = Date.now();
   try {
-    await withTimeout(getPrisma().$queryRaw`SELECT 1`, WARM_DB_TIMEOUT_MS);
+    await withTimeout(
+      withPrismaRetry(() => getPrisma().$queryRaw`SELECT 1`, { attempts: 3 }),
+      WARM_DB_TIMEOUT_MS
+    );
     return NextResponse.json({ ok: true, ms: Date.now() - t0 });
   } catch (e) {
     const chain = formatAuthErrorCause(e);

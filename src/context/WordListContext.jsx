@@ -8,6 +8,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   WORD_LIST_STORAGE_KEY,
   WORD_LIST_UPDATED_EVENT,
@@ -16,10 +17,13 @@ import {
   removeWordFromList,
   isWordInList as checkWordInList,
 } from '@/lib/wordList';
+import { pushWordListIfAuthed } from '@/lib/userLibraryClient.js';
 
 const WordListContext = createContext(null);
 
 export function WordListProvider({ children }) {
+  const { status } = useSession();
+  const isAuthed = status === 'authenticated';
   const [words, setWords] = useState([]);
 
   const refresh = useCallback(() => {
@@ -40,16 +44,35 @@ export function WordListProvider({ children }) {
     };
   }, [refresh]);
 
-  const addWord = useCallback((entry) => {
-    const result = addWordToList(entry);
-    if (result.ok) refresh();
-    return result;
-  }, [refresh]);
+  const syncToServer = useCallback(
+    (list) => {
+      if (!isAuthed) return;
+      void pushWordListIfAuthed(list);
+    },
+    [isAuthed]
+  );
 
-  const removeWord = useCallback((id) => {
-    removeWordFromList(id);
-    refresh();
-  }, [refresh]);
+  const addWord = useCallback(
+    (entry) => {
+      const result = addWordToList(entry);
+      if (result.ok) {
+        const list = loadWordListRaw();
+        refresh();
+        syncToServer(list);
+      }
+      return result;
+    },
+    [refresh, syncToServer]
+  );
+
+  const removeWord = useCallback(
+    (id) => {
+      const list = removeWordFromList(id);
+      refresh();
+      syncToServer(list);
+    },
+    [refresh, syncToServer]
+  );
 
   const isWordSaved = useCallback((word) => checkWordInList(word), [words]);
 

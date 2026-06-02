@@ -1,11 +1,9 @@
 import { getPrisma, withPrismaRetry } from '@/lib/prisma';
 import {
   AI_RATE_LIMITS,
-  GUEST_CHECK_LIMIT,
   getClientIp,
   hashClientIp,
   jsonAuthRequired,
-  jsonGuestQuotaExhausted,
   jsonRateLimitExceeded,
 } from '@/lib/aiAccessShared';
 
@@ -76,6 +74,27 @@ async function enforceRateLimit(scope, route) {
   return { ok: true };
 }
 
+/**
+ * Task/topic/image helpers on POST /api/check.
+ * Authenticated: user + IP rate limits.
+ * Guest: IP rate limits only (no sign-in required).
+ */
+export async function resolveAuxiliaryAiAccess(request, session, route) {
+  const ipHash = await hashClientIp(getClientIp(request));
+
+  if (session?.user?.id) {
+    return requireAuthenticatedAiAccess(request, session, route);
+  }
+
+  const guestBurst = await enforceRateLimit(`guest-ip:${ipHash}`, 'checkGuestIp');
+  if (!guestBurst.ok) return guestBurst;
+
+  const ipRl = await enforceRateLimit(`ip:${ipHash}`, route);
+  if (!ipRl.ok) return ipRl;
+
+  return { ok: true, userId: null, ipHash, isGuest: true };
+}
+
 export async function requireAuthenticatedAiAccess(request, session, route) {
   if (!session?.user?.id) {
     return {
@@ -96,70 +115,22 @@ export async function requireAuthenticatedAiAccess(request, session, route) {
   return { ok: true, userId: session.user.id };
 }
 
-/** Read-only guest quota for UI (does not increment). */
-export async function getGuestCheckQuotaStatus(ipHash) {
-  const prisma = getPrisma();
-
-  return withPrismaRetry(async () => {
-    const row = await prisma.guestCheckQuota.findUnique({ where: { ipHash } });
-    const used = Math.min(GUEST_CHECK_LIMIT, row?.count ?? 0);
-    const remaining = Math.max(0, GUEST_CHECK_LIMIT - used);
-    return { limit: GUEST_CHECK_LIMIT, used, remaining };
-  });
-}
-
-async function consumeGuestCheckQuota(ipHash) {
-  const prisma = getPrisma();
-
-  return withPrismaRetry(async () => {
-    const updated = await prisma.guestCheckQuota.updateMany({
-      where: { ipHash, count: { lt: GUEST_CHECK_LIMIT } },
-      data: { count: { increment: 1 } },
-    });
-
-    if (updated.count > 0) {
-      const row = await prisma.guestCheckQuota.findUnique({ where: { ipHash } });
-      return { ok: true, used: row?.count ?? 1 };
-    }
-
-    const existing = await prisma.guestCheckQuota.findUnique({ where: { ipHash } });
-    if (existing) {
-      return { ok: false, used: existing.count };
-    }
-
-    try {
-      await prisma.guestCheckQuota.create({ data: { ipHash, count: 1 } });
-      return { ok: true, used: 1 };
-    } catch (e) {
-      if (e?.code !== 'P2002') throw e;
-      return consumeGuestCheckQuota(ipHash);
-    }
-  });
-}
-
 /**
- * Access control for main essay analysis on POST /api/check.
- * Authenticated: rate limit + credits (caller still validates credits).
- * Guest: IP rate limit + lifetime quota (GUEST_CHECK_LIMIT).
+ * Access control for main essay analysis on POST /api/check (signed-in only).
  */
 export async function resolveMainCheckAccess(request, session) {
   const ip = getClientIp(request);
   const ipHash = await hashClientIp(ip);
   const userId = session?.user?.id || null;
 
-  if (userId) {
-    const authAccess = await requireAuthenticatedAiAccess(request, session, 'check');
-    if (!authAccess.ok) return authAccess;
-    return { ok: true, userId, ipHash, isGuest: false };
+  if (!userId) {
+    return {
+      ok: false,
+      response: jsonAuthRequired('Sign in to analyze your essay.'),
+    };
   }
 
-  const guestBurst = await enforceRateLimit(`guest-ip:${ipHash}`, 'checkGuestIp');
-  if (!guestBurst.ok) return guestBurst;
-
-  const quota = await consumeGuestCheckQuota(ipHash);
-  if (!quota.ok) {
-    return { ok: false, response: jsonGuestQuotaExhausted() };
-  }
-
-  return { ok: true, userId: null, ipHash, isGuest: true, guestChecksUsed: quota.used };
+  const authAccess = await requireAuthenticatedAiAccess(request, session, 'check');
+  if (!authAccess.ok) return authAccess;
+  return { ok: true, userId, ipHash, isGuest: false };
 }

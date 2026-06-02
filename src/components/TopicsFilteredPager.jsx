@@ -6,13 +6,9 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { useBankTopicsNav } from '@/context/BankTopicsNavContext';
 import styles from '@/components/bank/TopicsBank.module.css';
+import { bankApiUrl } from '@/lib/bankClient.js';
 
 const PAGE_SIZE = 8;
-
-function bankUrl(path) {
-  const base = process.env.NEXT_PUBLIC_BANK_API_URL || '';
-  return `${base}${path}`;
-}
 
 /**
  * Paginated topic links under TopicDetails — same filters/sort as Bank (from context).
@@ -34,7 +30,7 @@ export default function TopicsFilteredPager({ currentTopicId, darkMode }) {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
       if (appliedSearch.trim()) params.set('q', appliedSearch.trim());
-      const { data } = await axios.get(bankUrl(`/api/topics?${params.toString()}`));
+      const { data } = await axios.get(bankApiUrl(`/api/topics?${params.toString()}`));
       setItems(Array.isArray(data.data) ? data.data : []);
     } catch {
       setItems([]);

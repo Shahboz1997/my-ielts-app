@@ -11,7 +11,7 @@ function humanizeAuthError(code) {
     return "Auth configuration error. This usually means missing/incorrect environment variables (AUTH_URL/NEXTAUTH_URL, AUTH_SECRET/NEXTAUTH_SECRET, Google credentials) or a host/redirect mismatch.";
   }
   if (c === "OAuthSignin" || c === "OAuthCallback") {
-    return "OAuth sign-in failed. Check Google redirect URI and AUTH_URL, DATABASE_URL / Prisma (adapter errors), and the server log line \"[auth] error\" for the underlying cause.";
+    return "Google sign-in failed. Try again in a moment. If it keeps failing, check your internet connection, VPN/firewall, and that Google is reachable from this network.";
   }
   if (c === "OAuthAccountNotLinked") {
     return "This email is already registered with a different sign-in method. Use the same method you used originally.";
@@ -28,11 +28,15 @@ function humanizeAuthError(code) {
 export default function AuthErrorClient() {
   const sp = useSearchParams();
   const error = sp?.get("error") || "";
+  const reason = sp?.get("reason") || "";
   const callbackUrl = sp?.get("callbackUrl") || "";
 
   const message = useMemo(() => {
+    if (error === "OAuthCallback" && reason === "google_timeout") {
+      return "Google sign-in timed out while contacting Google servers. This is usually a slow or blocked network connection — not a misconfigured AUTH_SECRET. Wait a few seconds and try Google again, or sign in with email and password.";
+    }
     return humanizeAuthError(error);
-  }, [error]);
+  }, [error, reason]);
 
   return (
     <div className="min-h-[70dvh] flex items-center justify-center px-4 py-10">

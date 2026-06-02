@@ -17,6 +17,25 @@ export function getTrimmedOpenAIProjectId() {
   return (process.env.OPENAI_PROJECT_ID || '').trim();
 }
 
+/** Placeholder or obviously invalid keys from .env.example / local setup. */
+export function isPlaceholderOpenAiKey(apiKey) {
+  const key = String(apiKey || '').trim();
+  if (!key) return true;
+  if (key.length < 20) return true;
+  if (key.endsWith('nTkA')) return true;
+  if (/your-key|placeholder|example|changeme|xxx|\.\.\./i.test(key)) return true;
+  return false;
+}
+
+/**
+ * Dev-only mock when the configured key is still a placeholder.
+ * E2E_MOCK_OPENAI is handled separately in /api/check (essay check only, not chart vision).
+ */
+export function shouldUseDevOpenAiMock() {
+  if (process.env.NODE_ENV !== 'development') return false;
+  return isPlaceholderOpenAiKey(getTrimmedOpenAIKey());
+}
+
 /**
  * Validates server OpenAI env before calling the API.
  * @returns {NextResponse|null} 401 response or null if OK
@@ -33,11 +52,11 @@ export function validateOpenAIEnvForRoute() {
       { status: 401 }
     );
   }
-  if (apiKey.slice(-4) === 'nTkA') {
+  if (isPlaceholderOpenAiKey(apiKey)) {
     return NextResponse.json(
       {
         error:
-          'Invalid or old API key (ends with nTkA). Create a new key at https://platform.openai.com/api-keys, update .env.local, then restart the dev server.',
+          'OPENAI_API_KEY in .env.local looks like a placeholder. Paste a real key from https://platform.openai.com/api-keys, then restart npm run dev.',
         code: 'INVALID_API_KEY',
       },
       { status: 401 }

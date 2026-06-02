@@ -2,13 +2,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { safeAuth } from "@/lib/safeAuth";
 import { getPrisma } from "@/lib/prisma";
 import { isAdminEmail } from "@/lib/admin";
 import { clampCreditsAdminManual } from "@/lib/credits";
 
 export async function POST(request) {
-  const session = await auth();
+  const session = await safeAuth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

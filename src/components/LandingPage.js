@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@wrksz/themes/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import { useLandingAbVariant } from '@/hooks/useLandingAbVariant';
 import TransformationSlider from '@/components/TransformationSlider';
 import Task2ComparisonLab from '@/components/Task2ComparisonLab';
 import {
@@ -46,9 +47,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { TASK1_TIPS, TASK2_TIPS, LETTER_TIPS } from '@/lib/ieltsGuidelines';
-import { COPYRIGHT_SHORT, BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 import NeuralSyncShowcase from '@/components/NeuralSyncShowcase';
-import PaymentMethodsBadges from '@/components/PaymentMethodsBadges';
 
 const appleEase = [0.16, 1, 0.3, 1];
 const fadeInUp = {
@@ -112,32 +111,7 @@ const VOCAB_UPGRADES = [
   { basic: 'importent', advanced: 'crucial', category: 'Task 2' },
 ];
 
-const FAQ_ITEMS = [
-  {
-    q: 'How accurate is Stratum AI for IELTS scoring?',
-    a: 'Our neural network is trained on thousands of official IELTS samples. Stratum AI achieves 98% correlation with human examiner scoring across all four criteria.',
-  },
-  {
-    q: 'Does it support both Academic and General Training?',
-    a: 'Yes. Use Academic mode for charts, graphs, and tables (Vision + overview/grouping strategy). Use GT Letter mode for General Training Task 1: tone (formal/semi-formal), every bullet point, salutation & closing, and a dedicated Letter Strategy panel after each check.',
-  },
-  {
-    q: 'How does GT Letter checking work?',
-    a: 'Choose GT Letter in Task 1, paste or generate a letter task with bullet points, set tone and purpose, then submit. The AI scores Task Achievement on bullet coverage and register — not chart language — and returns letter_strategy with per-bullet feedback and a full model letter rewrite.',
-  },
-  {
-    q: 'Will using Stratum AI help me reach Band 8.0?',
-    a: 'Absolutely. By identifying your recurring grammar strata and providing high-level lexical upgrades, Stratum focuses on the specific gaps preventing you from hitting Band 7.5+.',
-  },
-  {
-    q: 'Is my data secure and private?',
-    a: 'We prioritize your privacy. Your essays are processed via encrypted channels and are never shared with third parties or used for public model training.',
-  },
-  {
-    q: 'Does STRATUM include a study plan and practice reminders?',
-    a: 'Yes. Your Study plan page turns saved checks into a Writing profile: criterion averages, recurring error patterns, sub-topic trends, and curated links for weak areas. Optional email reminders in Settings let you pick local time, weekdays, and timezone so consistency becomes effortless.',
-  },
-];
+import { LANDING_FAQ_ITEMS as FAQ_ITEMS } from '@/lib/landingSeoData';
 
 const BAND_6_SAMPLE = `The graph show how many people went to the cinema from 1990 to 2010. We can see that the number go up a lot in the first years. In 1995 it was about 50 million but then it get bigger and in 2010 it was more than 80 million. So the trend is that cinema get more popular over the time.`;
 
@@ -202,6 +176,8 @@ function BeforeAfterComparison() {
 }
 
 export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
+  const router = useRouter();
+  const { copy: abCopy } = useLandingAbVariant();
   const { resolvedTheme } = useTheme();
   const { status } = useSession();
   const [themeMounted, setThemeMounted] = useState(false);
@@ -334,18 +310,11 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
           >
             <button
               type="button"
-              onClick={onFullAnalysisClick}
+              onClick={onLoginClick}
               className="btn-stratum px-7 py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
             >
               <div className="shimmer-layer animate-shimmer" aria-hidden />
-              <span className="btn-stratum-text">START WITH STRATUM</span>
-            </button>
-            <button
-              type="button"
-              onClick={onLoginClick}
-              className="btn-squircle-secondary px-7 py-3.5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10"
-            >
-              Get Free Credits
+              <span className="btn-stratum-text">Sign in</span>
             </button>
           </motion.div>
           {/* Dashboard preview — bento widget */}
@@ -1258,18 +1227,16 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               Ready to Reach Band 7.5+?
             </h2>
             <p className="text-slate-500 dark:text-slate-400 font-medium tracking-wide mb-6 leading-relaxed max-w-xl mx-auto">
-              Move beyond ineffective practice. Get precision AI-evaluation and Band Score feedback on your Writing Task 1 and Task 2. Your first three checks are free with STRATUM.ai.
+              {abCopy.offerLine}
             </p>
             <button
               type="button"
-              onClick={() => {
-                onLoginClick?.();
-                onFullAnalysisClick?.();
-              }}
+              onClick={() => router.push('/?app=1')}
               className="btn-stratum px-8 py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
+              data-ab-variant={abCopy.id}
             >
               <div className="shimmer-layer animate-shimmer" aria-hidden />
-              <span className="btn-stratum-text">START FREE · 3 CHECKS</span>
+              <span className="btn-stratum-text">{abCopy.bottomCta}</span>
             </button>
           </motion.div>
         </div>
@@ -1346,47 +1313,6 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/5 bg-[#F9FAFB] dark:bg-[#050505]">
-        <div className="max-w-5xl mx-auto px-4 py-10 sm:py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.6 }}
-            className="text-center space-y-4"
-          >
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400">
-              <Link href="/privacy" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Terms of Service
-              </Link>
-              <Link href="/refund" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Refund Policy
-              </Link>
-            </div>
-            <p className="text-sm font-medium tracking-wide text-slate-900 dark:text-white">
-              {COPYRIGHT_SHORT}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {BUSINESS_ADDRESS} ·{' '}
-              <a href={SUPPORT_PHONE_TEL} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {CONTACT_SUPPORT_LABEL}
-              </a>
-              {' · '}
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                {SUPPORT_EMAIL}
-              </a>
-            </p>
-            <p className="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
-              Don&apos;t just practice. Evolve. Start your Stratum journey today.
-            </p>
-            <PaymentMethodsBadges className="pt-2" />
-          </motion.div>
-        </div>
-      </footer>
     </main>
   );
 }

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { safeAuth } from '@/lib/safeAuth';
 import {
   formatHistoryDbError,
   getHistoryChecksForUser,
@@ -9,7 +9,7 @@ import {
 } from '@/lib/historyChecks';
 
 export async function GET(request) {
-  const session = await auth();
+  const session = await safeAuth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

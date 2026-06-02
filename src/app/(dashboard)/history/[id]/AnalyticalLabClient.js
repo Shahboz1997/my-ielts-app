@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import AnalyticalLab from '@/components/dashboard/AnalyticalLab';
+import AnalyticalLabLazy from '@/components/lazy/AnalyticalLabLazy';
 
 /**
  * Client wrapper that owns editable content state and provides handleReplaceWord
@@ -24,7 +24,7 @@ export default function AnalyticalLabClient({ check }) {
   }, []);
 
   return (
-    <AnalyticalLab
+    <AnalyticalLabLazy
       check={check}
       userText={userText}
       setUserText={setUserText}

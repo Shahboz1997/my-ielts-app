@@ -1,11 +1,11 @@
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { safeAuth } from "@/lib/safeAuth";
 import { getPrisma } from "@/lib/prisma";
 import { getCachedWritingProfile } from "@/lib/writingProfileCache";
 import { buildWritingProfile } from "@/lib/writingProfileAnalytics";
 import StudyPlanClient from "@/components/dashboard/StudyPlanClient";
 
 export default async function StudyPlanPage() {
-  const session = await auth();
+  const session = await safeAuth();
   if (!session?.user?.id) return null;
 
   let locale = "en";

@@ -1,11 +1,11 @@
 /**
  * Full STRATUM Writing analysis PDF (home page Task 1/2): mirrors on-screen analysis
- * (criteria, linguistic insights, lexical upgrade C1/C2, corrections, model response).
+ * (criteria, idea development, linguistic insights, lexical upgrade C1/C2, corrections, model response).
  */
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { PDF_BRAND_TAGLINE, PDF_CONTACT_LINE, PDF_LEGAL_LINE } from '@/lib/support';
-import { mergeLexicalUpgrades } from '@/lib/lexicalUpgrade';
+import { mergeLexicalUpgrades, normalizeLexicalRow } from '@/lib/lexicalUpgrade';
 
 function getLinkingWords(result) {
   return result?.analysis?.linking_words ?? result?.linking_words ?? null;
@@ -47,6 +47,21 @@ function decodeHtmlEntities(str) {
 }
 
 /**
+ * jsPDF default Helvetica is Latin-1 only; Unicode punctuation renders as garbage (& between letters).
+ */
+function normalizePdfUnicode(str) {
+  return String(str || '')
+    .replace(/\u2014/g, '-')
+    .replace(/\u2013/g, '-')
+    .replace(/\u2212/g, '-')
+    .replace(/\u2192/g, '->')
+    .replace(/\u00b7/g, '-')
+    .replace(/\u2026/g, '...')
+    .replace(/[\u2018\u2019\u201A]/g, "'")
+    .replace(/[\u201C\u201D\u201E]/g, '"');
+}
+
+/**
  * Some API payloads glitch with & between single letters (e.g. &i&n&f…).
  * Only run when there are several & — avoids breaking normal "R&D" or "A & B".
  */
@@ -57,9 +72,9 @@ function fixInterleavedAmpersands(str) {
   let prev;
   do {
     prev = s;
-    s = s.replace(/([a-zA-Z0-9])&([a-zA-Z0-9])/g, '$1$2');
+    s = s.replace(/([^&])&([^&])/g, '$1$2');
   } while (s !== prev);
-  return s;
+  return s.replace(/^&+|&+$/g, '');
 }
 
 /** Remove HTML; keep inner text of <mark>…</mark>. */
@@ -75,15 +90,22 @@ function stripHtmlToPlain(str) {
  */
 function sanitizePdfText(str) {
   let s = stripHtmlToPlain(str);
+  s = normalizePdfUnicode(s);
   s = decodeHtmlEntities(s);
   s = fixInterleavedAmpersands(s);
   s = s.replace(/\u00a0/g, ' ').replace(/[\u200b-\u200d\ufeff]/g, '');
   return s.replace(/\s+/g, ' ').trim();
 }
 
+/** Labels and static PDF copy — Helvetica-safe ASCII only (avoids &amp; glitches in jsPDF). */
+function sanitizePdfLabel(str) {
+  return sanitizePdfText(str).replace(/[^\x20-\x7E]/g, '');
+}
+
 /** Preserve line/paragraph breaks for essay body (matches site whitespace-pre-wrap). */
 function prepareEssayForPdf(str) {
   let s = stripHtmlToPlain(String(str || ''));
+  s = normalizePdfUnicode(s);
   s = decodeHtmlEntities(s);
   s = fixInterleavedAmpersands(s);
   s = s.replace(/\u00a0/g, ' ').replace(/[\u200b-\u200d\ufeff]/g, '');
@@ -112,7 +134,7 @@ function splitModelResponseParagraphs(text) {
   const paras = splitEssayParagraphs(text);
   if (paras.length > 1) return paras;
   const block = (paras[0] || sanitizePdfText(String(text)) || '').trim();
-  if (!block) return ['—'];
+  if (!block) return [];
   if (block.length < 220) return [block];
   const sentences = block
     .match(/[^.!?]+[.!?]+(?:\s+|$)|[^.!?]+$/g)
@@ -201,22 +223,278 @@ function partOverlapsErrorRanges(partStart, partEnd, ranges) {
 }
 
 function formatSynonymsField(syn) {
-  if (syn == null) return '—';
+  if (syn == null) return '';
   if (Array.isArray(syn)) {
-    return syn.map((x) => sanitizePdfText(String(x))).filter(Boolean).join(', ') || '—';
+    return syn.map((x) => sanitizePdfText(String(x))).filter(Boolean).join(', ') || '';
   }
-  return sanitizePdfText(String(syn)) || '—';
+  return sanitizePdfText(String(syn)) || '';
 }
 
 function formatSynonymList(synonyms) {
-  if (!Array.isArray(synonyms) || synonyms.length === 0) return '—';
+  if (!Array.isArray(synonyms) || synonyms.length === 0) return '';
   return (
     synonyms
       .map((x) => sanitizePdfText(String(x)))
       .filter(Boolean)
       .slice(0, 8)
-      .join(', ') || '—'
+      .join(', ') || ''
   );
+}
+
+function writePdfLines(doc, lines, x, y, ensureSpace, lineHeight = 4.8) {
+  lines.forEach((line) => {
+    y = ensureSpace(y, 5);
+    doc.text(line, x, y);
+    y += lineHeight;
+  });
+  return y;
+}
+
+function renderIdeaDevelopmentSection({
+  doc,
+  y,
+  result,
+  isT1,
+  ensureSpace,
+  MARGIN,
+  PAGE_WIDTH,
+  CONTENT_WIDTH,
+  indigo,
+  greyText,
+  amberText,
+  SECTION_GAP,
+}) {
+  if (isT1) return y;
+
+  const idea = result?.idea_development;
+  if (!idea || typeof idea !== 'object') return y;
+
+  const summary =
+    typeof idea?.overall?.summary === 'string' ? sanitizePdfText(idea.overall.summary) : '';
+  const score = Number(idea?.overall?.score_0_5);
+  const depthLabel = Number.isFinite(score)
+    ? `${Math.max(0, Math.min(5, score))}/5`
+    : '-';
+  const paragraphs = Array.isArray(idea?.paragraphs) ? idea.paragraphs : [];
+
+  if (!summary && paragraphs.length === 0) return y;
+
+  y = ensureSpace(y, 28);
+  doc.setTextColor(...indigo);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('4. Idea development', MARGIN, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(`Depth: ${depthLabel}`, PAGE_WIDTH - MARGIN, y, { align: 'right' });
+  y += 8;
+
+  if (summary) {
+    doc.setFontSize(9);
+    doc.setTextColor(...greyText);
+    y = writePdfLines(doc, doc.splitTextToSize(summary, CONTENT_WIDTH), MARGIN, y, ensureSpace);
+    y += 4;
+  }
+
+  paragraphs.slice(0, 6).forEach((p, idx) => {
+    const label =
+      typeof p?.label === 'string' ? sanitizePdfText(p.label) : `Paragraph ${idx + 1}`;
+    const mainIdea = typeof p?.main_idea === 'string' ? sanitizePdfText(p.main_idea) : '';
+    const missing = Array.isArray(p?.missing) ? p.missing : [];
+    const upgrades = Array.isArray(p?.upgrades) ? p.upgrades : [];
+
+    y = ensureSpace(y, 18);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...indigo);
+    doc.text(label.toUpperCase(), MARGIN, y);
+    doc.setFont('helvetica', 'normal');
+    y += 5;
+
+    if (missing.length > 0) {
+      doc.setFontSize(8);
+      doc.setTextColor(...amberText);
+      const missText = `Missing: ${missing
+        .slice(0, 5)
+        .map((m) => sanitizePdfText(String(m).replace(/_/g, ' ')))
+        .filter(Boolean)
+        .join(', ')}`;
+      y = writePdfLines(
+        doc,
+        doc.splitTextToSize(missText, CONTENT_WIDTH),
+        MARGIN,
+        y,
+        ensureSpace,
+        4.5
+      );
+    }
+
+    if (mainIdea) {
+      doc.setFontSize(8.5);
+      doc.setTextColor(...greyText);
+      y = writePdfLines(
+        doc,
+        doc.splitTextToSize(`Main idea: ${mainIdea}`, CONTENT_WIDTH),
+        MARGIN,
+        y,
+        ensureSpace
+      );
+    }
+
+    upgrades.slice(0, 2).forEach((u) => {
+      const text = sanitizePdfText(String(u));
+      if (!text) return;
+      y = writePdfLines(
+        doc,
+        doc.splitTextToSize(`• ${text}`, CONTENT_WIDTH - 2),
+        MARGIN + 2,
+        y,
+        ensureSpace
+      );
+    });
+
+    y += 4;
+  });
+
+  return y + SECTION_GAP;
+}
+
+function renderLexicalUpgradeSection({
+  doc,
+  y,
+  result,
+  essay,
+  isT1,
+  isGtLetter,
+  ensureSpace,
+  MARGIN,
+  CONTENT_WIDTH,
+  indigo,
+  greyText,
+  greyBorder,
+  SECTION_GAP,
+}) {
+  y = ensureSpace(y, 28);
+  doc.setTextColor(...indigo);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('6. Lexical upgrade', MARGIN, y);
+  doc.setFont('helvetica', 'normal');
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(...greyText);
+  doc.text(sanitizePdfLabel('Weak Band 5-6 words - C1/C2 synonyms with example sentences'), MARGIN, y);
+  y += 8;
+
+  const lexicalRows = mergeLexicalUpgrades({
+    apiRows: Array.isArray(result.lexical_upgrade) ? result.lexical_upgrade : [],
+    essayText: essay || '',
+    isT1: isT1 && !isGtLetter,
+  })
+    .map((row) => normalizeLexicalRow(row))
+    .filter((row) => row.band_56_word && (row.c1_synonyms.length > 0 || row.c2_synonyms.length > 0))
+    .slice(0, 15);
+
+  if (lexicalRows.length === 0) {
+    doc.setFontSize(9);
+    doc.setTextColor(...greyText);
+    doc.text('No lexical upgrades for this submission.', MARGIN, y);
+    return y + 8;
+  }
+
+  const violetText = [109, 40, 217];
+  const orangeText = [194, 65, 12];
+
+  lexicalRows.forEach((row, rowIdx) => {
+    y = ensureSpace(y, 22);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...indigo);
+    doc.text(sanitizePdfText(row.band_56_word) || '-', MARGIN, y);
+    doc.setFont('helvetica', 'normal');
+    y += 5;
+
+    const c1syns = formatSynonymList(row.c1_synonyms);
+    if (c1syns !== '') {
+      doc.setFontSize(8);
+      doc.setTextColor(...violetText);
+      y = writePdfLines(
+        doc,
+        doc.splitTextToSize(sanitizePdfLabel(`C1 (Band 7-8): ${c1syns}`), CONTENT_WIDTH - 2),
+        MARGIN + 2,
+        y,
+        ensureSpace,
+        4.5
+      );
+      if (row.c1_example) {
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(...greyText);
+        y = writePdfLines(
+          doc,
+          doc.splitTextToSize(sanitizePdfText(row.c1_example), CONTENT_WIDTH - 4),
+          MARGIN + 4,
+          y,
+          ensureSpace,
+          4.5
+        );
+        doc.setFont('helvetica', 'normal');
+      }
+      y += 2;
+    }
+
+    const c2syns = formatSynonymList(row.c2_synonyms);
+    if (c2syns !== '') {
+      doc.setFontSize(8);
+      doc.setTextColor(...orangeText);
+      y = writePdfLines(
+        doc,
+        doc.splitTextToSize(sanitizePdfLabel(`C2 (Band 8-9): ${c2syns}`), CONTENT_WIDTH - 2),
+        MARGIN + 2,
+        y,
+        ensureSpace,
+        4.5
+      );
+      if (row.c2_example) {
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(...greyText);
+        y = writePdfLines(
+          doc,
+          doc.splitTextToSize(sanitizePdfText(row.c2_example), CONTENT_WIDTH - 4),
+          MARGIN + 4,
+          y,
+          ensureSpace,
+          4.5
+        );
+        doc.setFont('helvetica', 'normal');
+      }
+      y += 2;
+    }
+
+    if (row.collocation_hint && !row.c1_example && !row.c2_example) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(...greyText);
+      y = writePdfLines(
+        doc,
+        doc.splitTextToSize(sanitizePdfText(row.collocation_hint), CONTENT_WIDTH - 2),
+        MARGIN + 2,
+        y,
+        ensureSpace,
+        4.5
+      );
+      doc.setFont('helvetica', 'normal');
+    }
+
+    if (rowIdx < lexicalRows.length - 1) {
+      y += 2;
+      doc.setDrawColor(...greyBorder);
+      doc.setLineWidth(0.2);
+      doc.line(MARGIN, y, MARGIN + CONTENT_WIDTH, y);
+      y += 5;
+    }
+  });
+
+  return y + SECTION_GAP;
 }
 
 /**
@@ -309,7 +587,7 @@ export function generateStratumWritingPdf({
     y + 18
   );
   doc.setFontSize(22);
-  doc.text(`Overall Band: ${result.overall_band != null ? result.overall_band : '—'}`, MARGIN + 8, y + 26);
+  doc.text(`Overall Band: ${result.overall_band != null ? result.overall_band : '-'}`, MARGIN + 8, y + 26);
   y += 34 + SECTION_GAP;
 
   if (safePrompt.trim()) {
@@ -445,7 +723,7 @@ export function generateStratumWritingPdf({
 
   cards.forEach((card) => {
     const crit = result.criteria?.[card.critKey];
-    const score = crit?.score != null ? crit.score : '—';
+    const score = crit?.score != null ? crit.score : '-';
     const comment = typeof crit?.comment === 'string' ? sanitizePdfText(crit.comment) : '';
     const bullets = comment
       .split(/\n+|\.\s+/)
@@ -515,7 +793,7 @@ export function generateStratumWritingPdf({
     y += 6;
     const bullets = Array.isArray(letterStrat.bullets_coverage) ? letterStrat.bullets_coverage : [];
     bullets.slice(0, 6).forEach((b) => {
-      const line = `${b.covered ? '[OK]' : '[MISS]'} ${b.bullet || 'Bullet'}${b.comment ? ` — ${b.comment}` : ''}`;
+      const line = `${b.covered ? '[OK]' : '[MISS]'} ${b.bullet || 'Bullet'}${b.comment ? ` - ${b.comment}` : ''}`;
       const lines = doc.splitTextToSize(sanitizePdfText(line), CONTENT_WIDTH);
       lines.forEach((ln) => {
         y = ensureSpace(y, 5);
@@ -525,6 +803,21 @@ export function generateStratumWritingPdf({
     });
     y += SECTION_GAP;
   }
+
+  y = renderIdeaDevelopmentSection({
+    doc,
+    y,
+    result,
+    isT1,
+    ensureSpace,
+    MARGIN,
+    PAGE_WIDTH,
+    CONTENT_WIDTH,
+    indigo,
+    greyText,
+    amberText,
+    SECTION_GAP,
+  });
 
   const lw = getLinkingWords(result);
   const repetitions = getWordRepetition(result);
@@ -537,7 +830,7 @@ export function generateStratumWritingPdf({
     y = ensureSpace(y, 26);
     doc.setTextColor(...indigo);
     doc.setFontSize(12);
-    doc.text('4. Linguistic insights', MARGIN, y);
+    doc.text('5. Linguistic insights', MARGIN, y);
     y += 9;
 
     if (lw) {
@@ -548,7 +841,7 @@ export function generateStratumWritingPdf({
       y += 6;
       doc.setTextColor(...greyText);
       const found = Array.isArray(lw.found) ? lw.found.map((w) => sanitizePdfText(String(w))) : [];
-      const foundText = found.length ? found.join(', ') : '—';
+      const foundText = found.length ? found.join(', ') : '-';
       const foundLines = doc.splitTextToSize(`Found: ${foundText}`, CONTENT_WIDTH);
       foundLines.forEach((line) => {
         y = ensureSpace(y, 5);
@@ -556,7 +849,7 @@ export function generateStratumWritingPdf({
         y += 4.8;
       });
       const sugg = Array.isArray(lw.suggestions) ? lw.suggestions.map((s) => sanitizePdfText(String(s))) : [];
-      const suggText = sugg.length ? sugg.join(', ') : '—';
+      const suggText = sugg.length ? sugg.join(', ') : '-';
       const suggLines = doc.splitTextToSize(`Suggested additions: ${suggText}`, CONTENT_WIDTH);
       suggLines.forEach((line) => {
         y = ensureSpace(y, 5);
@@ -581,8 +874,8 @@ export function generateStratumWritingPdf({
           const alts = typeof item === 'object' && Array.isArray(item.alternatives) ? item.alternatives : [];
           return [
             sanitizePdfText(String(wordText)).slice(0, 80),
-            count > 0 ? String(count) : '—',
-            alts.length ? alts.map((a) => sanitizePdfText(String(a))).slice(0, 14).join(', ') : '—',
+            count > 0 ? String(count) : '-',
+            alts.length ? alts.map((a) => sanitizePdfText(String(a))).slice(0, 14).join(', ') : '-',
           ];
         }),
         theme: 'striped',
@@ -598,7 +891,7 @@ export function generateStratumWritingPdf({
       y = ensureSpace(y, 22);
       doc.setFontSize(9);
       doc.setTextColor(...greyText);
-      const pScore = result.plagiarism.score != null ? `${result.plagiarism.score}%` : '—';
+      const pScore = result.plagiarism.score != null ? `${result.plagiarism.score}%` : '-';
       doc.text(`Plagiarism check: ${pScore}`, MARGIN, y);
       y += 5;
       if (result.plagiarism.status) {
@@ -633,56 +926,21 @@ export function generateStratumWritingPdf({
     y += SECTION_GAP;
   }
 
-  y = ensureSpace(y, 28);
-  doc.setTextColor(...indigo);
-  doc.setFontSize(12);
-  doc.text('5. Lexical upgrade', MARGIN, y);
-  y += 6;
-  doc.setFontSize(9);
-  doc.setTextColor(...greyText);
-  doc.text('Swap weak words for sharper choices (C1 / C2)', MARGIN, y);
-  y += 8;
-
-  const lexicalRows = mergeLexicalUpgrades({
-    apiRows: Array.isArray(result.lexical_upgrade) ? result.lexical_upgrade : [],
-    essayText: essay || '',
-    isT1: isT1 && !isGtLetter,
+  y = renderLexicalUpgradeSection({
+    doc,
+    y,
+    result,
+    essay,
+    isT1,
+    isGtLetter,
+    ensureSpace,
+    MARGIN,
+    CONTENT_WIDTH,
+    indigo,
+    greyText,
+    greyBorder,
+    SECTION_GAP,
   });
-
-  if (lexicalRows.length > 0) {
-    const tableBody = lexicalRows.map((row) => [
-      sanitizePdfText(row.band_56_word) || '—',
-      formatSynonymList(row.c1_synonyms),
-      formatSynonymList(row.c2_synonyms),
-    ]);
-
-    autoTable(doc, {
-      startY: y,
-      head: [['Band 5–6 (weak)', 'C1 — sharper choice', 'C2 — sharper choice']],
-      body: tableBody,
-      theme: 'striped',
-      headStyles: { fillColor: indigo, fontSize: 8.5, textColor: 255, fontStyle: 'bold' },
-      styles: {
-        fontSize: 8,
-        cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
-        overflow: 'linebreak',
-        valign: 'top',
-      },
-      columnStyles: {
-        0: { cellWidth: CONTENT_WIDTH * 0.26, fontStyle: 'italic' },
-        1: { cellWidth: CONTENT_WIDTH * 0.37 },
-        2: { cellWidth: CONTENT_WIDTH * 0.37 - 0.5 },
-      },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: MARGIN, right: MARGIN },
-    });
-    y = (doc.lastAutoTable?.finalY ?? y) + SECTION_GAP;
-  } else {
-    doc.setFontSize(9);
-    doc.setTextColor(...greyText);
-    doc.text('No lexical upgrades for this submission.', MARGIN, y);
-    y += 8;
-  }
 
   const corrections = Array.isArray(result.corrections) ? result.corrections : [];
   if (corrections.length > 0) {
@@ -690,17 +948,17 @@ export function generateStratumWritingPdf({
     y = MARGIN + 10;
     doc.setTextColor(...indigo);
     doc.setFontSize(12);
-    doc.text('6. Detailed corrections', MARGIN, y);
+    doc.text('7. Detailed corrections', MARGIN, y);
     y += 6;
     autoTable(doc, {
       startY: y + 2,
       head: [['#', 'Type', 'Original', 'Correction', 'Explanation']],
       body: corrections.map((c, i) => [
         String(i + 1),
-        sanitizePdfText(String(c.category || c.rule || '—')).slice(0, 36),
-        sanitizePdfText(String(c.original || '—')),
-        sanitizePdfText(String(c.fixed || c.suggestion || '—')),
-        sanitizePdfText(String(c.explanation || '—')),
+        sanitizePdfText(String(c.category || c.rule || '-')).slice(0, 36),
+        sanitizePdfText(String(c.original || '-')),
+        sanitizePdfText(String(c.fixed || c.suggestion || '-')),
+        sanitizePdfText(String(c.explanation || '-')),
       ]),
       theme: 'grid',
       headStyles: { fillColor: indigo, fontSize: 9, textColor: 255, fontStyle: 'bold' },
@@ -737,18 +995,18 @@ export function generateStratumWritingPdf({
   doc.setTextColor(...indigo);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text('7. The model response', MARGIN, y);
+  doc.text('8. The model response', MARGIN, y);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...greyText);
-  doc.text('Band 9 target · examiner-style rewrite', MARGIN, y + 5);
+  doc.text(sanitizePdfLabel('Band 9 target - examiner-style rewrite'), MARGIN, y + 5);
   y += 15;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10.5);
 
   modelParagraphs.forEach((para, paraIdx) => {
-    const safePara = sanitizePdfText(para) || '—';
+    const safePara = sanitizePdfText(para) || '';
     const lines = doc.splitTextToSize(safePara, MODEL_TEXT_W);
     const label = modelParagraphLabel(paraIdx, modelParagraphs.length, isGtLetter);
     const labelOffset = label ? 5.5 : 0;

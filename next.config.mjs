@@ -1,5 +1,5 @@
 import withPWAInit from '@ducanh2912/next-pwa';
-import { getAllowedImageRemotePatterns } from './src/lib/allowedImageHosts.js';
+import { getAllowedImageRemotePatterns } from './src/lib/allowedImageHosts.mjs';
 
 const withPWA = withPWAInit({
   dest: 'public',

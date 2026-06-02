@@ -8,6 +8,9 @@ export async function GET(request, context) {
   try {
     const params = await context.params;
     const id = params?.id;
+    if (!/^\d+$/.test(String(id ?? ''))) {
+      return NextResponse.json({ error: 'Invalid template id' }, { status: 400 });
+    }
     const row = bank.getTemplateById(id);
     if (!row) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });

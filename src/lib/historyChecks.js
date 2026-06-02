@@ -62,12 +62,8 @@ export async function getHistoryChecksForUser(userId, opts = {}) {
           LEFT(COALESCE("promptText", ''), 200) AS "promptText",
           LEFT(content, 400) AS content,
           CASE
-            WHEN feedback IS NULL OR feedback = '' THEN NULL
-            ELSE (
-              jsonb_build_object(
-                'criteria', (feedback::jsonb)->'criteria'
-              )::text
-            )
+            WHEN feedback IS NULL THEN NULL
+            ELSE jsonb_build_object('criteria', feedback->'criteria')
           END AS feedback
         FROM "Check"
         WHERE ${where}

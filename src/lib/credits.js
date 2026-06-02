@@ -23,3 +23,15 @@ export function clampCreditsGeneral(n) {
 export function clampCreditsAdminManual(n) {
   return clampCreditsGeneral(n);
 }
+
+/** Stored balance for UI and /api/check guards (null → 0). */
+export function normalizeCreditsBalance(value) {
+  if (value == null) return CREDITS_MIN_GENERAL;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return CREDITS_MIN_GENERAL;
+  return clampCreditsGeneral(n);
+}
+
+export function userHasCheckCredits(credits) {
+  return normalizeCreditsBalance(credits) >= 1;
+}

@@ -13,6 +13,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -38,6 +39,31 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
       return false;
     }
     return true;
+  };
+
+  const handleResendVerification = async () => {
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    setResendLoading(true);
+    setError('');
+    try {
+      const res = await fetch(clientApiUrl('/api/auth/resend-verification'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Could not resend verification email.');
+        return;
+      }
+      setMessage(data.message || 'A new confirmation email was sent. Check your inbox.');
+    } catch {
+      setError('Connection error');
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -71,6 +97,8 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
             if (stRes.ok && st && typeof st === 'object') {
               if (st.exists === false) {
                 setError('No account found for this email. Please register first.');
+              } else if (st.exists === true && st.emailVerified === false && st.hasPassword === true) {
+                setError('Please verify your email before signing in. Check your inbox for the confirmation link.');
               } else if (st.exists === true && st.hasPassword === false && st.hasGoogle === true) {
                 setError('This email is linked to Google sign-in. Click “Google” to log in.');
               } else {
@@ -122,20 +150,28 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
           return;
         }
 
-        const inResult = await signIn('credentials', {
-          email: normalizedEmail,
-          password: formData.password,
-          redirect: false,
-        });
-
-        if (inResult?.error) {
+        if (data.needsVerification === false) {
+          const inResult = await signIn('credentials', {
+            email: normalizedEmail,
+            password: formData.password,
+            redirect: false,
+          });
+          if (!inResult?.error) {
+            onLoginSuccess?.();
+            onClose();
+            return;
+          }
           setIsLogin(true);
-          setMessage('Account created. Sign in with your email and password.');
+          setMessage('Account created. You can sign in with your email and password.');
+          setFormData((prev) => ({ ...prev, password: '', name: '' }));
           return;
         }
 
-        onLoginSuccess?.();
-        onClose();
+        setIsLogin(true);
+        setMessage(
+          'Account created. Open the confirmation link in your email, then sign in with your password.'
+        );
+        setFormData((prev) => ({ ...prev, password: '', name: '' }));
       } catch (err) {
         setError('Something went wrong');
       } finally {
@@ -210,6 +246,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" strokeWidth={1.5} />
               <input
                 type="email"
+                data-testid="auth-email"
                 placeholder="Email address"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -222,6 +259,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" strokeWidth={1.5} />
               <input
                 type="password"
+                data-testid="auth-password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -232,6 +270,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
 
             <button
               type="submit"
+              data-testid="auth-submit"
               disabled={isLoading}
               className="btn-stratum w-full min-h-[44px] py-4 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)] disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -275,7 +314,18 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
             </>
           )}
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
+            {(message || '').toLowerCase().includes('confirmation') ||
+            (error || '').toLowerCase().includes('verify your email') ? (
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading || !formData.email.trim()}
+                className="min-h-[44px] flex items-center justify-center w-full sm:w-auto mx-auto text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-60 transition-colors"
+              >
+                {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => {

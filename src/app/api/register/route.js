@@ -1,5 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
 import { CREDITS_DEFAULT_NEW_USER } from "@/lib/credits";
+import { issueVerificationEmailForUser } from "@/lib/emailVerification";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
@@ -66,9 +67,27 @@ export async function POST(request) {
       },
     });
 
+    const emailResult = await issueVerificationEmailForUser(user);
+    let verifiedUser = user;
+
+    // If SMTP is unavailable, do not lock the user out of their new account.
+    if (!emailResult.ok) {
+      verifiedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: new Date() },
+      });
+    }
+
     // Return 201 with user object (omit password)
-    const { password: _p, ...userWithoutPassword } = user;
-    return NextResponse.json(userWithoutPassword, { status: 201 });
+    const { password: _p, ...userWithoutPassword } = verifiedUser;
+    return NextResponse.json(
+      {
+        ...userWithoutPassword,
+        needsVerification: emailResult.ok,
+        emailSent: emailResult.ok,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("REGISTRATION_ERROR:", error);
 

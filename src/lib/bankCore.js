@@ -1,9 +1,14 @@
 /**
- * IELTS Writing bank — topics & templates (shared by Next.js API and optional Express server).
+ * IELTS Writing bank — topics & templates (used by Next.js /api/* routes).
  * Data: /data/topics.json, /data/templates.json (project root).
  *
  * Topics/templates are imported as JSON so they are bundled into the serverless function on Vercel.
  * Reading via fs from process.cwd() often fails on deploy (files not traced into the bundle → ENOENT → 500).
+ *
+ * HTTP contract (same-origin):
+ * - GET /api/topics?type&subtype&dateFrom&dateTo&q → { data: Topic[], count }
+ * - GET /api/bank/topic/:id → topic detail (id, title, taskType, subtype, examDate, promptText, keywords)
+ * - GET /api/templates?… → { data, count }; GET /api/templates/:id → { data }; POST /api/templates (x-bank-admin-key)
  */
 import fs from 'fs';
 import path from 'path';

@@ -32,6 +32,7 @@ export async function POST(request) {
           select: {
             id: true,
             password: true,
+            emailVerified: true,
             accounts: {
               select: { provider: true },
             },
@@ -46,7 +47,12 @@ export async function POST(request) {
         const hasGoogle = providers.includes("google");
         const hasPassword = Boolean(user.password && String(user.password).trim().length > 0);
 
-        return NextResponse.json({ exists: true, hasPassword, hasGoogle });
+        return NextResponse.json({
+          exists: true,
+          hasPassword,
+          hasGoogle,
+          emailVerified: Boolean(user.emailVerified),
+        });
       } catch (e) {
         if (attempt === 0 && isTransientDbError(e)) {
           await sleep(450);

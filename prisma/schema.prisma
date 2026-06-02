@@ -29,6 +29,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   checks          Check[]
+  wordListItems     WordListItem[]
+  favoriteTemplates FavoriteTemplate[]
 }
 
 model Account {
@@ -67,23 +69,60 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model Task {
-  id        String   @id @default(cuid())
-  title     String
-  completed Boolean  @default(false)
-  createdAt DateTime @default(now())
-}
 model Check {
   id         String   @id @default(cuid())
   type       String   @default("TASK_2") // 'TASK_1' | 'TASK_2'
   content    String   @db.Text
   promptText String?  @db.Text
   score      Float?
-  feedback   String?  @db.Text   // Full JSON: criteria, corrections, suggested_rewrite, etc.
+  feedback   Json?    // Examiner payload: criteria, errors/subtopics, suggested_rewrite, etc.
   createdAt  DateTime @default(now())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
+  @@index([feedback(ops: JsonbPathOps)], type: Gin, map: "Check_feedback_gin_idx")
+}
+
+/// Guest essay checks consumed per IP (hashed) before registration.
+model GuestCheckQuota {
+  ipHash    String   @id
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Per-user vocabulary saved from corrections / lexical upgrades (synced across devices).
+model WordListItem {
+  id       String   @id @default(cuid())
+  userId   String
+  wordKey  String
+  word     String
+  taskType String?
+  source   String?
+  note     String?
+  synonyms Json     @default("[]")
+  addedAt  DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, wordKey])
+  @@index([userId, addedAt(sort: Desc)])
+}
+
+/// Favourite writing-bank template IDs (from data/templates.json).
+model FavoriteTemplate {
+  userId     String
+  templateId Int
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, templateId])
+}
+
+/// Fixed-window API rate limits (userId or IP scope + route).
+model AiRateLimitBucket {
+  bucketKey   String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
 }
 

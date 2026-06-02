@@ -1,10 +1,10 @@
 // Settings page — profile/account management only. No theme logic (no setTheme, no useEffect that changes theme).
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { safeAuth } from "@/lib/safeAuth";
 import { getPrisma } from "@/lib/prisma";
 import SettingsClient from "./SettingsClient";
 
 export default async function SettingsPage() {
-  const session = await auth();
+  const session = await safeAuth();
   if (!session?.user) return null;
 
   let reminders = null;

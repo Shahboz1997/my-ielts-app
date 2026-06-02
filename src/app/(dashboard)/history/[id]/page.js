@@ -1,10 +1,10 @@
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { safeAuth } from "@/lib/safeAuth";
 import { getHistoryCheckForUser } from "@/lib/historyChecks";
 import { notFound } from "next/navigation";
 import AnalyticalLabClient from "./AnalyticalLabClient";
 
 export default async function HistoryDetailPage({ params }) {
-  const session = await auth();
+  const session = await safeAuth();
   if (!session?.user?.id) return null;
 
   const resolved = await params;

@@ -1,0 +1,30 @@
+{
+  "ignores": [
+    "@ai-sdk/openai",
+    "@ai-sdk/react",
+    "@heroicons/react",
+    "@prisma/config",
+    "@tailwindcss/postcss",
+    "@types/bcryptjs",
+    "@types/pg",
+    "@types/react",
+    "@vercel/blob",
+    "ai",
+    "babel-plugin-react-compiler",
+    "@playwright/test",
+    "depcheck",
+    "eslint",
+    "eslint-config-next",
+    "html-to-image",
+    "moment-timezone",
+    "postcss",
+    "prisma",
+    "react-is",
+    "server-only",
+    "swr",
+    "tailwindcss",
+    "typescript",
+    "ws"
+  ],
+  "skipMissing": ["dotenv"]
+}

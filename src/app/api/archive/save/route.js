@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
-import { auth } from '@/app/api/auth/[...nextauth]/route';
+import { safeAuth } from '@/lib/safeAuth';
 import { getPrisma } from '@/lib/prisma';
 import { writingProfileTag } from '@/lib/writingProfileCache.js';
 
 export async function POST(request) {
-  const session = await auth();
+  const session = await safeAuth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -36,8 +36,16 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Invalid score' }, { status: 400 });
   }
 
-  const feedbackStr =
-    typeof feedback === 'string' ? feedback : JSON.stringify(feedback);
+  let feedbackValue;
+  if (typeof feedback === 'string') {
+    try {
+      feedbackValue = JSON.parse(feedback);
+    } catch {
+      return NextResponse.json({ error: 'Invalid feedback JSON' }, { status: 400 });
+    }
+  } else {
+    feedbackValue = feedback;
+  }
 
   const prisma = getPrisma();
   const check = await prisma.check.create({
@@ -45,7 +53,7 @@ export async function POST(request) {
       type,
       content,
       score: scoreNum,
-      feedback: feedbackStr,
+      feedback: feedbackValue,
       promptText: typeof promptText === 'string' ? promptText : null,
       userId: session.user.id,
     },

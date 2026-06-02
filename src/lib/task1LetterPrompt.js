@@ -38,7 +38,7 @@ export function buildGtLetterUserContext({ promptText, letterMeta }) {
 }
 
 /** System-prompt block for GT letter analysis (replaces Academic Task 1 rules). */
-export function buildTask1LetterRulesBlock() {
+export function buildTask1LetterRulesBlock({ includeRewrite = true } = {}) {
   return `You are a strict universal IELTS Writing expert (British Council / IDP style).
 The student wrote **IELTS General Training Task 1 — a LETTER** (not a chart report).
 
@@ -71,9 +71,10 @@ Each error MUST have exactly:
 }
 
 LEXICAL UPGRADE (GT letter only):
-- Return 8–15 items in "lexical_upgrade" for weak Band 5–6 words that ACTUALLY appear in the letter.
+- Return 8–15 items in "lexical_upgrade" for weak Band 5–6 words/phrases that ACTUALLY appear in the letter.
+- Each item: { "band_56_word", "c1_synonyms": [2], "c2_synonyms": [2], "c1_example", "c2_example" } — formal letter sentences (12–20 words).
 - Prefer letter phrases: I am writing to..., I would be grateful if..., I look forward to hearing from you, I apologise for...
-- C1/C2 = formal letter collocations; avoid chart verbs (illustrate trends, peaked at).
+- C1/C2 = formal letter collocations (CEFR C1/C2); avoid chart verbs (illustrate trends, peaked at).
 
 ADDITIONAL REQUIREMENT (GT letter only):
 Return "letter_strategy" (NOT task1_strategy) — actionable structure feedback:
@@ -93,11 +94,15 @@ Return "letter_strategy" (NOT task1_strategy) — actionable structure feedback:
   "what_to_fix": ["string", "string"]
 }
 
-CRITICAL: Your "suggested_rewrite" MUST be a full GT letter (150+ words), paragraphs separated by \\n\\n.
+${
+  includeRewrite
+    ? `CRITICAL: Your "suggested_rewrite" MUST be a full GT letter (150+ words), paragraphs separated by \\n\\n.
 Use appropriate salutation and sign-off. You MAY use bullet lines in the body if the task used bullet points.
 Wrap improved phrases in <mark>...</mark> tags (lowercase only). Do not use markdown headings.
 
-Return a Band 9.0–level "suggested_rewrite" as a letter, not a report.`;
+Return a Band 9.0–level "suggested_rewrite" as a letter, not a report.`
+    : 'Do NOT include suggested_rewrite in this response — a separate rewrite step will follow.'
+}`;
 }
 
 export function buildLetterChecklistInstruction() {

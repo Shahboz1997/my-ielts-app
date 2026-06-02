@@ -1,0 +1,92 @@
+'use client';
+
+import { AnimatePresence } from 'framer-motion';
+import { COPYRIGHT_LINE } from '@/lib/support';
+import WriterFeedbackForm from '@/components/writer/footer/WriterFeedbackForm';
+import { WriterFooterBrand, WriterFooterLegal, WriterFooterResources } from '@/components/writer/footer/WriterFooterNav';
+import WriterShareModal from '@/components/writer/footer/WriterShareModal';
+import WriterSupportModal from '@/components/writer/footer/WriterSupportModal';
+import WriterScrollTopButton from '@/components/writer/footer/WriterScrollTopButton';
+
+export default function WriterFooter({
+  darkMode,
+  activeTab,
+  setActiveTab,
+  onLoginClick,
+  onSubmitFeedback,
+  feedbackBanner,
+  shareModal,
+  setShareModal,
+  copyShareLink,
+  nativeShareLink,
+  showSupportModal,
+  setShowSupportModal,
+  supportFirstFieldRef,
+  showScrollTop,
+  scrollProgress,
+  onScrollToTop,
+}) {
+  return (
+    <footer className="border-t border-white/5 bg-[#F9FAFB] dark:bg-[#050505] transition-colors">
+      <div className="mx-auto w-full max-w-7xl xl:max-w-screen-2xl px-3 sm:px-6 lg:px-8 xl:px-10 py-12 lg:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+          <WriterFooterBrand />
+          <WriterFooterResources activeTab={activeTab} setActiveTab={setActiveTab} onLoginClick={onLoginClick} />
+
+          <div id="stratum-feedback-section" className="relative scroll-mt-24 space-y-4">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-4">Feedback</h4>
+            <WriterFeedbackForm darkMode={darkMode} onSubmit={onSubmitFeedback} />
+          </div>
+
+          <WriterFooterLegal />
+        </div>
+
+        <div className="mt-12 pt-8 border-t border-white/5 text-center space-y-2">
+          <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{COPYRIGHT_LINE}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            <button
+              type="button"
+              onClick={() => setShowSupportModal(true)}
+              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              Contact support
+            </button>
+          </p>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {shareModal && (
+          <WriterShareModal
+            darkMode={darkMode}
+            shareModal={shareModal}
+            setShareModal={setShareModal}
+            copyShareLink={copyShareLink}
+            nativeShareLink={nativeShareLink}
+          />
+        )}
+        {showSupportModal && (
+          <WriterSupportModal
+            darkMode={darkMode}
+            showSupportModal={showSupportModal}
+            setShowSupportModal={setShowSupportModal}
+            feedbackBanner={feedbackBanner}
+            onSubmitFeedback={onSubmitFeedback}
+            supportFirstFieldRef={supportFirstFieldRef}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showScrollTop && (
+          <WriterScrollTopButton
+            darkMode={darkMode}
+            showScrollTop={showScrollTop}
+            scrollProgress={scrollProgress}
+            onScrollToTop={onScrollToTop}
+          />
+        )}
+      </AnimatePresence>
+    </footer>
+  );
+}

@@ -11,6 +11,7 @@ const Navbar = ({
   activeTab, setActiveTab, darkMode: darkModeProp, setDarkMode: setDarkModeProp, 
   isMenuOpen, setIsMenuOpen, onLoginClick,
   credits: creditsProp,
+  guestQuotaRemaining = null,
 }) => {
   const { data: session, status } = useSession();
   const { resolvedTheme, setTheme } = useTheme();
@@ -22,7 +23,7 @@ const Navbar = ({
   const credits =
     typeof creditsProp === 'number'
       ? creditsProp
-      : (session?.user?.credits || 0);
+      : (session?.user?.credits ?? 0);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [confirmLogoutMobile, setConfirmLogoutMobile] = useState(false);
 
@@ -30,7 +31,9 @@ const Navbar = ({
     if (!isMenuOpen) setConfirmLogoutMobile(false);
   }, [isMenuOpen]);
 
-  const menuItems = ['Home', 'Bank', 'Task 1', 'Task 2', 'Archive'];
+  const primaryItems = ['Task 1', 'Task 2'];
+  const secondaryItems = ['Home', 'Bank', 'Archive'];
+  const menuItems = ['Home', 'Bank', ...primaryItems, 'Archive'];
   const handleThemeToggle = () => {
     if (!themeMounted) return;
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
@@ -41,27 +44,57 @@ const Navbar = ({
       <nav className={`sticky top-0 z-50 p-4 border-b border-white/5 backdrop-blur-md transition-colors duration-300 ${
         darkMode ? 'bg-[#050505]/90' : 'bg-[#F9FAFB]/90'
       }`}>
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+        <div className="max-w-7xl mx-auto flex items-center gap-2">
           
           {/* Logo: STRATUM.ai — bold, wide-tracked, accent on dot */}
           <button
             type="button"
             onClick={() => setActiveTab('Home')}
-            className="group flex items-center gap-2 text-xl sm:text-2xl font-black tracking-[0.15em] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded uppercase"
+            className="group flex items-center gap-1.5 sm:gap-2 text-lg sm:text-xl md:text-2xl font-black tracking-[0.12em] sm:tracking-[0.15em] cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded uppercase shrink-0"
             aria-label="Go to Home"
           >
-            <Zap className="w-7 h-7 sm:w-8 sm:h-8 text-indigo-500 dark:text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110 [filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]" strokeWidth={1.5} />
-            <span className={darkMode ? 'text-white' : 'text-slate-900'}>
+            <Zap className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-indigo-500 dark:text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110 [filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]" strokeWidth={1.5} />
+            <span className={`hidden min-[400px]:inline ${darkMode ? 'text-white' : 'text-slate-900'}`}>
               STRATUM<span className="text-indigo-500 dark:text-indigo-400">.</span>ai
             </span>
           </button>
 
+          {/* Task 1 / Task 2 — always visible on mobile, outside burger */}
+          <div className={`md:hidden flex items-center gap-1 flex-1 justify-center min-w-0 p-0.5 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+            {primaryItems.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setActiveTab(item)}
+                className={`min-h-[40px] px-2.5 sm:px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-tighter whitespace-nowrap transition-all ${
+                  activeTab === item
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'
+                }`}
+              >
+                <span className="min-[380px]:hidden">{item === 'Task 1' ? 'T1' : 'T2'}</span>
+                <span className="hidden min-[380px]:inline">{item}</span>
+              </button>
+            ))}
+          </div>
+
           {/* ДЕСКТОПНОЕ МЕНЮ (Скрыто на мобилках) */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-6 ml-auto">
             <div className={`flex p-1 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
               {menuItems.map((item) =>
                 item === 'Archive' ? (
-                  <Link key={item} href="/history" className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all block ${activeTab === item ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</Link>
+                  isLoggedIn ? (
+                    <Link key={item} href="/history" className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all block ${activeTab === item ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</Link>
+                  ) : (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => onLoginClick?.('Sign in to view your archive.')}
+                      className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all ${activeTab === item ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}
+                    >
+                      {item}
+                    </button>
+                  )
                 ) : (
                   <button key={item} type="button" onClick={() => setActiveTab(item)} className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all ${activeTab === item ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</button>
                 )
@@ -88,7 +121,7 @@ const Navbar = ({
               </div> */}
             {isLoggedIn ? (
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 font-semibold text-xs text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight">
+          <div className="flex items-center gap-1 font-semibold text-xs text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight" title="Account credits">
             {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={1.5} />
           </div>
           
@@ -138,10 +171,22 @@ const Navbar = ({
           </div>
         </div>
               ) : (
-                <button type="button" onClick={() => onLoginClick()} className="btn-stratum min-h-[44px] px-4 py-2 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]">
-                  <div className="shimmer-layer animate-shimmer" aria-hidden />
-                  <span className="btn-stratum-text">STRATUM LOGIN</span>
-                </button>
+                <>
+                  {typeof guestQuotaRemaining === 'number' && guestQuotaRemaining > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onLoginClick?.()}
+                      className="hidden sm:flex items-center gap-1 font-semibold text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-1 rounded-lg tracking-tight hover:bg-amber-500/20 transition-colors"
+                      title="One free demo check on this network — sign in for archive and credits"
+                    >
+                      Demo
+                    </button>
+                  )}
+                  <button type="button" onClick={() => onLoginClick()} className="btn-stratum min-h-[44px] px-4 py-2 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]">
+                    <div className="shimmer-layer animate-shimmer" aria-hidden />
+                    <span className="btn-stratum-text">STRATUM LOGIN</span>
+                  </button>
+                </>
               )}
               <button
                 type="button"
@@ -156,12 +201,23 @@ const Navbar = ({
           </div>
 
           {/* КНОПКА БУРГЕРА (Только мобильные, <768px) */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="md:hidden flex items-center gap-2 shrink-0 ml-auto">
             {/* Кредиты (mobile) */}
-            {isLoggedIn && (
+            {isLoggedIn ? (
               <div className="flex items-center gap-1 font-semibold text-[11px] text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight whitespace-nowrap">
                 {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={1.5} />
               </div>
+            ) : (
+              typeof guestQuotaRemaining === 'number' && guestQuotaRemaining > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onLoginClick?.()}
+                  className="flex items-center gap-1 font-semibold text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-1 rounded-lg tracking-tight whitespace-nowrap hover:bg-amber-500/20 transition-colors"
+                  title="Sign in for archive and full analysis"
+                >
+                  Demo
+                </button>
+              )
             )}
             <button
               type="button"
@@ -183,9 +239,23 @@ const Navbar = ({
                 
                 {/* 1. Навигация */}
                 <div className="grid grid-cols-2 gap-2">
-                  {menuItems.map((item) =>
+                  {secondaryItems.map((item) =>
                     item === 'Archive' ? (
-                      <Link key={item} href="/history" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-center min-h-[44px] p-4 rounded-xl font-semibold tracking-tight text-center block text-slate-600 dark:text-slate-400 hover:bg-white/5 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20' : 'bg-white/5 dark:bg-white/5 border border-white/5'}`}>{item}</Link>
+                      isLoggedIn ? (
+                        <Link key={item} href="/history" onClick={() => setIsMenuOpen(false)} className={`flex items-center justify-center min-h-[44px] p-4 rounded-xl font-semibold tracking-tight text-center block text-slate-600 dark:text-slate-400 hover:bg-white/5 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20' : 'bg-white/5 dark:bg-white/5 border border-white/5'}`}>{item}</Link>
+                      ) : (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            onLoginClick?.('Sign in to view your archive.');
+                          }}
+                          className={`flex items-center justify-center min-h-[44px] p-4 rounded-xl font-semibold tracking-tight text-center text-slate-600 dark:text-slate-400 hover:bg-white/5 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20' : 'bg-white/5 dark:bg-white/5 border border-white/5'}`}
+                        >
+                          {item}
+                        </button>
+                      )
                     ) : (
                       <button key={item} type="button" onClick={() => { setActiveTab(item); setIsMenuOpen(false); }} className={`flex items-center justify-center min-h-[44px] p-4 rounded-xl font-semibold tracking-tight text-center text-slate-600 dark:text-slate-400 hover:bg-white/5 hover:text-indigo-600 ${activeTab === item ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20' : 'bg-white/5 dark:bg-white/5 border border-white/5'}`}>{item}</button>
                     )

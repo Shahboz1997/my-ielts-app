@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, X, Send, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, Trash2, Lock } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 function cx(...xs) {
@@ -114,9 +114,10 @@ function readContextFromWorkspace(w, task) {
   };
 }
 
-export default function ChatAssistantWidget() {
+export default function ChatAssistantWidget({ onSignIn }) {
   const { data: session, status } = useSession();
   const isAuthed = status === "authenticated";
+  const isGuest = status === "unauthenticated";
   const userStorageId = useMemo(() => {
     const id = session?.user?.id || session?.user?.email;
     return typeof id === "string" && id.trim().length > 0 ? id.trim() : "anon";
@@ -274,7 +275,90 @@ export default function ChatAssistantWidget() {
     setApplyNotice("");
   }
 
-  // Only show after registration/login (authenticated session).
+  // Guests: locked teaser (API already requires auth).
+  if (isGuest) {
+    return (
+      <div
+        className="fixed z-[200]"
+        style={{
+          right: "calc(1rem + env(safe-area-inset-right))",
+          bottom: "calc(1rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        {open && (
+          <>
+            <div
+              className="fixed inset-0 z-[200] bg-black/30 backdrop-blur-[2px] sm:hidden"
+              onClick={() => setOpen(false)}
+              aria-hidden="true"
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="chat-assistant-locked-title"
+              className="fixed inset-x-0 bottom-0 z-[201] sm:static sm:mb-3 sm:w-[340px] sm:max-w-[calc(100vw-2rem)] rounded-t-3xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur shadow-2xl overflow-hidden p-5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white mb-3">
+                    <Lock className="w-4 h-4" strokeWidth={1.5} aria-hidden />
+                  </div>
+                  <h3
+                    id="chat-assistant-locked-title"
+                    className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100"
+                  >
+                    AI Writing Assistant
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    Sign in to rewrite drafts, get coaching tips, and apply improvements directly to your
+                    editor. Sign in to unlock this feature.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="p-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 shrink-0"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (typeof onSignIn === "function") onSignIn();
+                }}
+                className="mt-4 w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-bold text-white hover:bg-indigo-500"
+              >
+                Sign up free
+              </button>
+            </div>
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={cx(
+            "relative w-14 h-14 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 flex items-center justify-center hover:scale-[1.02] active:scale-95 transition-transform",
+            open && "hidden sm:flex"
+          )}
+          aria-label={open ? "Close assistant sign-in prompt" : "AI assistant — sign in required"}
+          aria-expanded={open}
+        >
+          <MessageCircle className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white">
+            <Lock className="w-2.5 h-2.5" strokeWidth={2.5} aria-hidden />
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "loading") return null;
+
+  // Only show full assistant after registration/login (authenticated session).
   if (!isAuthed) return null;
 
   return (

@@ -26,7 +26,15 @@ function escapeRegExp(phrase) {
 /** @param {string} essay @param {string} phrase */
 export function essayContainsPhrase(essay, phrase) {
   if (!essay || !phrase) return false;
-  const re = new RegExp(`\\b${escapeRegExp(phrase.trim())}\\b`, 'i');
+  const trimmed = phrase.trim();
+  if (!trimmed) return false;
+  if (/\s/.test(trimmed)) {
+    const re = new RegExp(`\\b${escapeRegExp(trimmed)}\\b`, 'i');
+    return re.test(essay);
+  }
+  // Single headword: match common inflections (increase → increased, increasing).
+  const stem = escapeRegExp(trimmed);
+  const re = new RegExp(`\\b${stem}(?:s|ed|ing|es|er|est|ly)?\\b`, 'i');
   return re.test(essay);
 }
 
@@ -43,13 +51,18 @@ export function normalizeLexicalRow(row) {
   const c2_synonyms =
     c2.length > 0 ? c2 : legacy.length > 2 ? legacy.slice(2) : legacy.slice(0, 2);
   const band_89_synonyms = [...new Set([...c1_synonyms, ...c2_synonyms, ...legacy])];
+  const c1_example = row.c1_example ? String(row.c1_example).trim() : undefined;
+  const c2_example = row.c2_example ? String(row.c2_example).trim() : undefined;
+  const collocation_hint = row.collocation_hint ? String(row.collocation_hint).trim() : undefined;
   return {
     band_56_word,
     c1_synonyms,
     c2_synonyms,
     band_89_synonyms,
     source: row.source || 'api',
-    collocation_hint: row.collocation_hint ? String(row.collocation_hint) : undefined,
+    collocation_hint: collocation_hint || undefined,
+    c1_example: c1_example || undefined,
+    c2_example: c2_example || undefined,
   };
 }
 
@@ -68,6 +81,8 @@ function mergeRows(a, b) {
     band_89_synonyms: dedupe([...a.band_89_synonyms, ...b.band_89_synonyms]),
     source: a.source === 'api' || b.source === 'api' ? 'api' : 'static',
     collocation_hint: a.collocation_hint || b.collocation_hint,
+    c1_example: a.c1_example || b.c1_example,
+    c2_example: a.c2_example || b.c2_example,
   });
 }
 
@@ -95,12 +110,15 @@ export function mergeLexicalUpgrades({ apiRows = [], essayText = '', isT1 = true
     upsert({ ...row, source: 'api' });
   });
 
-  Object.entries(staticMap).forEach(([word, { c1, c2 }]) => {
+  Object.entries(staticMap).forEach(([word, entry]) => {
     if (essayText && !essayContainsPhrase(essayText, word)) return;
     upsert({
       band_56_word: word,
-      c1_synonyms: c1,
-      c2_synonyms: c2,
+      c1_synonyms: entry.c1,
+      c2_synonyms: entry.c2,
+      c1_example: entry.c1_example,
+      c2_example: entry.c2_example,
+      collocation_hint: entry.collocation_hint,
       source: 'static',
     });
   });

@@ -8,36 +8,40 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-
-const STORAGE_KEY = 'ielts_bank_favorite_templates';
+import { useSession } from 'next-auth/react';
+import {
+  FAVORITE_TEMPLATES_STORAGE_KEY,
+  FAVORITE_TEMPLATES_UPDATED_EVENT,
+  loadFavoriteTemplateIds,
+  persistFavoriteTemplateIds,
+} from '@/lib/bankFavorites.js';
+import { pushFavoriteTemplateIdsIfAuthed } from '@/lib/userLibraryClient.js';
 
 const BankContext = createContext(null);
 
-/** Favourite template IDs persisted in localStorage */
+/** Favourite template IDs — localStorage + DB sync when logged in. */
 export function BankProvider({ children }) {
+  const { status } = useSession();
+  const isAuthed = status === 'authenticated';
   const [favoriteIds, setFavoriteIds] = useState([]);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setFavoriteIds(parsed.map(Number).filter((n) => Number.isFinite(n)));
-        }
-      }
-    } catch {
-      /* ignore */
-    }
+  const refresh = useCallback(() => {
+    setFavoriteIds(loadFavoriteTemplateIds());
   }, []);
 
-  const persist = useCallback((ids) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  useEffect(() => {
+    refresh();
+    const onUpdate = () => refresh();
+    const onStorage = (e) => {
+      if (e.key === FAVORITE_TEMPLATES_STORAGE_KEY) refresh();
+    };
+    window.addEventListener(FAVORITE_TEMPLATES_UPDATED_EVENT, onUpdate);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(FAVORITE_TEMPLATES_UPDATED_EVENT, onUpdate);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, [refresh]);
 
   const toggleFavorite = useCallback(
     (id) => {
@@ -45,11 +49,14 @@ export function BankProvider({ children }) {
       if (!Number.isFinite(n)) return;
       setFavoriteIds((prev) => {
         const next = prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n];
-        persist(next);
+        persistFavoriteTemplateIds(next);
+        if (isAuthed) {
+          void pushFavoriteTemplateIdsIfAuthed(next);
+        }
         return next;
       });
     },
-    [persist]
+    [isAuthed]
   );
 
   const isFavorite = useCallback(

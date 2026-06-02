@@ -5,9 +5,10 @@ import { Analytics } from "@vercel/analytics/next";
 import AppThemeProvider from "@/components/AppThemeProvider";
 import { Providers } from "../components/Providers";
 import { getServerHtmlThemeClass, getServerInitialTheme } from "@/lib/themeBootstrapScript";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { safeAuth } from "@/lib/safeAuth";
 import { getMetadataBaseUrl } from "@/lib/publicSiteUrl";
 import { LEGAL_COMPANY_NAME } from "@/lib/support";
+import LandingJsonLd from "@/components/landing/LandingJsonLd";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -74,6 +75,9 @@ export const metadata = {
     apple: [{ url: '/apple-touch-icon.png', type: 'image/png', sizes: '180x180' }],
   },
   robots: { index: true, follow: true },
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export const viewport = {
@@ -83,12 +87,7 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }) {
-  let session = null;
-  try {
-    session = await auth();
-  } catch (e) {
-    console.error("[layout] auth():", e?.message ?? e);
-  }
+  const session = await safeAuth();
 
   const htmlClass = await getServerHtmlThemeClass();
   const storedTheme = await getServerInitialTheme();
@@ -100,6 +99,7 @@ export default async function RootLayout({ children }) {
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-[#F9FAFB] text-slate-900 dark:bg-[#050505] dark:text-slate-100 transition-colors duration-500 min-h-screen`}
       >
+        <LandingJsonLd />
         <AppThemeProvider initialTheme={initialTheme}>
           <Providers session={session}>
             {children}

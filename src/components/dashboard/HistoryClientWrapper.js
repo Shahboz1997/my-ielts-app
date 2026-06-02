@@ -16,7 +16,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import { generateStratumWritingPdfFromCheck } from '@/lib/stratumWritingPdf';
+import { generateStratumWritingPdfFromCheck } from '@/lib/lazyStratumPdf';
 import { EmptyState } from '@/components/stratum';
 import { HISTORY_PAGE_SIZE } from '@/lib/historyConstants';
 
@@ -134,7 +134,7 @@ export default function HistoryClientWrapper({
       if (!res.ok) {
         throw new Error(data.error || 'Failed to load report');
       }
-      generateStratumWritingPdfFromCheck(data.check || check);
+      await generateStratumWritingPdfFromCheck(data.check || check);
     } catch (err) {
       console.error('History PDF download failed:', err);
     } finally {

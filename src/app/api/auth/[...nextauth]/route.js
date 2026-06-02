@@ -8,6 +8,11 @@ import { createLazyPrismaAdapter } from "@/lib/lazyPrismaAdapter";
 import bcrypt from "bcryptjs";
 import { ensureAuthPublicUrl } from "@/lib/ensureAuthPublicUrl";
 import { formatAuthErrorCause } from "@/lib/formatAuthErrorCause";
+import {
+  appendClearAuthCookies,
+  isPkceOrOAuthStateError,
+  isSessionDecryptionError,
+} from "@/lib/authSessionCookies";
 
 ensureAuthPublicUrl();
 
@@ -61,6 +66,13 @@ export const authOptions = {
   adapter: createLazyPrismaAdapter(),
   logger: {
     error(code, ...message) {
+      const candidates = [code, ...message];
+      if (candidates.some((c) => isSessionDecryptionError(c))) {
+        if (isDev) {
+          console.warn("[auth] Stale session cookie ignored (decryption secret mismatch).");
+        }
+        return;
+      }
       const extra = message
         .map((m) => {
           if (m instanceof Error) return formatAuthErrorCause(m);
@@ -164,6 +176,26 @@ export const authOptions = {
 
         if (!isPasswordValid) return null;
 
+        if (!user.emailVerified) {
+          const smtpConfigured = Boolean(
+            process.env.EMAIL_USER?.trim() && process.env.EMAIL_PASS?.trim()
+          );
+          if (!smtpConfigured) {
+            try {
+              await withPrismaRetry(() =>
+                getPrisma().user.update({
+                  where: { id: user.id },
+                  data: { emailVerified: new Date() },
+                })
+              );
+            } catch {
+              return null;
+            }
+          } else {
+            return null;
+          }
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -181,6 +213,31 @@ export const authOptions = {
     async signIn({ user, account }) {
       if (isDev) {
         console.log("[auth] signIn:", { email: user?.email, provider: account?.provider });
+      }
+      if (account?.provider === "google") {
+        const userId = user?.id;
+        const email = user?.email
+          ? String(user.email).trim().toLowerCase()
+          : "";
+        try {
+          if (userId) {
+            await withPrismaRetry(() =>
+              getPrisma().user.update({
+                where: { id: String(userId) },
+                data: { emailVerified: new Date() },
+              })
+            );
+          } else if (email) {
+            await withPrismaRetry(() =>
+              getPrisma().user.updateMany({
+                where: { email, emailVerified: null },
+                data: { emailVerified: new Date() },
+              })
+            );
+          }
+        } catch {
+          /* best-effort */
+        }
       }
       return true;
     },
@@ -241,16 +298,28 @@ export const authOptions = {
             token.language = user.language ?? "en";
           }
         }
-        // `update()` from the client (e.g. after essay check decrements credits in DB) must reload JWT fields.
-        // Without a DB read, token.credits stays stale because `session` is often empty when `update()` is called with no args.
+        // `update()` from the client reloads JWT fields from DB (credits after /api/check, etc.).
+        // Do not accept client `session.credits` — it caused double-decrement in the UI vs DB.
         const creditUserId = token.id ?? token.sub;
-        if (trigger === "update" && creditUserId) {
+        if (trigger === "update" && (creditUserId || token.email)) {
           try {
             const prisma = getPrisma();
-            const row = await prisma.user.findUnique({
-              where: { id: String(creditUserId) },
-              select: { credits: true, language: true },
-            });
+            let row = creditUserId
+              ? await prisma.user.findUnique({
+                  where: { id: String(creditUserId) },
+                  select: { id: true, credits: true, language: true },
+                })
+              : null;
+            if (!row && token.email) {
+              row = await prisma.user.findUnique({
+                where: { email: String(token.email).trim().toLowerCase() },
+                select: { id: true, credits: true, language: true },
+              });
+              if (row?.id) {
+                token.id = row.id;
+                token.sub = String(row.id);
+              }
+            }
             if (row) {
               token.credits = row.credits ?? 0;
               token.language = row.language ?? token.language ?? "en";
@@ -260,7 +329,7 @@ export const authOptions = {
           }
         }
         if (trigger === "update") {
-          if (session?.credits !== undefined) token.credits = session.credits;
+          // Credits always come from DB on `update` (see block above). Client must not overwrite JWT.
           if (session?.language !== undefined) token.language = session.language;
         }
       } catch (e) {
@@ -292,72 +361,6 @@ export const authOptions = {
 // App Router: equivalent to const handler = NextAuth(authOptions); export { handler as GET, handler as POST }
 const nextAuth = NextAuth(authOptions);
 export const { handlers, auth } = nextAuth;
-
-/** Ошибка расшифровки JWT сессии (сменился секрет или битый cookie) — не отдаём 500, а завершаем сессию */
-function isSessionDecryptionError(err) {
-  let e = err;
-  let depth = 0;
-  while (e && depth < 6) {
-    const name = e?.name || "";
-    const msg = String(e?.message || "").toLowerCase();
-    if (
-      name === "JWTSessionError" ||
-      name === "JWEDecryptionFailed" ||
-      msg.includes("decryption secret") ||
-      msg.includes("decryption failed") ||
-      msg.includes("no matching")
-    ) {
-      return true;
-    }
-    e = e?.cause;
-    depth += 1;
-  }
-  return false;
-}
-
-/** OAuth PKCE/state cookie lost or wrong host — очистить и начать вход заново */
-function isPkceOrOAuthStateError(err) {
-  let e = err;
-  let depth = 0;
-  while (e && depth < 6) {
-    const name = e?.name || "";
-    const msg = String(e?.message || "").toLowerCase();
-    if (
-      name === "InvalidCheck" ||
-      msg.includes("pkcecodeverifier") ||
-      (msg.includes("pkce") && msg.includes("parsed"))
-    ) {
-      return true;
-    }
-    e = e?.cause;
-    depth += 1;
-  }
-  return false;
-}
-
-/** Auth.js может разбивать JWT на несколько cookie (session-token.0, .1, …) */
-function appendClearAuthCookies(response) {
-  const names = [
-    "authjs.session-token",
-    "__Secure-authjs.session-token",
-    "authjs.pkce.code_verifier",
-    "__Secure-authjs.pkce.code_verifier",
-    "authjs.state",
-    "__Secure-authjs.state",
-    "authjs.callback-url",
-    "__Secure-authjs.callback-url",
-    "authjs.csrf-token",
-    "__Host-authjs.csrf-token",
-  ];
-  for (const n of names) {
-    response.cookies.set(n, "", { maxAge: 0, path: "/" });
-  }
-  for (let i = 0; i < 8; i++) {
-    response.cookies.set(`authjs.session-token.${i}`, "", { maxAge: 0, path: "/" });
-    response.cookies.set(`__Secure-authjs.session-token.${i}`, "", { maxAge: 0, path: "/" });
-  }
-  return response;
-}
 
 function isAuthSessionRoute(request) {
   const p = request.nextUrl.pathname;
@@ -398,24 +401,49 @@ function chainOrAuthMessage(err) {
   return c && c.trim().length > 0 ? c : err?.message ?? "Authentication error";
 }
 
+function isConnectTimeoutError(err) {
+  const chain = formatAuthErrorCause(err);
+  return (
+    /ConnectTimeoutError/i.test(chain) ||
+    /UND_ERR_CONNECT_TIMEOUT/i.test(chain) ||
+    /fetch failed/i.test(chain)
+  );
+}
+
 /**
- * Auth.js catches many failures and redirects to /api/auth/error?error=Configuration (no throw).
- * After OAuth callback, recover by clearing cookies so the user can retry (fixes PKCE / host mismatch).
+ * Auth.js often maps OAuth callback failures (network, adapter) to error=Configuration.
+ * Rewrite to a clearer error page so users can retry instead of checking env vars.
  */
-function shouldRecoverOAuthCallbackRedirect(request, response) {
-  if (response.status < 300 || response.status >= 400) return false;
-  if (!request.nextUrl.pathname.includes("/callback/")) return false;
+function rewriteMisleadingAuthErrorRedirect(request, response) {
+  if (response.status < 300 || response.status >= 400) return response;
   const loc = response.headers.get("Location");
-  if (!loc) return false;
+  if (!loc) return response;
+
   try {
     const u = new URL(loc, request.url);
-    return (
-      u.pathname.includes("/api/auth/error") &&
-      u.searchParams.get("error") === "Configuration"
-    );
+    const err = u.searchParams.get("error");
+    const isMisleadingConfig =
+      err === "Configuration" &&
+      (u.pathname.includes("/auth/error") || u.pathname.includes("/api/auth/error"));
+
+    if (!isMisleadingConfig) return response;
+
+    const target = new URL("/auth/error", request.url);
+    target.searchParams.set("error", "OAuthCallback");
+    if (request.nextUrl.pathname.includes("/callback/google")) {
+      target.searchParams.set("reason", "google_timeout");
+    }
+    return NextResponse.redirect(target);
   } catch {
-    return false;
+    return response;
   }
+}
+
+function oauthCallbackErrorRedirect(request, reason = "google_timeout") {
+  const target = new URL("/auth/error", request.url);
+  target.searchParams.set("error", "OAuthCallback");
+  target.searchParams.set("reason", reason);
+  return NextResponse.redirect(target);
 }
 
 // App Router requires named GET and POST exports; delegate to NextAuth handlers
@@ -431,9 +459,8 @@ export async function GET(request) {
         `${Date.now() - t0}ms`,
         res.status
       );
+      return rewriteMisleadingAuthErrorRedirect(request, res);
     }
-    // Don't silently swallow Configuration errors on OAuth callbacks.
-    // Let Auth.js redirect to our custom /auth/error page so the real cause is visible in production.
     return res;
   } catch (err) {
     if (isSessionDecryptionError(err)) {
@@ -456,6 +483,10 @@ export async function GET(request) {
         `${Date.now() - t0}ms`,
         request.nextUrl.pathname
       );
+      if (isConnectTimeoutError(err)) {
+        return oauthCallbackErrorRedirect(request, "google_timeout");
+      }
+      return oauthCallbackErrorRedirect(request, "oauth_callback");
     }
     logHandlerError("GET unhandled", err);
     return jsonError(

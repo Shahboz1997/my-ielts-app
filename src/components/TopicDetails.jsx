@@ -4,14 +4,10 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
-
-function bankUrl(path) {
-  const base = process.env.NEXT_PUBLIC_BANK_API_URL || '';
-  return `${base}${path}`;
-}
+import { bankApiUrl } from '@/lib/bankClient.js';
 
 /**
- * Full topic card for /topics/:id — loads GET /api/bank/topic/:id (Next or Express via NEXT_PUBLIC_BANK_API_URL).
+ * Full topic card for /topics/:id — loads GET /api/bank/topic/:id.
  */
 export default function TopicDetails({ topicId, darkMode }) {
   const router = useRouter();
@@ -25,7 +21,7 @@ export default function TopicDetails({ topicId, darkMode }) {
       setLoading(true);
       setErr(null);
       try {
-        const { data: d } = await axios.get(bankUrl(`/api/bank/topic/${topicId}`));
+        const { data: d } = await axios.get(bankApiUrl(`/api/bank/topic/${topicId}`));
         if (!cancelled) setData(d);
       } catch (e) {
         if (!cancelled) {

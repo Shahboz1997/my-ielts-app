@@ -6,14 +6,10 @@ import { Search, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useBankTopicsNav } from '@/context/BankTopicsNavContext';
 import styles from '@/components/bank/TopicsBank.module.css';
+import { bankApiUrl } from '@/lib/bankClient.js';
 
 const PAGE_SIZE = 10;
 const SAVED_KEY = 'ielts_saved_prompts';
-
-function bankUrl(path) {
-  const base = process.env.NEXT_PUBLIC_BANK_API_URL || '';
-  return `${base}${path}`;
-}
 
 const T1_SUB = [
   { value: '', label: 'All Task 1 types' },
@@ -117,7 +113,7 @@ export default function BankList({ darkMode }) {
       if (dateFrom) params.set('dateFrom', dateFrom);
       if (dateTo) params.set('dateTo', dateTo);
       if (appliedSearch.trim()) params.set('q', appliedSearch.trim());
-      const { data } = await axios.get(bankUrl(`/api/topics?${params.toString()}`), {
+      const { data } = await axios.get(bankApiUrl(`/api/topics?${params.toString()}`), {
         signal: controller.signal,
       });
       if (gen !== fetchGenRef.current) return;

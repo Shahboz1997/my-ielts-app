@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
-/** Free essay checks per IP before registration (server-enforced). */
-export const GUEST_CHECK_LIMIT = 3;
+/** One demo essay check per IP before registration (server-enforced). */
+export const GUEST_CHECK_LIMIT = 1;
 
 export const AUTH_REQUIRED_CODE = 'AUTH_REQUIRED';
 export const GUEST_QUOTA_EXHAUSTED_CODE = 'GUEST_QUOTA_EXHAUSTED';
@@ -64,7 +64,7 @@ export function jsonGuestQuotaExhausted() {
   return NextResponse.json(
     {
       code: GUEST_QUOTA_EXHAUSTED_CODE,
-      error: `You have used all ${GUEST_CHECK_LIMIT} free checks for this network. Create a free account to continue.`,
+      error: `You have used your free demo check on this network. Create a free account for full GPT-4o analysis and credits.`,
       limit: GUEST_CHECK_LIMIT,
     },
     { status: 403 }
@@ -86,7 +86,7 @@ export function jsonRateLimitExceeded(retryAfterMs) {
   );
 }
 
-/** OpenAI helpers on /api/check that require a signed-in user. */
+/** OpenAI helpers on /api/check (describe image, generate topic/letter). Guests: IP rate limits only. */
 export function isAuxiliaryOpenAiCheckRequest(body) {
   if (!body || typeof body !== 'object') return false;
   if (body.describeImage && body.image) return true;
@@ -96,7 +96,7 @@ export function isAuxiliaryOpenAiCheckRequest(body) {
   return false;
 }
 
-/** Full GPT-4o essay analysis (guests: up to GUEST_CHECK_LIMIT per IP). */
+/** Main essay analysis request (signed-in users; full GPT-4o + credits). */
 export function isMainEssayAnalysisRequest(body) {
   if (!body || typeof body !== 'object') return false;
   const isT1 = body.analysisMode === 'task1';
