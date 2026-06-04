@@ -1,10 +1,9 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@wrksz/themes/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSession } from 'next-auth/react';
 import { useLandingAbVariant } from '@/hooks/useLandingAbVariant';
 import TransformationSlider from '@/components/TransformationSlider';
 import Task2ComparisonLab from '@/components/Task2ComparisonLab';
@@ -13,33 +12,20 @@ import {
   Search,
   BarChart3,
   CheckCircle,
-  XCircle,
   Star,
   Sparkles,
   PenTool,
   Wrench,
-  ArrowRight,
-  Download,
   Plus,
   Minus,
   Eye,
-  EyeOff,
   Crown,
   Filter,
-  Type,
   LayoutGrid,
   RefreshCw,
-  AlignLeft,
   Shield,
-  ShieldCheck,
   Target,
   Zap,
-  Volume2,
-  Play,
-  Pause,
-  Headphones,
-  Share2,
-  X,
   CalendarDays,
   BellRing,
   LineChart,
@@ -68,33 +54,6 @@ const staggerItem = {
   transition: { ease: appleEase, duration: 0.7 },
 };
 
-/* Section header: Cathalon — font-black, tracking-tighter, uppercase */
-function SectionHeading({ tagline, children }) {
-  return (
-    <div>
-      {tagline && (
-        <span className="tagline-pill mb-2 block w-fit">{tagline}</span>
-      )}
-      <h2 className="text-xl sm:text-2xl font-black tracking-tighter uppercase text-slate-900 dark:text-white">
-        {children}
-      </h2>
-    </div>
-  );
-}
-
-const VOCAB_BOOSTER = [
-  { word: 'increase', synonyms: ['surge', 'soar', 'climb', 'rise'] },
-  { word: 'decrease', synonyms: ['plummet', 'decline', 'drop', 'dip'] },
-  { word: 'show', synonyms: ['demonstrate', 'illustrate', 'reveal'] },
-  { word: 'go up', synonyms: ['rise', 'grow', 'escalate'] },
-  { word: 'stay the same', synonyms: ['remain stable', 'plateau', 'level off'] },
-  { word: 'big', synonyms: ['substantial', 'significant', 'considerable'] },
-  { word: 'small', synonyms: ['marginal', 'modest', 'slight'] },
-  { word: 'a lot', synonyms: ['substantially', 'significantly', 'considerably'] },
-  { word: 'about', synonyms: ['approximately', 'roughly', 'around'] },
-  { word: 'get', synonyms: ['obtain', 'acquire', 'attain'] },
-];
-
 const SUCCESS_PATH_STEPS = [
   { step: 1, title: 'Generate Topic', desc: 'Charts for Academic Task 1, formal letters for GT, or Task 2 essay prompts — from the lab or AI generator.', Icon: Sparkles },
   { step: 2, title: 'Write Essay', desc: 'Switch Academic chart mode or GT Letter mode. Timer and word count match the real exam.', Icon: PenTool },
@@ -102,171 +61,17 @@ const SUCCESS_PATH_STEPS = [
   { step: 4, title: 'Fix Mistakes', desc: 'Highlights, Letter Strategy (GT), vocabulary upgrades, and a Band 9-style suggested rewrite.', Icon: Wrench },
 ];
 
-const VOCAB_UPGRADES = [
-  { basic: 'increase', advanced: 'surge / skyrocket', category: 'Task 1' },
-  { basic: 'think', advanced: 'assert / maintain', category: 'Task 2' },
-  { basic: 'big change', advanced: 'dramatic shift', category: 'Task 1' },
-  { basic: 'good', advanced: 'exemplary / beneficial', category: 'General' },
-  { basic: 'problem', advanced: 'setback / predicament', category: 'Task 2' },
-  { basic: 'importent', advanced: 'crucial', category: 'Task 2' },
-];
-
 import { LANDING_FAQ_ITEMS as FAQ_ITEMS } from '@/lib/landingSeoData';
-
-const BAND_6_SAMPLE = `The graph show how many people went to the cinema from 1990 to 2010. We can see that the number go up a lot in the first years. In 1995 it was about 50 million but then it get bigger and in 2010 it was more than 80 million. So the trend is that cinema get more popular over the time.`;
-
-const BAND_85_SAMPLE = `The graph illustrates cinema attendance between 1990 and 2010. Attendance rose substantially in the first decade, from approximately 35 million to around 50 million by 1995, before climbing to over 80 million by 2010. Overall, cinema grew significantly in popularity over the period.`;
-
-function BeforeAfterComparison() {
-  const [sliderPos, setSliderPos] = useState(50);
-  return (
-    <motion.div
-      className="mt-4 rounded-3xl border border-white/5 backdrop-blur-md bg-white/80 dark:bg-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 overflow-hidden"
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.7 }}
-    >
-      <div className="grid md:grid-cols-2 gap-0 min-h-[220px]">
-        <div
-          className="p-5 md:p-6 border-b md:border-b-0 md:border-r border-white/5 transition-opacity duration-200"
-          style={{ opacity: 0.5 + (sliderPos / 100) * 0.5 }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
-              Band 6.0
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Before</span>
-          </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-mono">
-            {BAND_6_SAMPLE}
-          </p>
-        </div>
-        <div
-          className="p-5 md:p-6 transition-opacity duration-200"
-          style={{ opacity: 0.5 + ((100 - sliderPos) / 100) * 0.5 }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider bg-red-100 dark:bg-red-900/20 text-red-500">
-              Band 8.5
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">After</span>
-          </div>
-          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-mono">
-            {BAND_85_SAMPLE}
-          </p>
-        </div>
-      </div>
-      <div className="px-4 py-3 border-t border-white/5 bg-slate-50/80 dark:bg-white/5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
-          <span className="text-indigo-600 dark:text-indigo-400">Compare:</span> drag to reveal
-        </p>
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={sliderPos}
-          onChange={(e) => setSliderPos(Number(e.target.value))}
-          className="w-full h-1.5 rounded-full appearance-none bg-slate-200 dark:bg-slate-700 accent-indigo-600"
-          aria-label="Reveal Before or After comparison"
-        />
-      </div>
-    </motion.div>
-  );
-}
 
 export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
   const router = useRouter();
   const { copy: abCopy } = useLandingAbVariant();
   const { resolvedTheme } = useTheme();
-  const { status } = useSession();
   const [themeMounted, setThemeMounted] = useState(false);
   const [faqOpenIndex, setFaqOpenIndex] = useState(null);
-  const [isSampleOpen, setIsSampleOpen] = useState(false);
-  const [shareInfoOpen, setShareInfoOpen] = useState(false);
-  /** Mock MP3 strata preview in sample modal — play/pause + no page scroll while “playing”. */
-  const [sampleStrataFilled, setSampleStrataFilled] = useState(12);
-  const [sampleMockPlaying, setSampleMockPlaying] = useState(false);
-  const sampleMockIntervalRef = useRef(null);
   useEffect(() => setThemeMounted(true), []);
 
-  useEffect(() => {
-    if (!isSampleOpen) {
-      setSampleMockPlaying(false);
-      setSampleStrataFilled(12);
-    }
-  }, [isSampleOpen]);
-
-  useEffect(() => {
-    if (!sampleMockPlaying) {
-      if (typeof document !== 'undefined') document.body.style.overflow = '';
-      if (sampleMockIntervalRef.current) {
-        clearInterval(sampleMockIntervalRef.current);
-        sampleMockIntervalRef.current = null;
-      }
-      return;
-    }
-    if (typeof document !== 'undefined') document.body.style.overflow = 'hidden';
-    sampleMockIntervalRef.current = setInterval(() => {
-      setSampleStrataFilled((n) => {
-        if (n >= 33) {
-          setSampleMockPlaying(false);
-          return 34;
-        }
-        return n + 1;
-      });
-    }, 260);
-    return () => {
-      if (sampleMockIntervalRef.current) {
-        clearInterval(sampleMockIntervalRef.current);
-        sampleMockIntervalRef.current = null;
-      }
-      if (typeof document !== 'undefined') document.body.style.overflow = '';
-    };
-  }, [sampleMockPlaying]);
-
-  useEffect(() => {
-    if (!isSampleOpen || typeof window === 'undefined') return;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') setIsSampleOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isSampleOpen]);
-
   const darkMode = themeMounted && resolvedTheme === 'dark';
-
-  const shareLanding = async () => {
-    if (typeof window === 'undefined') return;
-    const url = window.location.origin;
-    const title = 'STRATUM.ai — Premium IELTS Intelligence';
-    const text = 'Try STRATUM.ai for IELTS Writing Task 1 & Task 2.';
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text, url });
-        return;
-      }
-    } catch {
-      // user canceled or share failed
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      alert('Link copied to clipboard!');
-    } catch {
-      window.prompt('Copy this link:', url);
-    }
-  };
-
-  const cycleContainer = {
-    initial: {},
-    whileInView: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
-    viewport: { once: true, margin: '-48px' },
-  };
-  const cycleItem = {
-    initial: { opacity: 0, y: 20 },
-    whileInView: { opacity: 1, y: 0 },
-    transition: { ease: appleEase, duration: 0.7 },
-  };
 
   return (
     <main className="min-h-screen bg-[#F9FAFB] dark:bg-[#050505] transition-colors duration-300 pt-0">
@@ -341,14 +146,6 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
             </div>
           </motion.div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-6 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-widest"
-          >
-            Trusted by Students Worldwide
-          </motion.p>
         </div>
       </section>
 
@@ -410,18 +207,6 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                 badge: 'New',
                 desc: 'Dedicated GT Task 1 workflow: tone & purpose controls, bullet checklist, Letter Strategy feedback, and AI-generated formal letter prompts.',
               },
-              {
-                icon: Volume2,
-                title: 'MP3 Audio Models',
-                desc: (
-                  <>
-                    Download AI-generated audio models of Band 9.0-level responses for advanced shadowing practice.
-                    <span className="block mt-3">
-                      Master the Sound of Band 9.0 with Stratum Shadowing on model answers.
-                    </span>
-                  </>
-                ),
-              },
             ].map((item, idx) => {
               const Icon = item.icon;
               return (
@@ -453,61 +238,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
         </div>
       </section>
 
-      {/* Section 2: Instant Band 9.0 Feedback & Corrections */}
-      <section aria-labelledby="section-band-feedback" className="py-12 sm:py-16 bg-[#F9FAFB] dark:bg-[#050505] border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-4">
-          <motion.div {...fadeInUp} className="text-center mb-6">
-            <span className="tagline-pill mb-2 block w-fit mx-auto text-slate-500 dark:text-slate-400 font-medium tracking-wide">Band Score</span>
-            <h2 id="section-band-feedback" className="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 dark:text-white">
-              Instant Band 9.0 Feedback &amp; Corrections
-            </h2>
-            <p className="mt-3 text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
-              Get instant Band 9.0-style feedback and in-line corrections for every Writing Task. STRATUM.ai compares against generic AI so you see why precision AI-evaluation and real-time Band Score matter for IELTS.
-            </p>
-          </motion.div>
-          <motion.div
-            {...fadeInUp}
-            className="overflow-x-auto rounded-3xl border border-white/5 backdrop-blur-md bg-white/80 dark:bg-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20"
-          >
-            <table className="w-full min-w-[400px]">
-              <thead>
-                <tr className="border-b border-white/5">
-                  <th className="text-left p-4 font-semibold text-slate-900 dark:text-white text-sm"></th>
-                  <th className="text-left p-4 font-medium tracking-wide text-slate-500 dark:text-slate-400 text-sm">Generic AI (e.g. ChatGPT)</th>
-                  <th className="text-left p-4 font-semibold text-indigo-600 dark:text-indigo-400 text-sm">STRATUM.ai</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {[
-                  { feature: 'Feedback quality', generic: 'Vague feedback', booster: 'IDP/BC Certified Logic' },
-                  { feature: 'Scoring', generic: 'Inconsistent scoring', booster: 'Real-time Band Descriptors' },
-                  { feature: 'Criteria', generic: 'Lacks official criteria', booster: 'Deep Error Mapping' },
-                  { feature: 'Tone', generic: 'Informal tone suggestions', booster: 'Academic Register Engine' },
-                  { feature: 'GT Task 1', generic: 'Treats letters like essays', booster: 'Letter Strategy · bullets & tone' },
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-white/5">
-                    <td className="p-4 font-medium text-slate-900 dark:text-white">{row.feature}</td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400 leading-relaxed">
-                      <span className="inline-flex items-center gap-1.5">
-                        <XCircle className="w-4 h-4 text-red-500 shrink-0" strokeWidth={1.5} />
-                        {row.generic}
-                      </span>
-                    </td>
-                    <td className="p-4 text-slate-700 dark:text-slate-300 leading-relaxed">
-                      <span className="inline-flex items-center gap-1.5">
-                        <CheckCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.5} />
-                        {row.booster}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Neural Sync — THE SOUND OF PERFECTION */}
+      {/* Neural Sync — audio shadowing demo */}
       <NeuralSyncShowcase onCtaClick={onFullAnalysisClick} />
 
       {/* Section 3: Stratum-Level Analytics for Your Progress */}
@@ -522,41 +253,15 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
           </div>
         </motion.div>
         <div className="mt-8 max-w-5xl mx-auto px-4 sm:px-6">
-          <motion.div {...fadeInUp} className="text-center mb-6">
+          <motion.div {...fadeInUp} className="text-center">
             <span className="tagline-pill mb-2 block w-fit mx-auto text-slate-500 dark:text-slate-400 font-medium tracking-wide">Progress</span>
             <h2 id="section-stratum-analytics" className="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 dark:text-white mb-3">
               Stratum-Level Analytics for Your Progress
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
-              Track your progress with stratum-level analytics and Band 9 vocabulary upgrades. See before-and-after comparisons and real-time scoring so every Writing Task moves you closer to your target Band Score.
+              Track criterion trends, flagged issues, and before-and-after rewrites so every check moves you closer to your target band.
             </p>
           </motion.div>
-          <motion.div {...fadeInUp} className="text-center mb-4">
-            <h3 className="text-lg sm:text-xl font-semibold tracking-wide text-slate-900 dark:text-white">
-              Lexical Resource Upgrade
-            </h3>
-          </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {VOCAB_UPGRADES.map((item, idx) => (
-              <motion.div
-                key={idx}
-                {...fadeInUp}
-                className="p-4 rounded-3xl border border-white/5 backdrop-blur-md bg-white/80 dark:bg-white/5 shadow-2xl shadow-black/5 dark:shadow-black/20 transition-all duration-300 hover:shadow-2xl"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400">
-                    {item.category}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm line-through text-slate-400 font-medium">{item.basic}</span>
-                  <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                    → {item.advanced}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -604,54 +309,6 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                 {label}
               </span>
             ))}
-          </motion.div>
-
-          <motion.div {...fadeInUp} className="mx-auto w-full max-w-2xl mb-8">
-            <div className="rounded-[1.75rem] border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 backdrop-blur-md shadow-xl shadow-black/5 dark:shadow-black/25 px-4 py-4 sm:px-5 sm:py-5">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 dark:bg-indigo-400/10 ring-1 ring-indigo-500/15 dark:ring-indigo-300/15">
-                    <Share2 className="h-5 w-5 text-indigo-700/90 dark:text-indigo-300" />
-                  </span>
-                  <div className="text-center sm:text-left">
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-900/80 dark:text-white/80">
-                      Share STRATUM.ai
-                    </p>
-                    <p className="mt-1 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                      Send the landing link to a friend or your study group.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <AnimatePresence>
-                {shareInfoOpen && status !== 'authenticated' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.18 }}
-                    className="mt-3"
-                  >
-                    <div className="rounded-2xl border border-indigo-200/60 dark:border-indigo-700/30 bg-indigo-50/70 dark:bg-indigo-950/30 px-4 py-3 backdrop-blur-md shadow-sm shadow-black/5 dark:shadow-black/25">
-                      <div className="flex items-start gap-2.5">
-                        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/70 dark:bg-white/5 ring-1 ring-indigo-500/15 dark:ring-white/10">
-                          <Share2 className="h-4 w-4 text-indigo-700 dark:text-indigo-300" />
-                        </span>
-                        <div className="text-left">
-                          <p className="text-[11px] sm:text-xs font-black uppercase tracking-[0.18em] text-indigo-900/80 dark:text-indigo-200/90">
-                            Sign in required
-                          </p>
-                          <p className="mt-1 text-xs sm:text-sm font-medium text-indigo-900/90 dark:text-indigo-200 leading-relaxed">
-                            Sharing is available after you create an account and sign in.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-5 sm:gap-6">
@@ -727,304 +384,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
         </div>
       </section>
 
-      {/* GT Letter — General Training Task 1 */}
-      <section aria-labelledby="section-gt-letter" className="py-12 sm:py-16 bg-gradient-to-b from-teal-50/80 to-[#F9FAFB] dark:from-teal-950/20 dark:to-[#050505] border-b border-white/5">
-        <div className="max-w-5xl mx-auto px-4">
-          <motion.div {...fadeInUp} className="text-center mb-8">
-            <span className="tagline-pill mb-2 block w-fit mx-auto text-teal-700 dark:text-teal-300 font-medium tracking-wide">
-              General Training
-            </span>
-            <h2 id="section-gt-letter" className="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 dark:text-white">
-              GT Task 1 · Formal Letters
-            </h2>
-            <p className="mt-3 text-slate-600 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
-              Not every Task 1 is a chart. Switch to <strong className="font-semibold text-slate-800 dark:text-slate-200">GT Letter</strong> for complaints, requests, and apologies — with examiner feedback on bullets, tone, and salutation.
-            </p>
-          </motion.div>
-          <motion.div
-            {...fadeInUp}
-            className="rounded-3xl border border-teal-200/60 dark:border-teal-800/40 bg-white/90 dark:bg-slate-900/60 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-teal-900/5"
-          >
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-teal-600 dark:text-teal-300" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">Letter Strategy</p>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Per-bullet coverage</p>
-                  </div>
-                </div>
-                <ul className="space-y-2.5">
-                  {LETTER_TIPS.map((tip) => (
-                    <li key={tip.id} className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
-                      <CheckCircle className="w-4 h-4 text-teal-500 shrink-0" strokeWidth={1.5} />
-                      {tip.label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-2xl border border-dashed border-teal-300/50 dark:border-teal-700/50 bg-teal-50/50 dark:bg-teal-950/20 p-4 font-mono text-[11px] sm:text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                <p className="text-teal-800 dark:text-teal-200 font-semibold mb-2 not-italic">Sample task</p>
-                <p className="mb-2">You recently stayed at a hotel where the service was unsatisfactory.</p>
-                <p className="mb-1">• explain what went wrong</p>
-                <p className="mb-1">• say how it affected your stay</p>
-                <p className="mb-2">• request compensation</p>
-                <p className="text-slate-500 dark:text-slate-500 italic">Dear Sir or Madam, …</p>
-              </div>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-3 justify-center">
-              <button
-                type="button"
-                onClick={onFullAnalysisClick}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-black uppercase tracking-[0.15em] transition-colors shadow-lg shadow-teal-600/25"
-              >
-                Try GT Letter
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Task 2 Comparison Lab — Static Premium Demo (Cathalon.ai style) */}
+      {/* Task 2 Comparison Lab — before/after rewrite demo */}
       <section className="py-8 sm:py-10 bg-white/50 dark:bg-white/5 border-b border-white/5">
         <Task2ComparisonLab darkMode={darkMode} />
-      </section>
-
-      {/* Intelligence Ecosystem — The Stratum Cycle */}
-      <section aria-labelledby="section-stratum-cycle" className="py-14 sm:py-20 bg-[#F9FAFB] dark:bg-[#050505] border-b border-white/5">
-        <div className="max-w-6xl mx-auto px-4">
-          <motion.div {...fadeInUp} className="text-center mb-10 sm:mb-12">
-            <span className="tagline-pill mb-2 block w-fit mx-auto text-slate-500 dark:text-slate-400 font-medium tracking-wide">
-              Intelligence Ecosystem
-            </span>
-            <h2 id="section-stratum-cycle" className="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 dark:text-white">
-              BEYOND EVALUATION. COMPLETE MASTERY.
-            </h2>
-            <p className="mt-3 text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
-              The Stratum Cycle connects prompt generation, examiner-grade evaluation, and audio shadowing into one continuous improvement loop — with writing-profile analytics and optional email reminders so progress does not fade between sessions.
-            </p>
-          </motion.div>
-
-          <motion.div {...cycleContainer} className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
-            {[
-              {
-                step: '01',
-                title: 'Neural Generation',
-                Icon: Sparkles,
-                text: 'Generate Academic charts, GT letter tasks with bullets, and Task 2 essay prompts.',
-              },
-              {
-                step: '02',
-                title: 'Deep Analysis',
-                Icon: ShieldCheck,
-                text: 'Receive instant Band Score evaluation with precise grammar and lexical strata mapping.',
-              },
-              {
-                step: '03',
-                title: 'Auditory Mastery',
-                Icon: Headphones,
-                text: 'Download AI-generated MP3 models to master the rhythm and pronunciation of Band 9.0 responses.',
-              },
-            ].map(({ step, title, Icon, text }) => (
-              <motion.div
-                key={step}
-                {...cycleItem}
-                className="relative overflow-hidden rounded-[2rem] border border-white/10 dark:border-white/5 bg-white/80 dark:bg-white/5 backdrop-blur-md shadow-2xl shadow-black/5 dark:shadow-black/20 p-6 sm:p-7"
-              >
-                <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-indigo-500/10 blur-[50px] pointer-events-none" aria-hidden />
-                <div className="flex items-start justify-between gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center border border-indigo-200/40 dark:border-indigo-700/30">
-                    <Icon className="w-6 h-6 text-indigo-600 dark:text-indigo-300" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
-                    Step {step}
-                  </span>
-                </div>
-                <h3 className="mt-5 text-base font-semibold tracking-wide text-slate-900 dark:text-white">
-                  {title}
-                </h3>
-                <p className="mt-2 text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide leading-relaxed">
-                  {text}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          <motion.div
-            {...fadeInUp}
-            className="mt-10 sm:mt-12 flex flex-col items-stretch sm:items-center gap-3 sm:gap-4 w-full"
-          >
-            <button
-              type="button"
-              onClick={() => setIsSampleOpen(true)}
-              className="group w-full sm:w-auto sm:max-w-none max-w-md mx-auto inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 rounded-2xl bg-slate-900 text-white px-5 sm:px-6 py-3 sm:py-3.5 text-[11px] sm:text-xs font-black uppercase tracking-[0.18em] sm:tracking-[0.2em] text-center transition-all hover:bg-slate-800 hover:shadow-[0_0_25px_rgba(79,70,229,0.22)] active:scale-[0.98]"
-            >
-              <span className="inline-flex items-center justify-center w-10 h-10 sm:w-9 sm:h-9 rounded-xl bg-white/10 border border-white/10 group-hover:border-indigo-300/40 transition-colors">
-                <Download className="w-4 h-4 sm:w-4 sm:h-4 text-indigo-300" />
-              </span>
-              Download Sample Strata
-              <ArrowRight className="w-4 h-4 sm:w-4 sm:h-4 opacity-70 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-            <p className="px-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide text-center max-w-xl">
-              Preview the STRATUM report format + audio model interface before you generate your first check.
-            </p>
-          </motion.div>
-        </div>
-
-        <AnimatePresence>
-          {isSampleOpen && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-start sm:items-center justify-center px-4 py-6 sm:py-8 bg-black/40 backdrop-blur-sm overflow-y-auto"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsSampleOpen(false)}
-              role="dialog"
-              aria-modal="true"
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 18, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 18, scale: 0.98 }}
-                transition={{ ease: appleEase, duration: 0.35 }}
-                className="w-full max-w-3xl max-h-[calc(100vh-3rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/70 backdrop-blur-xl shadow-2xl shadow-black/40"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-slate-950/85 backdrop-blur-xl">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">
-                      Sample STRATA Preview
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsSampleOpen(false)}
-                    className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 transition-colors"
-                    aria-label="Close sample preview"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="overflow-y-auto overscroll-contain">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-                    {/* Mock PDF */}
-                    <div className="p-6 border-b md:border-b-0 md:border-r border-white/10">
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Mock PDF</p>
-                        <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-white/70">
-                          STRATUM_REPORT.pdf
-                        </span>
-                      </div>
-                      <div className="aspect-[4/5] rounded-2xl bg-white/5 border border-white/10 overflow-hidden relative">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(99,102,241,0.25)_0%,transparent_55%)]" aria-hidden />
-                        <div className="p-5 space-y-3">
-                          <div className="h-3 w-2/3 rounded bg-white/10" />
-                          <div className="h-2 w-full rounded bg-white/10" />
-                          <div className="h-2 w-11/12 rounded bg-white/10" />
-                          <div className="h-2 w-10/12 rounded bg-white/10" />
-                          <div className="mt-4 h-24 rounded-xl bg-white/5 border border-white/10" />
-                          <div className="h-2 w-9/12 rounded bg-white/10" />
-                          <div className="h-2 w-full rounded bg-white/10" />
-                        </div>
-                        <div className="absolute bottom-4 right-4 px-2 py-1 rounded-lg bg-slate-900/60 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/70">
-                          Page 1/3
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mock MP3 */}
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Mock MP3</p>
-                        <span className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-bold text-white/70">
-                          STRATUM_MODEL.mp3
-                        </span>
-                      </div>
-                      <div className="rounded-2xl bg-white/5 border border-white/10 p-5">
-                          <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-11 h-11 shrink-0 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center">
-                            <Headphones className="w-5 h-5 text-indigo-300" strokeWidth={1.5} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-white/90">Band 9.0 Model Voice</p>
-                            <p className="text-[11px] text-white/60">Shadowing-ready pacing &amp; intonation</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (sampleStrataFilled >= 34) setSampleStrataFilled(12);
-                              setSampleMockPlaying((p) => !p);
-                            }}
-                            className="inline-flex shrink-0 items-center justify-center w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-400/20 text-white hover:bg-indigo-500/25 transition-colors"
-                            aria-label={sampleMockPlaying ? 'Pause sample preview' : 'Play sample preview'}
-                          >
-                            {sampleMockPlaying ? (
-                              <Pause className="w-5 h-5" strokeWidth={1.75} />
-                            ) : (
-                              <Play className="w-5 h-5 ml-0.5" strokeWidth={1.5} fill="currentColor" />
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="mt-5 rounded-2xl bg-slate-900/40 border border-white/10 p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">
-                              Audio strata bar
-                            </span>
-                            <span className="text-[10px] font-bold text-white/60 tabular-nums">
-                              {`00:${String(Math.min(45, Math.round((sampleStrataFilled / 34) * 45))).padStart(2, '0')} / 00:45`}
-                            </span>
-                          </div>
-                          <div className="flex items-end gap-[2px] h-8 rounded-2xl bg-white/5 border border-white/10 px-2 overflow-hidden">
-                            {Array.from({ length: 34 }, (_, i) => {
-                              const v = Math.abs(Math.sin(i * 0.92 + 0.7));
-                              const h = 0.28 + v * 0.72;
-                              const filled = i < sampleStrataFilled;
-                              return (
-                                <span
-                                  key={i}
-                                  className={filled ? 'bg-indigo-400/90' : 'bg-white/20'}
-                                  style={{
-                                    width: 3,
-                                    height: `${Math.round(h * 100)}%`,
-                                    borderRadius: 999,
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                          <button
-                            type="button"
-                            className="btn-stratum w-full py-3 rounded-2xl flex items-center justify-center gap-2"
-                            onClick={onFullAnalysisClick}
-                          >
-                            <div className="shimmer-layer animate-shimmer" aria-hidden />
-                            <span className="btn-stratum-text">GET STARTED · STRATUM</span>
-                          </button>
-                          <button
-                            type="button"
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/80 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white/10 transition-colors"
-                            onClick={() => setIsSampleOpen(false)}
-                          >
-                            Close
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </section>
 
       {/* STRATUM METHODOLOGY — Expert IELTS Guidelines */}

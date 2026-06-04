@@ -64,7 +64,7 @@ export async function proxy(request) {
     return withStaleSessionCookieClear(nextWithAuthHeaders(request, token), staleSession);
   }
 
-  if (pathname.startsWith('/api/assistant') || pathname.startsWith('/api/tts')) {
+  if (pathname.startsWith('/api/tts')) {
     if (request.method !== 'POST') {
       return withStaleSessionCookieClear(NextResponse.next(), staleSession);
     }

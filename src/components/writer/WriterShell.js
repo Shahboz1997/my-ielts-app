@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 import AuthModal from '@/components/AuthModal';
 import LandingPageLazy from '@/components/lazy/LandingPageLazy';
 import GlowFollow from '@/components/GlowFollow';
-import ChatAssistantLazy from '@/components/lazy/ChatAssistantLazy';
 import { BankProvider } from '@/context/BankContext';
 import WritingBankLazy from '@/components/lazy/WritingBankLazy';
 import TaskEditorToolbar from '@/components/writer/TaskEditorToolbar';
@@ -159,6 +158,7 @@ export default function WriterShell() {
             isLoggedIn={sessionStatus === 'authenticated'}
           />
           <WriterFooter
+            minimal
             darkMode={darkMode}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
@@ -430,9 +430,6 @@ export default function WriterShell() {
           onScrollToTop={handleScrollToTop}
         />
 
-        {(activeTab === 'Task 1' || activeTab === 'Task 2') && (
-          <ChatAssistantLazy onSignIn={openLogin} />
-        )}
       </div>
     </div>
   );

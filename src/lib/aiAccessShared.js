@@ -10,7 +10,6 @@ export const RATE_LIMIT_EXCEEDED_CODE = 'RATE_LIMIT_EXCEEDED';
 /** Per-minute burst limits (fixed window, stored in Postgres). */
 export const AI_RATE_LIMITS = {
   check: { limit: 5, windowMs: 60_000 },
-  assistant: { limit: 15, windowMs: 60_000 },
   tts: { limit: 10, windowMs: 60_000 },
   checkGuestIp: { limit: 10, windowMs: 60_000 },
 };

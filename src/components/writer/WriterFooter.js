@@ -9,6 +9,7 @@ import WriterSupportModal from '@/components/writer/footer/WriterSupportModal';
 import WriterScrollTopButton from '@/components/writer/footer/WriterScrollTopButton';
 
 export default function WriterFooter({
+  minimal = false,
   darkMode,
   activeTab,
   setActiveTab,
@@ -28,30 +29,48 @@ export default function WriterFooter({
 }) {
   return (
     <footer className="border-t border-white/5 bg-[#F9FAFB] dark:bg-[#050505] transition-colors">
-      <div className="mx-auto w-full max-w-7xl xl:max-w-screen-2xl px-3 sm:px-6 lg:px-8 xl:px-10 py-12 lg:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          <WriterFooterBrand />
-          <WriterFooterResources activeTab={activeTab} setActiveTab={setActiveTab} onLoginClick={onLoginClick} />
+      <div
+        className={
+          minimal
+            ? 'mx-auto max-w-5xl px-4 py-8 sm:py-10 text-center'
+            : 'mx-auto w-full max-w-7xl xl:max-w-screen-2xl px-3 sm:px-6 lg:px-8 xl:px-10 py-12 lg:py-16'
+        }
+      >
+        {!minimal && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+            <WriterFooterBrand />
+            <WriterFooterResources activeTab={activeTab} setActiveTab={setActiveTab} onLoginClick={onLoginClick} />
 
-          <div id="stratum-feedback-section" className="relative scroll-mt-24 space-y-4">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-4">Feedback</h4>
-            <WriterFeedbackForm darkMode={darkMode} onSubmit={onSubmitFeedback} />
+            <div id="stratum-feedback-section" className="relative scroll-mt-24 space-y-4">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight mb-4">Feedback</h4>
+              <WriterFeedbackForm darkMode={darkMode} onSubmit={onSubmitFeedback} />
+            </div>
+
+            <WriterFooterLegal />
           </div>
+        )}
 
-          <WriterFooterLegal />
-        </div>
-
-        <div className="mt-12 pt-8 border-t border-white/5 text-center space-y-2">
-          <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">{COPYRIGHT_LINE}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            <button
-              type="button"
-              onClick={() => setShowSupportModal(true)}
-              className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-            >
-              Contact support
-            </button>
+        <div className={minimal ? '' : 'mt-12 pt-8 border-t border-white/5 text-center space-y-2'}>
+          <p
+            className={
+              minimal
+                ? 'text-xs sm:text-sm font-medium tracking-tight text-slate-600 dark:text-slate-400'
+                : 'text-sm font-semibold tracking-tight text-slate-900 dark:text-white'
+            }
+          >
+            {COPYRIGHT_LINE}
           </p>
+          {!minimal && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              <button
+                type="button"
+                onClick={() => setShowSupportModal(true)}
+                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                Contact support
+              </button>
+            </p>
+          )}
         </div>
       </div>
 
