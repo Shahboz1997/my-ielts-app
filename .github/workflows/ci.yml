@@ -40,15 +40,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: [lint, build]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DIRECT_URL: ${{ secrets.DIRECT_URL }}
-      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-      NEXTAUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+      AUTH_SECRET: ci-e2e-secret-minimum-32-characters-long
+      NEXTAUTH_SECRET: ci-e2e-secret-minimum-32-characters-long
       NEXTAUTH_URL: http://127.0.0.1:3000
       E2E_MOCK_OPENAI: '1'
-      E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
-      E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      E2E_TEST_EMAIL: e2e@ci.example.com
+      E2E_TEST_PASSWORD: ci-e2e-password-12
       OPENAI_API_KEY: sk-e2e-ci-placeholder-not-used
       CI: true
     steps:
@@ -58,12 +72,6 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
-      - name: Require CI secrets for E2E
-        run: |
-          if [ -z "$DATABASE_URL" ] || [ -z "$AUTH_SECRET" ] || [ -z "$E2E_TEST_EMAIL" ] || [ -z "$E2E_TEST_PASSWORD" ]; then
-            echo "::error::Set GitHub secrets: DATABASE_URL, AUTH_SECRET, E2E_TEST_EMAIL, E2E_TEST_PASSWORD (optional DIRECT_URL)."
-            exit 1
-          fi
       - name: Apply database migrations
         run: npx prisma migrate deploy
       - name: Ensure E2E test user
