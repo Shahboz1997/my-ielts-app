@@ -1,5 +1,5 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { getPrisma } from "@/lib/prisma";
+import { getPrisma, withPrismaRetry } from "@/lib/prisma";
 
 /** Methods exposed by @auth/prisma-adapter (Auth.js v5). */
 const ADAPTER_METHODS = [
@@ -34,12 +34,14 @@ export function createLazyPrismaAdapter() {
   const lazy = {};
   for (const method of ADAPTER_METHODS) {
     lazy[method] = async (...args) => {
-      const adapter = PrismaAdapter(getPrisma());
-      const fn = adapter[method];
-      if (typeof fn !== "function") {
-        throw new TypeError(`PrismaAdapter.${method} is not a function`);
-      }
-      return fn.apply(adapter, args);
+      return withPrismaRetry(async () => {
+        const adapter = PrismaAdapter(getPrisma());
+        const fn = adapter[method];
+        if (typeof fn !== "function") {
+          throw new TypeError(`PrismaAdapter.${method} is not a function`);
+        }
+        return fn.apply(adapter, args);
+      }, { attempts: 4 });
     };
   }
   return lazy;

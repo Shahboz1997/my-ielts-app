@@ -8,7 +8,7 @@
 
 const token = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const appOrigin =
-  (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://startum-writing-ai.vercel.app')
+  (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://stratumielts.com')
     .replace(/\/$/, '');
 
 if (!token) {

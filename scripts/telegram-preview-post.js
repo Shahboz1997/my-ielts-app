@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const templates = JSON.parse(readFileSync(join(root, 'data/templates.json'), 'utf8'));
 const topics = JSON.parse(readFileSync(join(root, 'data/topics.json'), 'utf8'));
-const STRATUM = 'https://startum-writing-ai.vercel.app/';
+const STRATUM = 'https://stratumielts.com/';
 
 const MORNING_TOPICS = [
   'Task 1: overview without numbers',
@@ -46,5 +46,5 @@ console.log('Prompt: src/lib/telegramPostPrompts.js → EVENING_POST_PROMPT\n');
 
 console.log('With OPENAI_API_KEY, cron generates posts via src/lib/telegramGeneratePost.js');
 console.log(
-  'Test: curl -H "Authorization: Bearer $CRON_SECRET" "https://startum-writing-ai.vercel.app/api/cron/telegram-daily?slot=morning"'
+  'Test: curl -H "Authorization: Bearer $CRON_SECRET" "https://stratumielts.com/api/cron/telegram-daily?slot=morning"'
 );

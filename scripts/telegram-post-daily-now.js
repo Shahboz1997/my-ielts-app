@@ -12,7 +12,7 @@ const token = process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.TELEGRAM_CHANNEL_ID;
 const templates = JSON.parse(readFileSync(join(root, 'data/templates.json'), 'utf8'));
 const topics = JSON.parse(readFileSync(join(root, 'data/topics.json'), 'utf8'));
-const SITE = 'https://startum-writing-ai.vercel.app/';
+const SITE = 'https://stratumielts.com/';
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -46,7 +46,7 @@ function buildMorning(date) {
     ...(t.structure || []).slice(0, 3).map((s) => `• ${esc(s)}`),
     '',
     '✍️ Check your essay with AI:',
-    `<a href="${link('morning')}">startum-writing-ai.vercel.app</a>`,
+    `<a href="${link('morning')}">stratumielts.com</a>`,
     '',
     '#IELTS #Writing',
   ].join('\n');
@@ -69,7 +69,7 @@ function buildEvening(date) {
     t?.phrases?.introduction ? `\n<code>${esc(t.phrases.introduction)}</code>` : '',
     '',
     '🤖 Check TA, CC, LR, GRA:',
-    `<a href="${link('evening')}">startum-writing-ai.vercel.app</a>`,
+    `<a href="${link('evening')}">stratumielts.com</a>`,
     '',
     '#IELTS #Practice',
   ].join('\n');
@@ -94,7 +94,7 @@ const welcome = [
   '☀️ ~08:00 — IELTS Writing tip',
   '🌙 ~19:00 — practice topic + quiz',
   '',
-  `<a href="${link('welcome')}">startum-writing-ai.vercel.app</a>`,
+  `<a href="${link('welcome')}">stratumielts.com</a>`,
 ].join('\n');
 
 const ids = [];

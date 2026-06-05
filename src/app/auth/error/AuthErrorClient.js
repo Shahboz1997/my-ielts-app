@@ -3,15 +3,18 @@
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PRODUCTION_SITE_ORIGIN } from "@/lib/publicSiteUrl";
+
+const GOOGLE_CALLBACK_URI = `${PRODUCTION_SITE_ORIGIN}/api/auth/callback/google`;
 
 function humanizeAuthError(code) {
   const c = String(code || "").trim();
   if (!c) return "Unknown auth error";
   if (c === "Configuration") {
-    return "Auth configuration error. This usually means missing/incorrect environment variables (AUTH_URL/NEXTAUTH_URL, AUTH_SECRET/NEXTAUTH_SECRET, Google credentials) or a host/redirect mismatch.";
+    return "Auth configuration error. Check AUTH_URL/NEXTAUTH_URL, Google OAuth credentials, and that the redirect URI below is registered in Google Cloud Console.";
   }
   if (c === "OAuthSignin" || c === "OAuthCallback") {
-    return "Google sign-in failed. Try again in a moment. If it keeps failing, check your internet connection, VPN/firewall, and that Google is reachable from this network.";
+    return "Google sign-in failed. Try again in a moment. If it keeps failing, check your connection and VPN/firewall.";
   }
   if (c === "OAuthAccountNotLinked") {
     return "This email is already registered with a different sign-in method. Use the same method you used originally.";
@@ -33,7 +36,13 @@ export default function AuthErrorClient() {
 
   const message = useMemo(() => {
     if (error === "OAuthCallback" && reason === "google_timeout") {
-      return "Google sign-in timed out while contacting Google servers. This is usually a slow or blocked network connection — not a misconfigured AUTH_SECRET. Wait a few seconds and try Google again, or sign in with email and password.";
+      return "Google sign-in timed out while contacting Google servers. Wait a few seconds and try again, or sign in with email and password.";
+    }
+    if (error === "OAuthCallback" && reason === "db_timeout") {
+      return "Google sign-in timed out while saving your account to the database. Wait a few seconds and try again — the server may have been waking up.";
+    }
+    if (error === "OAuthCallback" && reason === "oauth_config") {
+      return `Google OAuth is misconfigured for this domain. In Vercel set NEXTAUTH_URL and NEXT_PUBLIC_APP_URL to ${PRODUCTION_SITE_ORIGIN}, then add this redirect URI in Google Cloud Console (Credentials → your OAuth client → Authorized redirect URIs).`;
     }
     return humanizeAuthError(error);
   }, [error, reason]);
@@ -58,6 +67,15 @@ export default function AuthErrorClient() {
           </div>
         ) : null}
 
+        <div className="mt-4 rounded-2xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/30 p-4">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Google redirect URI (required)
+          </div>
+          <div className="mt-1 break-all text-xs font-mono text-slate-800 dark:text-slate-100">
+            {GOOGLE_CALLBACK_URI}
+          </div>
+        </div>
+
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
           <Link
             href="/"
@@ -74,11 +92,12 @@ export default function AuthErrorClient() {
         </div>
 
         <div className="mt-6 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-          If this happens only after deploy, check Production env vars on your host and Google OAuth redirect URI:
-          <span className="font-semibold"> https://YOUR_DOMAIN/api/auth/callback/google</span>
+          Production env on Vercel:{" "}
+          <span className="font-semibold">NEXTAUTH_URL={PRODUCTION_SITE_ORIGIN}</span>,{" "}
+          <span className="font-semibold">NEXT_PUBLIC_APP_URL={PRODUCTION_SITE_ORIGIN}</span>, plus{" "}
+          <span className="font-semibold">AUTH_SECRET</span> and Google OAuth keys.
         </div>
       </div>
     </div>
   );
 }
-

@@ -7,6 +7,8 @@
  * Set AUTH_URL explicitly to the origin you open in the browser (localhost or IP), and add that redirect URI in Google Cloud.
  */
 
+import { PRODUCTION_SITE_ORIGIN } from "@/lib/publicSiteUrl";
+
 function stripTrailingSlashes(s) {
   return String(s ?? "").replace(/\/+$/, "");
 }
@@ -70,6 +72,28 @@ function getVercelSuggestedOrigin() {
   return deploymentOrigin;
 }
 
+function hostFromOrigin(origin) {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return "";
+  }
+}
+
+function isVercelDeploymentHost(host) {
+  return /\.vercel\.app$/i.test(String(host || ""));
+}
+
+/** Prefer custom production domain over *.vercel.app when env is stale after a domain change. */
+function resolveProductionAuthOrigin() {
+  return (
+    parseOriginOnly(process.env.NEXT_PUBLIC_APP_URL) ||
+    parseOriginOnly(process.env.AUTH_URL) ||
+    parseOriginOnly(process.env.NEXTAUTH_URL) ||
+    PRODUCTION_SITE_ORIGIN
+  );
+}
+
 export function ensureAuthPublicUrl() {
   if (typeof process === "undefined") return;
 
@@ -108,8 +132,15 @@ export function ensureAuthPublicUrl() {
 
   if (!effectiveRaw) {
     if (vercelSuggested) {
-      process.env.AUTH_URL = vercelSuggested;
-      process.env.NEXTAUTH_URL = vercelSuggested;
+      const origin =
+        process.env.VERCEL_ENV === "production"
+          ? resolveProductionAuthOrigin()
+          : vercelSuggested;
+      process.env.AUTH_URL = origin;
+      process.env.NEXTAUTH_URL = origin;
+    } else if (process.env.NODE_ENV === "production") {
+      process.env.AUTH_URL = PRODUCTION_SITE_ORIGIN;
+      process.env.NEXTAUTH_URL = PRODUCTION_SITE_ORIGIN;
     }
     return;
   }
@@ -141,6 +172,21 @@ export function ensureAuthPublicUrl() {
     if (/^https?:\/\//i.test(base)) {
       process.env.AUTH_URL = base;
       process.env.NEXTAUTH_URL = base;
+    }
+  }
+
+  // Production custom domain: override stale *.vercel.app AUTH_URL after migrating to stratumielts.com
+  if (process.env.VERCEL_ENV === "production") {
+    const preferred = resolveProductionAuthOrigin();
+    const current = parseOriginOnly(process.env.AUTH_URL || process.env.NEXTAUTH_URL || "");
+    const currentHost = hostFromOrigin(current);
+    const preferredHost = hostFromOrigin(preferred);
+    if (
+      preferredHost &&
+      (!currentHost || (isVercelDeploymentHost(currentHost) && !isVercelDeploymentHost(preferredHost)))
+    ) {
+      process.env.AUTH_URL = preferred;
+      process.env.NEXTAUTH_URL = preferred;
     }
   }
 }

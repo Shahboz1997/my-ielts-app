@@ -14,7 +14,7 @@ import { pickEveningQuiz } from '@/lib/telegramQuiz';
 import { daySlotIndex, pickByIndex } from '@/lib/telegramSchedule';
 
 /** Fixed public site — always used in group posts. */
-export const STRATUM_SITE = 'https://startum-writing-ai.vercel.app/';
+export const STRATUM_SITE = 'https://stratumielts.com/';
 
 export { daySlotIndex };
 

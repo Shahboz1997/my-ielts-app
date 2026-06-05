@@ -81,7 +81,7 @@ export default async function TelegramQuizPage({ searchParams }) {
         </a>
         {' · '}
         <a href={STRATUM_SITE} className="underline hover:text-indigo-600">
-          startum-writing-ai.vercel.app
+          stratumielts.com
         </a>
       </p>
     </main>

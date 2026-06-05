@@ -23,8 +23,8 @@ export const SUPPORT_PHONE = '(307) 295-0454';
 export const SUPPORT_PHONE_TEL = `tel:${SUPPORT_PHONE.replace(/\D/g, '')}`;
 export const CONTACT_SUPPORT_LABEL = 'Contact support';
 
-/** Public Telegram channel — daily IELTS Writing tips & quizzes */
-export const TELEGRAM_CHANNEL_URL = 'https://t.me/+yb4-_ZjVPUgwOWIy';
+/** Public site / community entry (footer & Telegram CTA) */
+export const TELEGRAM_CHANNEL_URL = 'https://stratumielts.com/';
 export const TELEGRAM_CHANNEL_LABEL = 'Join us on Telegram';
 
 export const REGISTERED_AGENT_NAME = 'Registered Agents Inc';

@@ -110,8 +110,8 @@ export const authOptions = {
           GoogleProvider({
             clientId: googleClientId,
             clientSecret: googleClientSecret,
-            // v5: must be "Linking" — "Merging" is ignored; otherwise OAuth + existing email → OAuthAccountNotLinked
             allowDangerousEmailAccountLinking: true,
+            httpOptions: { timeout: 20_000 },
             authorization: {
               params: {
                 scope: "openid email profile",
@@ -410,6 +410,15 @@ function isConnectTimeoutError(err) {
   );
 }
 
+function isDbTimeoutError(err) {
+  const chain = formatAuthErrorCause(err);
+  return (
+    /P1001|P1008|P1017|P2024|timeout exceeded when trying to connect|Can't reach database server|Connection terminated|warm-db timeout/i.test(
+      chain
+    )
+  );
+}
+
 /**
  * Auth.js often maps OAuth callback failures (network, adapter) to error=Configuration.
  * Rewrite to a clearer error page so users can retry instead of checking env vars.
@@ -431,7 +440,7 @@ function rewriteMisleadingAuthErrorRedirect(request, response) {
     const target = new URL("/auth/error", request.url);
     target.searchParams.set("error", "OAuthCallback");
     if (request.nextUrl.pathname.includes("/callback/google")) {
-      target.searchParams.set("reason", "google_timeout");
+      target.searchParams.set("reason", "oauth_config");
     }
     return NextResponse.redirect(target);
   } catch {
@@ -485,6 +494,9 @@ export async function GET(request) {
       );
       if (isConnectTimeoutError(err)) {
         return oauthCallbackErrorRedirect(request, "google_timeout");
+      }
+      if (isDbTimeoutError(err)) {
+        return oauthCallbackErrorRedirect(request, "db_timeout");
       }
       return oauthCallbackErrorRedirect(request, "oauth_callback");
     }
