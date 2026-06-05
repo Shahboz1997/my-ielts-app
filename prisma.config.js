@@ -24,7 +24,9 @@ function normalizePrismaCliUrl(raw) {
       u.searchParams.set("connect_timeout", "60");
     }
     if (!u.searchParams.has("sslmode")) {
-      u.searchParams.set("sslmode", "require");
+      const host = (u.hostname || "").toLowerCase();
+      const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
+      u.searchParams.set("sslmode", isLocal ? "disable" : "require");
     }
 
     return u.toString().replace(/^postgres:/i, "postgresql:");

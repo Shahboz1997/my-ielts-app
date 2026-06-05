@@ -55,8 +55,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?sslmode=disable
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci?sslmode=disable
       AUTH_SECRET: ci-e2e-secret-minimum-32-characters-long
       NEXTAUTH_SECRET: ci-e2e-secret-minimum-32-characters-long
       NEXTAUTH_URL: http://127.0.0.1:3000
