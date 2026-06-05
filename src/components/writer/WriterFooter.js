@@ -1,7 +1,8 @@
 'use client';
 
 import { AnimatePresence } from 'framer-motion';
-import { COPYRIGHT_LINE } from '@/lib/support';
+import { COPYRIGHT_LINE, TELEGRAM_CHANNEL_LABEL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
+import TelegramIcon from '@/components/icons/TelegramIcon';
 import WriterFeedbackForm from '@/components/writer/footer/WriterFeedbackForm';
 import { WriterFooterBrand, WriterFooterLegal, WriterFooterResources } from '@/components/writer/footer/WriterFooterNav';
 import WriterShareModal from '@/components/writer/footer/WriterShareModal';
@@ -50,7 +51,7 @@ export default function WriterFooter({
           </div>
         )}
 
-        <div className={minimal ? '' : 'mt-12 pt-8 border-t border-white/5 text-center space-y-2'}>
+        <div className={minimal ? 'space-y-2' : 'mt-12 pt-8 border-t border-white/5 text-center space-y-2'}>
           <p
             className={
               minimal
@@ -60,17 +61,29 @@ export default function WriterFooter({
           >
             {COPYRIGHT_LINE}
           </p>
-          {!minimal && (
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              <button
-                type="button"
-                onClick={() => setShowSupportModal(true)}
-                className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                Contact support
-              </button>
-            </p>
-          )}
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {!minimal && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowSupportModal(true)}
+                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                >
+                  Contact support
+                </button>
+                {' · '}
+              </>
+            )}
+            <a
+              href={TELEGRAM_CHANNEL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors inline-flex items-center gap-1.5"
+            >
+              <TelegramIcon className="h-4 w-4 shrink-0 text-[#229ED9]" />
+              {TELEGRAM_CHANNEL_LABEL}
+            </a>
+          </p>
         </div>
       </div>
 

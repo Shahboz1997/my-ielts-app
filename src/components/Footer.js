@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Layers } from 'lucide-react';
-import { BUSINESS_ADDRESS, COPYRIGHT_LINE, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
+import TelegramIcon from '@/components/icons/TelegramIcon';
+import { BUSINESS_ADDRESS, COPYRIGHT_LINE, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL, TELEGRAM_CHANNEL_LABEL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
 
 export default function Footer() {
   return (
@@ -70,6 +71,17 @@ export default function Footer() {
         <div className="mt-12 pt-8 border-t border-white/5 text-center space-y-2">
           <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
             {COPYRIGHT_LINE}
+          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            <a
+              href={TELEGRAM_CHANNEL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors inline-flex items-center justify-center gap-1.5"
+            >
+              <TelegramIcon className="h-4 w-4 shrink-0 text-[#229ED9]" />
+              {TELEGRAM_CHANNEL_LABEL}
+            </a>
           </p>
         </div>
       </div>

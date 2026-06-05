@@ -17,16 +17,16 @@ if (!token) {
 }
 
 const START_TEXT = [
-  '👋 <b>Добро пожаловать в STRATUM IELTS Writing!</b>',
+  '👋 <b>Welcome to STRATUM IELTS Writing!</b>',
   '',
-  'Бот присылает полезные материалы для подготовки к IELTS Writing.',
+  'This bot shares IELTS Writing tips, prompts, and study resources.',
   '',
-  '<b>Команды:</b>',
-  '/tip — совет по шаблону',
-  '/topic — случайная тема для эссе',
-  '/resource — полезная ссылка',
+  '<b>Commands:</b>',
+  '/tip — template advice',
+  '/topic — random essay prompt',
+  '/resource — useful link',
   '',
-  `✍️ <a href="${appOrigin}/?utm_source=telegram&utm_medium=bot&utm_campaign=start">Открыть STRATUM.ai</a>`,
+  `✍️ <a href="${appOrigin}/?utm_source=telegram&utm_medium=bot&utm_campaign=start">Open STRATUM.ai</a>`,
 ].join('\n');
 
 async function tgGet(method, params = {}) {

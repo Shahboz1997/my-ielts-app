@@ -31,6 +31,25 @@ function escapeHtml(text) {
 
 export { escapeHtml };
 
+/** Inline CTA button — clicks ~30–40% more than plain links. */
+export function buildCtaInlineKeyboard(url, label = '👉 Check your writing on the site') {
+  return {
+    inline_keyboard: [[{ text: label, url: String(url) }]],
+  };
+}
+
+/** Strip raw URLs and unsafe tags from AI output; keep b/i/code. */
+export function prepareTelegramHtml(text) {
+  let t = String(text ?? '').trim();
+  t = t.replace(/https?:\/\/\S+/gi, '').trim();
+  t = t.replace(/\n*(?:👉|🔗|✍️|→)\s*[^\n]*$/u, '').trim();
+  t = t.replace(/<(?!\/?(?:b|i|code|strong|em)\b)[^>]+>/gi, '');
+  t = t.replace(/<\/?(strong|em)>/gi, (m) =>
+    m.includes('strong') ? (m.startsWith('</') ? '</b>' : '<b>') : m.startsWith('</') ? '</i>' : '<i>'
+  );
+  return t;
+}
+
 async function callTelegramApi(method, body) {
   const token = getBotToken();
   if (!token) {
@@ -53,13 +72,16 @@ async function callTelegramApi(method, body) {
 
 /** @param {string} chatId */
 export async function sendTelegramMessage(chatId, text, options = {}) {
-  return callTelegramApi('sendMessage', {
+  const body = {
     chat_id: chatId,
     text,
-    parse_mode: 'HTML',
     disable_web_page_preview: false,
     ...options,
-  });
+  };
+  if (!('parse_mode' in options)) {
+    body.parse_mode = 'HTML';
+  }
+  return callTelegramApi('sendMessage', body);
 }
 
 export async function sendToChannel(text, options = {}) {
@@ -75,6 +97,34 @@ export async function sendToGroup(text, options = {}) {
     };
   }
   return sendTelegramMessage(chatId, text, options);
+}
+
+/**
+ * Native Telegram quiz poll (evening posts).
+ * @param {string} chatId
+ * @param {{ question: string, options: string[], correctOptionId: number, explanation?: string }} poll
+ */
+export async function sendTelegramQuizPoll(chatId, poll) {
+  const body = {
+    chat_id: chatId,
+    question: String(poll.question).slice(0, 300),
+    options: poll.options.map((o) => String(o).slice(0, 100)),
+    type: 'quiz',
+    correct_option_id: poll.correctOptionId,
+    is_anonymous: false,
+  };
+  if (poll.explanation) {
+    body.explanation = String(poll.explanation).slice(0, 200);
+  }
+  return callTelegramApi('sendPoll', body);
+}
+
+export async function sendQuizPollToGroup(poll) {
+  const chatId = getTelegramGroupId();
+  if (!chatId) {
+    return { ok: false, error: 'TELEGRAM_GROUP_ID (or TELEGRAM_CHANNEL_ID) is not configured' };
+  }
+  return sendTelegramQuizPoll(chatId, poll);
 }
 
 export async function getTelegramBotInfo() {

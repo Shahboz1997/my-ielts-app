@@ -1,90 +1,85 @@
 /**
- * Daily Telegram group posts — morning & evening IELTS Writing tips.
- * All CTA links point to STRATUM.ai only (no third-party URLs in group posts).
+ * Daily Telegram posts — morning tips & evening practice.
+ * CTA: inline keyboard. Evening: native Telegram quiz poll.
  */
 import templates from '../../data/templates.json';
 import topics from '../../data/topics.json';
-import { escapeHtml } from '@/lib/telegram';
+import {
+  buildCtaInlineKeyboard,
+  escapeHtml,
+  prepareTelegramHtml,
+} from '@/lib/telegram';
+import { generateTelegramPost } from '@/lib/telegramGeneratePost';
+import { pickEveningQuiz } from '@/lib/telegramQuiz';
+import { daySlotIndex, pickByIndex } from '@/lib/telegramSchedule';
 
 /** Fixed public site — always used in group posts. */
 export const STRATUM_SITE = 'https://startum-writing-ai.vercel.app/';
 
-const CRITERION_TIPS = [
-  {
-    ru: 'TA / TR: каждый абзац должен отвечать на вопрос задания. Не уходите от темы.',
-    en: 'TA: every paragraph must address the task prompt.',
-  },
-  {
-    ru: 'CC: используйте linking words между абзацами — However, Furthermore, In contrast.',
-    en: 'CC: use clear linking words between paragraphs.',
-  },
-  {
-    ru: 'LR: избегайте повторов — заменяйте important → significant → crucial.',
-    en: 'LR: avoid word repetition; use synonyms.',
-  },
-  {
-    ru: 'GRA: чередуйте простые и сложные предложения — не только short sentences.',
-    en: 'GRA: mix simple and complex sentence structures.',
-  },
-];
+export { daySlotIndex };
 
-const TASK1_CHECKS = [
-  'Task 1: overview обязателен — 1–2 предложения о главном тренде без цифр.',
-  'Task 1: не пишите своё мнение — только описание данных.',
-  'Task 1: сравнивайте группы — higher than, compared to, whereas.',
-  'Task 1 (graph): начните с The line graph illustrates…',
-  'Task 1 (table): выделите самую большую разницу в overview.',
-  'Task 1 (process): используйте passive voice — is collected, is filtered.',
-];
+const CTA_LABEL = '👉 Check your writing on the site';
+const CTA_EVENING_LABEL = '👉 See quiz breakdown on site';
 
-const TASK2_CHECKS = [
-  'Task 2: thesis в конце introduction — чёткая позиция.',
-  'Task 2: один main idea на абзац — не смешивайте аргументы.',
+const MORNING_TOPICS = [
+  'Task 1: overview without numbers — common mistake and fix',
+  'Task 1: comparing data — higher than, whereas, compared to',
+  'Task 1 (process): passive voice — is collected, is filtered',
+  'Task 1 (letter): register and bullet points — formal tone',
+  'Task 2: thesis at the end of the introduction — clear position',
+  'Task 2: one main idea per paragraph — do not mix arguments',
+  'Task 2 (discussion): On the one hand / On the other hand',
   'Task 2 (opinion): This essay strongly agrees/disagrees that…',
-  'Task 2 (discussion): On the one hand… / On the other hand…',
-  'Task 2: conclusion только перефразирует, без новых идей.',
-  'Task 2: минимум 250 слов — следите за объёмом.',
+  'Coherence (CC): linking words between paragraphs',
+  'Lexical Resource (LR): avoid repetition — use synonyms',
+  'Grammar (GRA): mix simple and complex sentences',
+  'Task Achievement (TA): every paragraph must address the prompt',
 ];
 
-function siteLink(campaign) {
+const MORNING_TRAPS = [
+  'Putting specific figures in the overview → TA penalty.',
+  'Starting body paragraphs without an overview → examiner notices immediately.',
+  'Giving personal opinion in Task 1 → it is data description only.',
+  'Thesis hidden in the body, not the intro → weak Task Response.',
+  'New ideas in the conclusion → typical −0.5 band.',
+  'Repeating the same word 5+ times → weak LR.',
+  'Only short sentences → GRA rarely above 6.',
+  'Linking words in every sentence → sounds unnatural.',
+  'Skipping the second part of a discussion prompt → incomplete TR.',
+  'Writing under 250 words in Task 2 → TA penalty.',
+];
+
+const EVENING_TRAPS = [
+  'Examiners expect the overview right after the intro — do not save it for the end.',
+  'In an opinion essay, state your position in the intro, not only in the body.',
+  'In discussion essays, cover both sides + your view — otherwise incomplete TR.',
+  'In process diagrams, describe "how", not "why".',
+  'In letters, each bullet from the prompt = its own paragraph.',
+  'Do not copy the prompt wording verbatim in the intro — paraphrase.',
+  'Compare data groups; do not list every figure in a row.',
+  'In problem-solution essays, solutions must be specific, not abstract.',
+];
+
+function siteLink(campaign, extra = {}) {
   const base = STRATUM_SITE.replace(/\/$/, '');
   const q = new URLSearchParams({
     utm_source: 'telegram',
     utm_medium: 'group',
     utm_campaign: campaign,
+    ...extra,
   });
   return `${base}/?${q}`;
 }
 
-/** Deterministic index — same slot/day always picks same item until next day. */
-function daySlotIndex(date, slot) {
-  const start = new Date(date.getFullYear(), 0, 0);
-  const dayOfYear = Math.floor((date - start) / 86400000);
-  const slotBit = slot === 'evening' ? 1 : 0;
-  return dayOfYear * 2 + slotBit;
-}
-
-function pickByIndex(list, index) {
-  if (!Array.isArray(list) || !list.length) return null;
-  return list[((index % list.length) + list.length) % list.length];
-}
-
-function templatePhrasesFlat() {
-  const out = [];
-  for (const t of templates) {
-    const phrases = t.phrases || {};
-    for (const [key, text] of Object.entries(phrases)) {
-      if (text && String(text).trim()) {
-        out.push({
-          templateTitle: t.title,
-          type: t.type,
-          key,
-          text: String(text).trim(),
-        });
-      }
-    }
-  }
-  return out;
+function quizBreakdownLink(campaign) {
+  const base = STRATUM_SITE.replace(/\/$/, '');
+  const q = new URLSearchParams({
+    id: campaign,
+    utm_source: 'telegram',
+    utm_medium: 'group',
+    utm_campaign: campaign,
+  });
+  return `${base}/telegram-quiz?${q}`;
 }
 
 function subtypeLabel(subtype) {
@@ -100,107 +95,148 @@ function subtypeLabel(subtype) {
   return map[subtype] || subtype || '';
 }
 
+/** @param {Date} date @param {'morning'|'evening'} slot */
+export function pickTopicForSlot(date, slot) {
+  const idx = daySlotIndex(date, slot);
+  if (slot === 'evening') {
+    const topic = pickByIndex(topics, idx);
+    if (!topic) return 'IELTS Writing — Task 1 or Task 2 practice';
+    const task = topic.type === 'task1' ? 'Task 1' : 'Task 2';
+    const sub = topic.subtype ? ` (${subtypeLabel(topic.subtype)})` : '';
+    return `${task}${sub}: ${topic.title}`;
+  }
+  return pickByIndex(MORNING_TOPICS, idx) || 'IELTS Writing — tip of the day';
+}
+
+function buildMorningPostStatic(date, campaign, ctaUrl) {
+  const idx = daySlotIndex(date, 'morning');
+  const topicLabel = pickByIndex(MORNING_TOPICS, idx);
+  const trap = pickByIndex(MORNING_TRAPS, idx);
+  const template = pickByIndex(templates, idx);
+
+  const lines = [
+    `📊 <b>${escapeHtml(topicLabel)}</b>`,
+    '',
+    `❌ <b>Mistake:</b> ${escapeHtml(trap)}`,
+    '',
+    '✅ <b>Rule of the day:</b>',
+  ];
+
+  if (template?.structure?.length) {
+    for (const step of template.structure.slice(0, 3)) {
+      lines.push(`• ${escapeHtml(step)}`);
+    }
+  } else {
+    lines.push(
+      '• Overview/thesis in the intro — no extra detail',
+      '• One main idea per paragraph',
+      '• Check TA, CC, LR, GRA before submitting'
+    );
+  }
+
+  lines.push(
+    '',
+    '🔗 Full cheat sheets and our <b>AI writing checker</b> — on the site (button below).'
+  );
+
+  return {
+    text: lines.join('\n'),
+    parseMode: 'HTML',
+    replyMarkup: buildCtaInlineKeyboard(ctaUrl, CTA_LABEL),
+    campaign,
+    source: 'static',
+  };
+}
+
+function buildEveningPostStatic(date, campaign, ctaUrl) {
+  const idx = daySlotIndex(date, 'evening');
+  const topic = pickByIndex(topics, idx);
+  const trap = pickByIndex(EVENING_TRAPS, idx);
+  const quiz = pickEveningQuiz(date);
+  const taskLabel = topic?.type === 'task1' ? 'Task 1' : 'Task 2';
+  const words = topic?.type === 'task1' ? '150+ words, 20 min' : '250+ words, 40 min';
+
+  const lines = [
+    '🌙 <b>Evening warm-up</b>',
+    '',
+    `✍️ <b>${escapeHtml(taskLabel)}</b>${topic?.subtype ? ` · ${escapeHtml(subtypeLabel(topic.subtype))}` : ''}`,
+    '',
+    `<i>${escapeHtml(topic?.title || 'Pick a topic in the Bank and write an essay today.')}</i>`,
+    '',
+    `⏱ ${words}`,
+    '',
+    `⚠️ <b>Trap:</b> ${escapeHtml(trap)}`,
+    '',
+    '📊 <b>Vote in the poll below</b> — then open the breakdown on our site.',
+  ];
+
+  return {
+    text: lines.join('\n'),
+    parseMode: 'HTML',
+    replyMarkup: buildCtaInlineKeyboard(ctaUrl, CTA_EVENING_LABEL),
+    poll: quiz
+      ? {
+          question: quiz.question,
+          options: quiz.options,
+          correctOptionId: quiz.correctOptionId,
+          explanation: quiz.explanation,
+        }
+      : undefined,
+    campaign,
+    source: 'static',
+  };
+}
+
+function buildStaticPost(slot, date) {
+  const campaign = `${slot}_${date.toISOString().slice(0, 10)}`;
+  const ctaUrl =
+    slot === 'evening' ? quizBreakdownLink(campaign) : siteLink(campaign);
+  return slot === 'evening'
+    ? buildEveningPostStatic(date, campaign, ctaUrl)
+    : buildMorningPostStatic(date, campaign, ctaUrl);
+}
+
 /**
  * @param {'morning'|'evening'} slot
  * @param {Date} [date]
  */
 export function buildDailyPost(slot, date = new Date()) {
-  return slot === 'evening' ? buildEveningPost(date) : buildMorningPost(date);
+  return buildStaticPost(slot, date).text;
 }
 
-function buildMorningPost(date) {
-  const idx = daySlotIndex(date, 'morning');
-  const dateLabel = date.toLocaleDateString('ru-RU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+/**
+ * @param {'morning'|'evening'} slot
+ * @param {Date} [date]
+ */
+export async function buildDailyPostAsync(slot, date = new Date()) {
+  const campaign = `${slot}_${date.toISOString().slice(0, 10)}`;
+  const ctaUrl =
+    slot === 'evening' ? quizBreakdownLink(campaign) : siteLink(campaign);
+  const topic = pickTopicForSlot(date, slot);
+  const ctaLabel = slot === 'evening' ? CTA_EVENING_LABEL : CTA_LABEL;
 
-  const pools = [
-    ...CRITERION_TIPS.map((t) => ({ kind: 'criterion', text: t.ru })),
-    ...TASK1_CHECKS.map((text) => ({ kind: 'task1', text })),
-    ...TASK2_CHECKS.map((text) => ({ kind: 'task2', text })),
-    ...templatePhrasesFlat().map((p) => ({
-      kind: 'phrase',
-      text: `${p.templateTitle}: «${p.text}»`,
-    })),
-  ];
-
-  const tip = pickByIndex(pools, idx);
-  const template = pickByIndex(templates, idx);
-  const link = siteLink(`morning_${date.toISOString().slice(0, 10)}`);
-
-  const lines = [
-    `☀️ <b>STRATUM.ai — утренний tip</b>`,
-    `<i>${escapeHtml(dateLabel)}</i>`,
-    '',
-    `💡 ${escapeHtml(tip?.text || 'Начните день с 15 минут письма — это лучше, чем час без практики.')}`,
-  ];
-
-  if (template?.structure?.length) {
-    lines.push('', `📝 <b>Структура дня:</b> ${escapeHtml(template.title)}`);
-    for (const step of template.structure.slice(0, 3)) {
-      lines.push(`• ${escapeHtml(step)}`);
+  const generated = await generateTelegramPost(slot, { topic, siteLink: ctaUrl });
+  if (generated?.text) {
+    const post = {
+      text: prepareTelegramHtml(generated.text),
+      parseMode: 'HTML',
+      replyMarkup: buildCtaInlineKeyboard(ctaUrl, ctaLabel),
+      campaign,
+      source: 'ai',
+    };
+    if (slot === 'evening') {
+      const quiz = pickEveningQuiz(date);
+      if (quiz) {
+        post.poll = {
+          question: quiz.question,
+          options: quiz.options,
+          correctOptionId: quiz.correctOptionId,
+          explanation: quiz.explanation,
+        };
+      }
     }
+    return post;
   }
 
-  lines.push(
-    '',
-    '✍️ Проверьте своё эссе с AI-экзаменатором:',
-    `<a href="${escapeHtml(link)}">startum-writing-ai.vercel.app</a>`,
-    '',
-    '#IELTS #Writing #Task1 #Task2'
-  );
-
-  return lines.join('\n');
-}
-
-function buildEveningPost(date) {
-  const idx = daySlotIndex(date, 'evening');
-  const dateLabel = date.toLocaleDateString('ru-RU', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-
-  const topic = pickByIndex(topics, idx);
-  const template = pickByIndex(
-    templates.filter((t) => !topic || t.type === topic.type),
-    idx
-  ) || pickByIndex(templates, idx);
-
-  const link = siteLink(`evening_${date.toISOString().slice(0, 10)}`);
-  const taskLabel = topic?.type === 'task1' ? 'Task 1' : 'Task 2';
-  const words = topic?.type === 'task1' ? '150+ слов' : '250+ слов';
-
-  const lines = [
-    `🌙 <b>STRATUM.ai — вечерняя практика</b>`,
-    `<i>${escapeHtml(dateLabel)}</i>`,
-    '',
-    `✍️ <b>${escapeHtml(taskLabel)}</b>${topic?.subtype ? ` · ${escapeHtml(subtypeLabel(topic.subtype))}` : ''}`,
-    '',
-    escapeHtml(topic?.title || 'Выберите тему в Bank и напишите эссе сегодня.'),
-    '',
-    `⏱ Задание: ${words}, ${topic?.type === 'task1' ? '20' : '40'} минут`,
-  ];
-
-  if (template) {
-    lines.push('', `📋 <b>Шаблон:</b> ${escapeHtml(template.title)}`);
-    if (template.phrases?.introduction) {
-      lines.push(`<code>${escapeHtml(template.phrases.introduction)}</code>`);
-    }
-    if (template.example) {
-      lines.push('', `<i>Пример:</i> ${escapeHtml(template.example.slice(0, 200))}…`);
-    }
-  }
-
-  lines.push(
-    '',
-    '🤖 Отправьте текст на проверку — band-оценка по TA, CC, LR, GRA:',
-    `<a href="${escapeHtml(link)}">startum-writing-ai.vercel.app</a>`,
-    '',
-    '#IELTS #Writing #Practice'
-  );
-
-  return lines.join('\n');
+  return buildStaticPost(slot, date);
 }

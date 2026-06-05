@@ -3,8 +3,12 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { verifyCronRequest } from '@/lib/cronAuth';
-import { isTelegramConfigured, sendToGroup } from '@/lib/telegram';
-import { buildDailyPost } from '@/lib/telegramDailyContent';
+import {
+  isTelegramConfigured,
+  sendQuizPollToGroup,
+  sendToGroup,
+} from '@/lib/telegram';
+import { buildDailyPostAsync } from '@/lib/telegramDailyContent';
 
 /**
  * Daily Telegram group posts — morning & evening.
@@ -12,9 +16,7 @@ import { buildDailyPost } from '@/lib/telegramDailyContent';
  *
  * Query: ?slot=morning|evening  (required)
  *
- * Vercel crons (UTC, ~ Moscow +3):
- *   morning  0 5 * * *  → ~08:00 MSK
- *   evening  0 16 * * * → ~19:00 MSK
+ * Features: HTML formatting, inline CTA button, evening quiz poll.
  */
 export async function GET(request) {
   const auth = verifyCronRequest(request);
@@ -38,8 +40,21 @@ export async function GET(request) {
     );
   }
 
-  const text = buildDailyPost(slot, new Date());
-  const result = await sendToGroup(text);
+  const post = await buildDailyPostAsync(slot, new Date());
+
+  const sendOpts = {
+    parse_mode: post.parseMode || 'HTML',
+    reply_markup: post.replyMarkup,
+  };
+
+  let result = await sendToGroup(post.text, sendOpts);
+
+  if (!result.ok && post.parseMode) {
+    console.warn('[cron/telegram-daily] HTML send failed, retry plain', result.error);
+    result = await sendToGroup(post.text.replace(/<[^>]+>/g, ''), {
+      reply_markup: post.replyMarkup,
+    });
+  }
 
   if (!result.ok) {
     console.warn('[cron/telegram-daily]', slot, 'send failed', result.error);
@@ -49,11 +64,23 @@ export async function GET(request) {
     );
   }
 
+  let pollMessageId;
+  if (post.poll) {
+    const pollResult = await sendQuizPollToGroup(post.poll);
+    if (pollResult.ok) {
+      pollMessageId = pollResult.data?.result?.message_id;
+    } else {
+      console.warn('[cron/telegram-daily] poll send failed', pollResult.error);
+    }
+  }
+
   const summary = {
     ok: true,
     slot,
     sent: true,
+    source: post.source,
     messageId: result.data?.result?.message_id,
+    pollMessageId: pollMessageId ?? null,
   };
   console.log('[cron/telegram-daily]', summary);
   return NextResponse.json(summary);

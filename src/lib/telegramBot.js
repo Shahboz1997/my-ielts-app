@@ -38,12 +38,20 @@ export async function handleTelegramMessage(message) {
   let reply = cmd ? replyForCommand(cmd) : null;
 
   if (!reply && text.startsWith('/')) {
-    reply = 'Неизвестная команда. Доступны: /start /tip /topic /resource /help';
+    reply = { text: 'Unknown command. Available: /start /tip /topic /resource /help' };
   }
 
   if (!reply) return { handled: false };
 
-  const result = await sendTelegramMessage(chatId, reply);
+  const payload =
+    typeof reply === 'string'
+      ? { text: reply }
+      : { text: reply.text, replyMarkup: reply.replyMarkup };
+
+  const result = await sendTelegramMessage(chatId, payload.text, {
+    parse_mode: 'HTML',
+    ...(payload.replyMarkup ? { reply_markup: payload.replyMarkup } : {}),
+  });
   return { handled: true, ok: result.ok, cmd: cmd || text };
 }
 

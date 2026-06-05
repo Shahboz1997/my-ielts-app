@@ -1,18 +1,23 @@
 #!/usr/bin/env node
 /**
- * Preview morning/evening group posts in the terminal.
+ * Preview morning/evening group posts (static fallback format).
  *   node scripts/telegram-preview-post.js
  */
 
-import { createRequire } from 'module';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-const require = createRequire(import.meta.url);
-
-// Load compiled path via dynamic import won't work with @ alias — duplicate minimal preview
-const templates = require('../data/templates.json');
-const topics = require('../data/topics.json');
-
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const templates = JSON.parse(readFileSync(join(root, 'data/templates.json'), 'utf8'));
+const topics = JSON.parse(readFileSync(join(root, 'data/topics.json'), 'utf8'));
 const STRATUM = 'https://startum-writing-ai.vercel.app/';
+
+const MORNING_TOPICS = [
+  'Task 1: overview without numbers',
+  'Task 2: thesis in introduction',
+  'Coherence: linking words',
+];
 
 function pick(list, i) {
   return list[((i % list.length) + list.length) % list.length];
@@ -29,15 +34,17 @@ const mIdx = dayIdx(date, 'morning');
 const eIdx = dayIdx(date, 'evening');
 
 console.log('=== MORNING ===\n');
-console.log(`Tip index: ${mIdx}`);
+console.log(`AI topic: ${pick(MORNING_TOPICS, mIdx)}`);
 console.log(`Template: ${pick(templates, mIdx)?.title}`);
-console.log(`Link: ${STRATUM}?utm_source=telegram&utm_medium=group&utm_campaign=morning\n`);
+console.log(`Link: ${STRATUM}?utm_source=telegram&utm_medium=group&utm_campaign=morning`);
+console.log('Prompt: src/lib/telegramPostPrompts.js → DAILY_POST_PROMPT\n');
 
 console.log('=== EVENING ===\n');
-console.log(`Topic: ${pick(topics, eIdx)?.title}`);
-console.log(`Link: ${STRATUM}?utm_source=telegram&utm_medium=group&utm_campaign=evening\n`);
+console.log(`AI topic: ${pick(topics, eIdx)?.title}`);
+console.log(`Link: ${STRATUM}?utm_source=telegram&utm_medium=group&utm_campaign=evening`);
+console.log('Prompt: src/lib/telegramPostPrompts.js → EVENING_POST_PROMPT\n');
 
-console.log('Deploy then test send:');
+console.log('With OPENAI_API_KEY, cron generates posts via src/lib/telegramGeneratePost.js');
 console.log(
-  'curl -H "Authorization: Bearer $CRON_SECRET" "https://startum-writing-ai.vercel.app/api/cron/telegram-daily?slot=morning"'
+  'Test: curl -H "Authorization: Bearer $CRON_SECRET" "https://startum-writing-ai.vercel.app/api/cron/telegram-daily?slot=morning"'
 );

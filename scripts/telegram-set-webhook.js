@@ -61,11 +61,11 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       commands: [
-        { command: 'start', description: 'Приветствие и ссылка на STRATUM.ai' },
-        { command: 'tip', description: 'Совет по шаблону Task 1/2' },
-        { command: 'topic', description: 'Случайная тема для эссе' },
-        { command: 'resource', description: 'Полезная ссылка (British Council)' },
-        { command: 'help', description: 'Список команд' },
+        { command: 'start', description: 'Welcome & link to STRATUM.ai' },
+        { command: 'tip', description: 'Task 1/2 template tip' },
+        { command: 'topic', description: 'Random essay prompt' },
+        { command: 'resource', description: 'Useful study link' },
+        { command: 'help', description: 'Command list' },
       ],
     }),
   });

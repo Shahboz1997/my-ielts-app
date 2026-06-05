@@ -35,17 +35,17 @@ function link(campaign) {
 function buildMorning(date) {
   const idx = dayIdx(date, 'morning');
   const t = pick(templates, idx);
-  const label = date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const label = date.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
   return [
-    '☀️ <b>STRATUM.ai — утренний tip</b>',
+    '☀️ <b>STRATUM.ai — morning tip</b>',
     `<i>${esc(label)}</i>`,
     '',
-    '💡 CC: используйте linking words — However, Furthermore, In contrast.',
+    '💡 CC: use linking words — However, Furthermore, In contrast.',
     '',
-    `📝 <b>Структура:</b> ${esc(t.title)}`,
+    `📝 <b>Structure:</b> ${esc(t.title)}`,
     ...(t.structure || []).slice(0, 3).map((s) => `• ${esc(s)}`),
     '',
-    '✍️ Проверьте эссе с AI:',
+    '✍️ Check your essay with AI:',
     `<a href="${link('morning')}">startum-writing-ai.vercel.app</a>`,
     '',
     '#IELTS #Writing',
@@ -56,19 +56,19 @@ function buildEvening(date) {
   const idx = dayIdx(date, 'evening');
   const topic = pick(topics, idx);
   const t = pick(templates.filter((x) => x.type === topic.type), idx) || pick(templates, idx);
-  const label = date.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const label = date.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
   return [
-    '🌙 <b>STRATUM.ai — вечерняя практика</b>',
+    '🌙 <b>STRATUM.ai — evening practice</b>',
     `<i>${esc(label)}</i>`,
     '',
     `✍️ <b>${esc(topic.type === 'task1' ? 'Task 1' : 'Task 2')}</b>`,
     '',
     esc(topic.title),
     '',
-    `⏱ ${topic.type === 'task1' ? '150+ слов, 20 мин' : '250+ слов, 40 мин'}`,
+    `⏱ ${topic.type === 'task1' ? '150+ words, 20 min' : '250+ words, 40 min'}`,
     t?.phrases?.introduction ? `\n<code>${esc(t.phrases.introduction)}</code>` : '',
     '',
-    '🤖 Проверка по TA, CC, LR, GRA:',
+    '🤖 Check TA, CC, LR, GRA:',
     `<a href="${link('evening')}">startum-writing-ai.vercel.app</a>`,
     '',
     '#IELTS #Practice',
@@ -88,11 +88,11 @@ async function send(text) {
 
 const date = new Date();
 const welcome = [
-  '✅ <b>Канал Startum подключён!</b>',
+  '✅ <b>Startum channel connected!</b>',
   '',
-  'Каждый день бот будет публиковать:',
-  '☀️ ~08:00 — tip по IELTS Writing',
-  '🌙 ~19:00 — тема для практики',
+  'The bot will publish daily:',
+  '☀️ ~08:00 — IELTS Writing tip',
+  '🌙 ~19:00 — practice topic + quiz',
   '',
   `<a href="${link('welcome')}">startum-writing-ai.vercel.app</a>`,
 ].join('\n');
