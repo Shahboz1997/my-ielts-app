@@ -242,6 +242,13 @@ export function useWriterWorkspace() {
   const showCreditsExhausted =
     credits <= 0 && (activeTab === 'Task 1' || activeTab === 'Task 2');
 
+  // Stuck spinner after network timeout or credits exhausted mid-request.
+  useEffect(() => {
+    if (credits > 0) return;
+    setLoadingT1(false);
+    setLoadingT2(false);
+  }, [credits]);
+
   useEffect(() => {
     if (!scrollToScoreAfterAnalyzeRef.current) return;
     if (activeAnalyzeLoading || !activeResult) return;

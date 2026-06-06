@@ -36,7 +36,7 @@ export default function WriterComparisonSection({
         </div>
       )}
 
-      {showCreditsExhausted && (
+      {showCreditsExhausted && showRewrite && (
         <CreditsExhaustedCallout className="w-full" onContactSupport={onContactSupport} />
       )}
 

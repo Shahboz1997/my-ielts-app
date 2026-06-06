@@ -349,6 +349,7 @@ export default function WriterShell() {
                           }}
                           analyzeLoading={activeTab === 'Task 1' ? loadingT1 : loadingT2}
                           analyzeDisabled={credits <= 0}
+                          creditsExhausted={credits <= 0}
                         />
                       </div>
                     </div>
@@ -364,6 +365,11 @@ export default function WriterShell() {
                       hasSavedAnalysis={Boolean(activeResultT1?.savedId || activeResultT2?.savedId)}
                       onCriteriaScoreChange={handleCriteriaScoreChange}
                       onResetToAiScores={handleResetToAiScores}
+                      showCreditsExhausted={showCreditsExhausted && !activeResult}
+                      onContactSupport={() => {
+                        setShowSupportModal(false);
+                        scrollToFeedbackForm();
+                      }}
                     />
 
                     <WriterDetailedAnalysisLazy

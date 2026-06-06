@@ -6,6 +6,9 @@ import { postJson } from '@/lib/httpClient';
 import { interpretAnalyzeFailure } from '@/lib/writer/interpretAnalyzeFailure';
 import { AUTH_REQUIRED_CODE } from '@/lib/aiAccessShared';
 import { CREDITS_EXHAUSTED_CODE } from '@/lib/credits';
+import { getEssayWordCount } from '@/lib/writer/editorUi';
+
+const ANALYZE_TIMEOUT_MS = 120_000;
 
 async function pullCreditsBalance(setCredits) {
   try {
@@ -55,8 +58,19 @@ export function useAnalyze({
         return;
       }
       if (credits <= 0) {
+        toast.error(
+          'You have no credits left. Contact support via the site footer to request more.',
+          { duration: 5000 }
+        );
         return;
       }
+
+      const essayText = mode === 'task1' ? essayT1 : essayT2;
+      if (getEssayWordCount(essayText) < 10) {
+        toast.error('Write at least 10 words before analyzing.', { duration: 4000 });
+        return;
+      }
+
       if (analyzeInFlightRef.current) return;
       analyzeInFlightRef.current = true;
 
@@ -64,6 +78,9 @@ export function useAnalyze({
       setCurLoading(true);
       setError(null);
       setErrorIs401(false);
+
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), ANALYZE_TIMEOUT_MS);
 
       try {
         const payload = {
@@ -81,7 +98,7 @@ export function useAnalyze({
           letterMeta: mode === 'task1' && task1Kind === 'gt_letter' ? letterMeta : undefined,
         };
 
-        const data = await postJson('/api/check', payload);
+        const data = await postJson('/api/check', payload, { signal: controller.signal });
 
         const { savedId, ...analysisRest } = data || {};
         const resultPayload = {
@@ -104,8 +121,11 @@ export function useAnalyze({
         if (typeof playSuccessSound === 'function') playSuccessSound();
         scrollToScoreAfterAnalyzeRef.current = true;
       } catch (err) {
+        const aborted = err?.name === 'AbortError';
         const { status, dataError, message: baseMsg, apiCode } = interpretAnalyzeFailure(err);
-        let msg = baseMsg;
+        let msg = aborted
+          ? 'Analysis timed out. Check your connection and try again.'
+          : baseMsg;
 
         const isApiKeyError =
           apiCode === 'INVALID_API_KEY' ||
@@ -156,6 +176,7 @@ export function useAnalyze({
         setError(msg);
         toast.error(msg);
       } finally {
+        window.clearTimeout(timeoutId);
         setCurLoading(false);
         analyzeInFlightRef.current = false;
       }

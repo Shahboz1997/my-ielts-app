@@ -2,6 +2,7 @@
 
 import { Download, Loader2, RotateCcw, Share2 } from 'lucide-react';
 import { LoadingState, EmptyState } from '@/components/stratum';
+import CreditsExhaustedCallout from '@/components/CreditsExhaustedCallout';
 import { IELTS_BAND_STEPS, isManualScoringActive } from '@/lib/writer/manualScoring';
 import { clampCriterionScore } from '@/lib/ielts/computeOverallBand';
 
@@ -23,6 +24,8 @@ export default function WriterResultsPanel({
   hasSavedAnalysis,
   onCriteriaScoreChange,
   onResetToAiScores,
+  showCreditsExhausted,
+  onContactSupport,
 }) {
   const manualActive = isManualScoringActive(activeResult);
   const aiOverall = activeResult?.scoring?.ai?.overall_band;
@@ -39,6 +42,8 @@ export default function WriterResultsPanel({
         >
           <LoadingState />
         </div>
+      ) : showCreditsExhausted ? (
+        <CreditsExhaustedCallout onContactSupport={onContactSupport} />
       ) : !activeResult ? (
         <div
           className={`min-h-0 rounded-3xl border border-dashed transition-all ${darkMode ? 'border-slate-700 bg-slate-900/20' : 'border-slate-200 bg-slate-50/80'}`}

@@ -14,6 +14,7 @@ export default function TaskEditorActions({
   onAnalyze,
   analyzeLoading,
   analyzeDisabled,
+  creditsExhausted,
 }) {
   return (
     <div className="mt-6 flex flex-col gap-4 border-t border-slate-200 pt-6 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
@@ -56,9 +57,17 @@ export default function TaskEditorActions({
         disabled={analyzeLoading || analyzeDisabled}
         className="btn-stratum w-full sm:w-auto sm:min-w-[220px] py-3.5 rounded-2xl flex items-center justify-center gap-3 hover:shadow-[0_0_25px_rgba(79,70,229,0.3)] disabled:opacity-50 disabled:pointer-events-none"
       >
-        {!analyzeLoading && <div className="shimmer-layer animate-shimmer" aria-hidden />}
-        <Sparkles className="w-5 h-5 relative z-10 opacity-90" />
-        <span className="btn-stratum-text">{analyzeLoading ? 'Analyzing…' : 'ANALYZE · STRATUM'}</span>
+        {!analyzeLoading && !analyzeDisabled && (
+          <div className="shimmer-layer animate-shimmer" aria-hidden />
+        )}
+        {analyzeLoading ? (
+          <Loader2 className="w-5 h-5 relative z-10 animate-spin" aria-hidden />
+        ) : (
+          <Sparkles className="w-5 h-5 relative z-10 opacity-90" />
+        )}
+        <span className="btn-stratum-text">
+          {analyzeLoading ? 'Analyzing…' : creditsExhausted ? 'No credits left' : 'ANALYZE · STRATUM'}
+        </span>
       </button>
     </div>
   );
