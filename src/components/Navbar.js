@@ -59,21 +59,35 @@ const Navbar = ({
             </span>
           </button>
 
-          {/* Task 1 / Task 2 — always visible on mobile, outside burger */}
-          <div className={`md:hidden flex items-center gap-1 flex-1 justify-center min-w-0 p-0.5 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
+          {/* Task 1 / Task 2 — always visible on mobile */}
+          <div
+            className={`md:hidden flex flex-1 min-w-0 items-stretch gap-1 p-1 rounded-xl border ${
+              darkMode
+                ? 'bg-slate-800/90 border-slate-600'
+                : 'bg-white border-slate-200 shadow-sm'
+            }`}
+          >
             {primaryItems.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setActiveTab(item)}
-                className={`min-h-[40px] px-2.5 sm:px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-tighter whitespace-nowrap transition-all ${
+                aria-current={activeTab === item ? 'page' : undefined}
+                className={`flex-1 min-h-[44px] min-w-0 px-1 py-1.5 rounded-lg font-extrabold transition-all ${
                   activeTab === item
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/35 ring-1 ring-indigo-500/50'
+                    : darkMode
+                      ? 'text-slate-100 hover:bg-slate-700'
+                      : 'text-slate-800 hover:bg-slate-50'
                 }`}
               >
-                <span className="min-[380px]:hidden">{item === 'Task 1' ? 'T1' : 'T2'}</span>
-                <span className="hidden min-[380px]:inline">{item}</span>
+                <span className="flex flex-col items-center justify-center leading-none gap-0.5 min-[400px]:hidden">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Task</span>
+                  <span className="text-base font-black">{item === 'Task 1' ? '1' : '2'}</span>
+                </span>
+                <span className="hidden min-[400px]:block text-xs sm:text-sm uppercase tracking-tight truncate">
+                  {item}
+                </span>
               </button>
             ))}
           </div>
@@ -96,7 +110,19 @@ const Navbar = ({
                     </button>
                   )
                 ) : (
-                  <button key={item} type="button" onClick={() => setActiveTab(item)} className={`px-4 py-2 rounded-full font-black text-[11px] uppercase tracking-tighter transition-all ${activeTab === item ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600'}`}>{item}</button>
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setActiveTab(item)}
+                    aria-current={activeTab === item ? 'page' : undefined}
+                    className={`px-4 py-2 rounded-full font-extrabold text-xs uppercase tracking-tight transition-all ${
+                      activeTab === item
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/25'
+                        : 'text-slate-700 dark:text-slate-300 hover:text-indigo-600'
+                    }`}
+                  >
+                    {item}
+                  </button>
                 )
               )}
             </div>

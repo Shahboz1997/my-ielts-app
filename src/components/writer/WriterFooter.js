@@ -61,29 +61,31 @@ export default function WriterFooter({
           >
             {COPYRIGHT_LINE}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-3 text-xs text-slate-500 dark:text-slate-400">
             {!minimal && (
               <>
                 <button
                   type="button"
                   onClick={() => setShowSupportModal(true)}
-                  className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  className="inline-flex items-center hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   Contact support
                 </button>
-                {' · '}
+                <span className="text-slate-400/70 select-none" aria-hidden="true">
+                  ·
+                </span>
               </>
             )}
             <a
               href={TELEGRAM_CHANNEL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors inline-flex items-center gap-1.5"
+              className="inline-flex items-center gap-1.5 hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors"
             >
               <TelegramIcon className="h-4 w-4 shrink-0 text-[#229ED9]" />
               {TELEGRAM_CHANNEL_LABEL}
             </a>
-          </p>
+          </div>
         </div>
       </div>
 
