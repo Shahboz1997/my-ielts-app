@@ -26,7 +26,9 @@ async function resolveSessionToken(request) {
   return getToken({
     req: request,
     secret,
-    secureCookie: process.env.NODE_ENV === 'production',
+    secureCookie:
+      process.env.NODE_ENV === 'production' &&
+      process.env.E2E_INSECURE_AUTH_COOKIES !== '1',
   });
 }
 

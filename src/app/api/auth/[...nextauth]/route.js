@@ -59,10 +59,15 @@ const googleClientSecret = (
   ""
 ).trim();
 
+const useSecureCookies =
+  process.env.NODE_ENV === "production" &&
+  process.env.E2E_INSECURE_AUTH_COOKIES !== "1";
+
 export const authOptions = {
   trustHost: true,
   basePath: "/api/auth",
   secret: getSecret(),
+  useSecureCookies,
   adapter: createLazyPrismaAdapter(),
   logger: {
     error(code, ...message) {

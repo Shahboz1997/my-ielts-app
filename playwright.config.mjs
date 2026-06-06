@@ -27,6 +27,12 @@ export default defineConfig({
         timeout: 120_000,
         env: {
           ...process.env,
+          // Must match Playwright baseURL (127.0.0.1 ≠ localhost for auth cookies).
+          AUTH_URL: baseURL,
+          NEXTAUTH_URL: baseURL,
+          AUTH_TRUST_HOST: 'true',
+          // Playwright/CI use http://127.0.0.1 — secure auth cookies are not sent over HTTP.
+          E2E_INSECURE_AUTH_COOKIES: '1',
           E2E_MOCK_OPENAI: process.env.E2E_MOCK_OPENAI || '1',
           NODE_ENV: 'production',
         },

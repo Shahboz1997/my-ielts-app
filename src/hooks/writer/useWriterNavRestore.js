@@ -1,5 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
+
+function readAppQueryFlags() {
+  if (typeof window === 'undefined') return { forceLanding: false, skipAppLanding: false };
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    return {
+      forceLanding: sp.get('landing') === '1',
+      skipAppLanding: sp.get('app') === '1',
+    };
+  } catch {
+    return { forceLanding: false, skipAppLanding: false };
+  }
+}
 
 export function useWriterNavRestore({
   setActiveTab,
@@ -10,17 +23,16 @@ export function useWriterNavRestore({
   setImage,
 }) {
   const pathname = usePathname();
-  const [forceLanding, setForceLanding] = useState(false);
+  const [forceLanding, setForceLanding] = useState(() => readAppQueryFlags().forceLanding);
+  const skipAppLanding = useSyncExternalStore(
+    () => () => {},
+    () => readAppQueryFlags().skipAppLanding,
+    () => false,
+  );
 
   useEffect(() => {
     if (pathname !== '/') return;
-    if (typeof window === 'undefined') return;
-    try {
-      const sp = new URLSearchParams(window.location.search);
-      setForceLanding(sp.get('landing') === '1');
-    } catch {
-      setForceLanding(false);
-    }
+    setForceLanding(readAppQueryFlags().forceLanding);
   }, [pathname]);
 
   useEffect(() => {
@@ -87,5 +99,5 @@ export function useWriterNavRestore({
     setImage,
   ]);
 
-  return { forceLanding };
+  return { forceLanding, skipAppLanding };
 }

@@ -4,7 +4,7 @@ import React from 'react';
 import { AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import AuthModal from '@/components/AuthModal';
-import LandingPageLazy from '@/components/lazy/LandingPageLazy';
+import LandingPage from '@/components/LandingPage';
 import GlowFollow from '@/components/GlowFollow';
 import { BankProvider } from '@/context/BankContext';
 import WritingBankLazy from '@/components/lazy/WritingBankLazy';
@@ -28,6 +28,7 @@ export default function WriterShell() {
     session,
     sessionStatus,
     forceLanding,
+    skipAppLanding,
     isAuthOpen,
     setIsAuthOpen,
     authModalMessage,
@@ -142,14 +143,15 @@ export default function WriterShell() {
     setIsAuthOpen(true);
   };
 
-  const showMarketingLanding = sessionStatus === 'unauthenticated' || forceLanding;
+  const showMarketingLanding =
+    (sessionStatus === 'unauthenticated' && !skipAppLanding) || forceLanding;
 
   if (showMarketingLanding) {
     return (
       <div className="relative min-h-[100dvh] bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300 overflow-y-auto overflow-x-hidden pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-0">
         <GlowFollow />
         <div className="relative z-0 min-h-[100dvh]">
-          <LandingPageLazy
+          <LandingPage
             onLoginClick={openLogin}
             onFullAnalysisClick={() => {
               setAuthModalMessage('Sign up to see your Band Score');
@@ -176,22 +178,18 @@ export default function WriterShell() {
             scrollProgress={scrollProgress}
             onScrollToTop={handleScrollToTop}
           />
-          <AnimatePresence>
-            {isAuthOpen && (
-              <AuthModal
-                isOpen={isAuthOpen}
-                onClose={() => {
-                  setIsAuthOpen(false);
-                  setAuthModalMessage(null);
-                }}
-                onLoginSuccess={() => {
-                  setIsAuthOpen(false);
-                  setAuthModalMessage(null);
-                }}
-                message={authModalMessage}
-              />
-            )}
-          </AnimatePresence>
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => {
+              setIsAuthOpen(false);
+              setAuthModalMessage(null);
+            }}
+            onLoginSuccess={() => {
+              setIsAuthOpen(false);
+              setAuthModalMessage(null);
+            }}
+            message={authModalMessage}
+          />
         </div>
       </div>
     );
@@ -218,23 +216,19 @@ export default function WriterShell() {
           credits={credits}
           onLoginClick={openLogin}
         />
-        <AnimatePresence>
-          {isAuthOpen && (
-            <AuthModal
-              isOpen={isAuthOpen}
-              onClose={() => {
-                setIsAuthOpen(false);
-                setAuthModalMessage(null);
-              }}
-              onLoginSuccess={() => {
-                setIsLoggedIn(true);
-                setIsAuthOpen(false);
-                setAuthModalMessage(null);
-              }}
-              message={authModalMessage}
-            />
-          )}
-        </AnimatePresence>
+        <AuthModal
+          isOpen={isAuthOpen}
+          onClose={() => {
+            setIsAuthOpen(false);
+            setAuthModalMessage(null);
+          }}
+          onLoginSuccess={() => {
+            setIsLoggedIn(true);
+            setIsAuthOpen(false);
+            setAuthModalMessage(null);
+          }}
+          message={authModalMessage}
+        />
 
         <div className="flex flex-1">
           <main className="flex-1 min-w-0 w-full max-w-7xl xl:max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 pt-4 md:pt-8 pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-8 bg-white dark:bg-slate-950 transition-colors duration-300">

@@ -83,7 +83,7 @@ export function useWriterWorkspace() {
   const router = useRouter();
   const { workspaceStorageKey, draftStorageKey, archiveStorageKey } = useWriterStorageKeys(session);
 
-  const { forceLanding } = useWriterNavRestore({
+  const { forceLanding, skipAppLanding } = useWriterNavRestore({
     setActiveTab,
     setTask1Kind,
     setPromptT1Letter,
@@ -359,6 +359,7 @@ export function useWriterWorkspace() {
     session,
     sessionStatus,
     forceLanding,
+    skipAppLanding,
     isAuthOpen,
     setIsAuthOpen,
     authModalMessage,

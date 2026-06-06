@@ -116,6 +116,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
             <button
               type="button"
               onClick={onLoginClick}
+              data-testid="open-auth-login"
               className="btn-stratum px-7 py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
             >
               <div className="shimmer-layer animate-shimmer" aria-hidden />
