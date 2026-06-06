@@ -3,7 +3,11 @@
  * Falls back to caller-provided static text when OpenAI is unavailable.
  */
 import { createOpenAIClient, getTrimmedOpenAIKey, isPlaceholderOpenAiKey } from '@/lib/openaiServer';
-import { buildTelegramPrompt } from '@/lib/telegramPostPrompts';
+import {
+  buildMorningQuizPrompt,
+  buildTelegramPrompt,
+  ESSAY_CHECK_PROMPT,
+} from '@/lib/telegramPostPrompts';
 
 const MODEL = (process.env.TELEGRAM_OPENAI_MODEL || 'gpt-4o-mini').trim();
 
@@ -31,7 +35,7 @@ export async function generateTelegramPost(slot, { topic, siteLink }) {
       model: MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.75,
-      max_tokens: 600,
+      max_tokens: slot === 'morning' ? 1200 : 800,
     });
 
     const text = completion.choices?.[0]?.message?.content?.trim();
@@ -43,6 +47,78 @@ export async function generateTelegramPost(slot, { topic, siteLink }) {
   } catch (err) {
     console.warn('[telegram/generate]', slot, err?.message || err);
     return { text: '', source: 'ai', error: String(err?.message || err) };
+  }
+}
+
+/**
+ * Generate a fill-in-the-blank quiz from a morning post.
+ * @param {string} postText
+ * @returns {Promise<{ question: string, options: string[], correctOptionId: number, explanation?: string } | null>}
+ */
+export async function generateMorningQuiz(postText) {
+  if (!aiEnabled() || !postText?.trim()) return null;
+
+  const clientResult = createOpenAIClient();
+  if ('error' in clientResult) return null;
+
+  try {
+    const completion = await clientResult.openai.chat.completions.create({
+      model: MODEL,
+      messages: [{ role: 'user', content: buildMorningQuizPrompt(postText) }],
+      temperature: 0.4,
+      max_tokens: 400,
+      response_format: { type: 'json_object' },
+    });
+
+    const raw = completion.choices?.[0]?.message?.content?.trim();
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    const options = Array.isArray(parsed.options) ? parsed.options.map(String).slice(0, 4) : [];
+    if (options.length < 2 || !parsed.question) return null;
+
+    const correctOptionId = Number(parsed.correctOptionId);
+    return {
+      question: String(parsed.question).slice(0, 300),
+      options,
+      correctOptionId:
+        Number.isInteger(correctOptionId) && correctOptionId >= 0 && correctOptionId < options.length
+          ? correctOptionId
+          : 0,
+      explanation: parsed.explanation ? String(parsed.explanation).slice(0, 200) : undefined,
+    };
+  } catch (err) {
+    console.warn('[telegram/morning-quiz]', err?.message || err);
+    return null;
+  }
+}
+
+/**
+ * @param {string} essayText
+ * @returns {Promise<{ text: string } | null>}
+ */
+export async function checkEssayViaAi(essayText) {
+  if (!aiEnabled()) return null;
+
+  const clientResult = createOpenAIClient();
+  if ('error' in clientResult) return null;
+
+  try {
+    const completion = await clientResult.openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: ESSAY_CHECK_PROMPT },
+        { role: 'user', content: essayText.slice(0, 4000) },
+      ],
+      temperature: 0.35,
+      max_tokens: 1200,
+    });
+
+    const text = completion.choices?.[0]?.message?.content?.trim();
+    return text ? { text } : null;
+  } catch (err) {
+    console.warn('[telegram/essay-check]', err?.message || err);
+    return null;
   }
 }
 
