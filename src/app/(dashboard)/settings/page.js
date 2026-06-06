@@ -14,13 +14,10 @@ export default async function SettingsPage() {
       where: { id: session.user.id },
       select: {
         practiceRemindersEnabled: true,
-        practiceRemindersTelegramEnabled: true,
         practiceReminderHour: true,
         practiceReminderMinute: true,
         practiceReminderTimezone: true,
         practiceReminderDays: true,
-        telegramChatId: true,
-        telegramLinkedAt: true,
       },
     });
   } catch {

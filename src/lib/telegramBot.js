@@ -7,7 +7,6 @@ import {
   buildTopicMessage,
 } from '@/lib/telegramContent';
 import { prepareTelegramHtml } from '@/lib/telegram';
-import { consumeTelegramLinkToken } from '@/lib/telegramLink';
 
 const CHECK_START_TEXT = [
   '✅ <b>Check my text</b>',
@@ -42,9 +41,6 @@ function wordCount(text) {
 function replyForCommand(cmd, args) {
   switch (cmd) {
     case '/start':
-      if (args.startsWith('link_')) {
-        return { linkToken: args.slice(5) };
-      }
       if (args === 'check' || args.startsWith('check_')) {
         return { text: CHECK_START_TEXT };
       }
@@ -74,11 +70,6 @@ export async function handleTelegramMessage(message) {
   const { cmd, args } = commandFromText(text);
   let reply = cmd ? replyForCommand(cmd, args) : null;
 
-  if (reply?.linkToken) {
-    const linkResult = await consumeTelegramLinkToken(reply.linkToken, message);
-    reply = { text: linkResult.text || 'Link failed.' };
-  }
-
   if (!reply && text.startsWith('/')) {
     reply = { text: 'Unknown command. Try /start /check /tip /topic /resource /help' };
   }
@@ -95,7 +86,7 @@ export async function handleTelegramMessage(message) {
     } else {
       reply = {
         text:
-          'Send at least 80 words for essay feedback, or use:\n/check — check essay\n/tip · /topic · /resource\n\nTo link reminders: Settings → Connect Telegram on stratumielts.com',
+          'Send at least 80 words for essay feedback, or use:\n/check — check essay\n/tip · /topic · /resource',
       };
     }
   }

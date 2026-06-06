@@ -24,13 +24,10 @@ export async function GET() {
       where: { id: session.user.id },
       select: {
         practiceRemindersEnabled: true,
-        practiceRemindersTelegramEnabled: true,
         practiceReminderHour: true,
         practiceReminderMinute: true,
         practiceReminderTimezone: true,
         practiceReminderDays: true,
-        telegramChatId: true,
-        telegramLinkedAt: true,
       },
     });
     if (!u) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -54,7 +51,6 @@ export async function PATCH(request) {
   }
 
   const enabled = body.practiceRemindersEnabled;
-  const telegramEnabled = body.practiceRemindersTelegramEnabled;
   const hour = body.practiceReminderHour;
   const minute = body.practiceReminderMinute;
   const tz = body.practiceReminderTimezone;
@@ -62,9 +58,6 @@ export async function PATCH(request) {
 
   const data = {};
   if (typeof enabled === 'boolean') data.practiceRemindersEnabled = enabled;
-  if (typeof telegramEnabled === 'boolean') {
-    data.practiceRemindersTelegramEnabled = telegramEnabled;
-  }
   if (hour != null) {
     const h = parseInt(hour, 10);
     if (Number.isNaN(h) || h < 0 || h > 23) {
@@ -99,31 +92,15 @@ export async function PATCH(request) {
 
   try {
     const prisma = getPrisma();
-    if (data.practiceRemindersTelegramEnabled === true) {
-      const current = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { telegramChatId: true },
-      });
-      if (!current?.telegramChatId) {
-        return NextResponse.json(
-          { error: 'Connect Telegram before enabling Telegram reminders' },
-          { status: 400 }
-        );
-      }
-    }
-
     const u = await prisma.user.update({
       where: { id: session.user.id },
       data,
       select: {
         practiceRemindersEnabled: true,
-        practiceRemindersTelegramEnabled: true,
         practiceReminderHour: true,
         practiceReminderMinute: true,
         practiceReminderTimezone: true,
         practiceReminderDays: true,
-        telegramChatId: true,
-        telegramLinkedAt: true,
       },
     });
     return NextResponse.json(u);

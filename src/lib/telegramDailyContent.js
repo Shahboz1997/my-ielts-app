@@ -2,14 +2,16 @@
  * Daily Telegram posts — morning tips & evening practice.
  * CTA: inline keyboard. Evening: native Telegram quiz poll.
  */
-import templates from '../../data/templates.json';
 import topics from '../../data/topics.json';
 import {
   buildCtaInlineKeyboard,
+  buildPostInlineKeyboard,
   escapeHtml,
+  getTelegramBotInfo,
+  MORNING_QUIZ_DELAY_SEC,
   prepareTelegramHtml,
 } from '@/lib/telegram';
-import { generateTelegramPost } from '@/lib/telegramGeneratePost';
+import { generateMorningQuiz, generateTelegramPost } from '@/lib/telegramGeneratePost';
 import { pickEveningQuiz } from '@/lib/telegramQuiz';
 import { daySlotIndex, pickByIndex } from '@/lib/telegramSchedule';
 
@@ -18,8 +20,16 @@ export const STRATUM_SITE = 'https://stratumielts.com/';
 
 export { daySlotIndex };
 
-const CTA_LABEL = '👉 Check your writing on the site';
-const CTA_EVENING_LABEL = '👉 See quiz breakdown on site';
+const SITE_LINK_HTML = '<a href="https://stratumielts.com/">stratumielts.com</a>';
+
+function appendSiteLinkHtml(text) {
+  const t = String(text ?? '').trim();
+  if (t.includes('stratumielts.com')) return t;
+  return `${t}\n\n—\n✍️ Practice with AI feedback: ${SITE_LINK_HTML}`;
+}
+
+const CTA_LABEL = '👉 stratumielts.com — Check your writing';
+const CTA_EVENING_LABEL = '👉 stratumielts.com — Quiz breakdown';
 
 const MORNING_TOPICS = [
   'Task 1: overview without numbers — common mistake and fix',
@@ -34,19 +44,6 @@ const MORNING_TOPICS = [
   'Lexical Resource (LR): avoid repetition — use synonyms',
   'Grammar (GRA): mix simple and complex sentences',
   'Task Achievement (TA): every paragraph must address the prompt',
-];
-
-const MORNING_TRAPS = [
-  'Putting specific figures in the overview → TA penalty.',
-  'Starting body paragraphs without an overview → examiner notices immediately.',
-  'Giving personal opinion in Task 1 → it is data description only.',
-  'Thesis hidden in the body, not the intro → weak Task Response.',
-  'New ideas in the conclusion → typical −0.5 band.',
-  'Repeating the same word 5+ times → weak LR.',
-  'Only short sentences → GRA rarely above 6.',
-  'Linking words in every sentence → sounds unnatural.',
-  'Skipping the second part of a discussion prompt → incomplete TR.',
-  'Writing under 250 words in Task 2 → TA penalty.',
 ];
 
 const EVENING_TRAPS = [
@@ -111,33 +108,25 @@ export function pickTopicForSlot(date, slot) {
 function buildMorningPostStatic(date, campaign, ctaUrl) {
   const idx = daySlotIndex(date, 'morning');
   const topicLabel = pickByIndex(MORNING_TOPICS, idx);
-  const trap = pickByIndex(MORNING_TRAPS, idx);
-  const template = pickByIndex(templates, idx);
 
   const lines = [
     `📊 <b>${escapeHtml(topicLabel)}</b>`,
     '',
-    `❌ <b>Mistake:</b> ${escapeHtml(trap)}`,
+    '✅ <b>Collocations of the day:</b>',
+    '• <code>of paramount importance</code> — of the greatest importance [Band 7.5+ Vocabulary]',
+    '  Synonym: <code>of vital significance</code>',
+    '• <code>stem from</code> — to originate from [Band 7+ LR]',
+    '  Synonym: <code>arise from</code>',
     '',
-    '✅ <b>Rule of the day:</b>',
+    '🔧 <b>Grammar Tip</b>',
+    '❌ <i>Education is important. Technology is also important.</i>',
+    '✅ <i>Education remains paramount, whereas technology serves mainly as a tool.</i>',
+    `<tg-spoiler>Образование остаётся первостепенным, тогда как технологии служат в основном инструментом.</tg-spoiler>`,
+    '',
+    '✍️ <b>Task of the Day:</b> Write one sentence using <code>of paramount importance</code> in the comments.',
+    '',
+    `🔗 Full cheat sheets and our <b>AI writing checker</b> — ${SITE_LINK_HTML}`,
   ];
-
-  if (template?.structure?.length) {
-    for (const step of template.structure.slice(0, 3)) {
-      lines.push(`• ${escapeHtml(step)}`);
-    }
-  } else {
-    lines.push(
-      '• Overview/thesis in the intro — no extra detail',
-      '• One main idea per paragraph',
-      '• Check TA, CC, LR, GRA before submitting'
-    );
-  }
-
-  lines.push(
-    '',
-    '🔗 Full cheat sheets and our <b>AI writing checker</b> — on the site (button below).'
-  );
 
   return {
     text: lines.join('\n'),
@@ -168,6 +157,8 @@ function buildEveningPostStatic(date, campaign, ctaUrl) {
     `⚠️ <b>Trap:</b> ${escapeHtml(trap)}`,
     '',
     '📊 <b>Vote in the poll below</b> — then open the breakdown on our site.',
+    '',
+    `🔗 ${SITE_LINK_HTML}`,
   ];
 
   return {
@@ -215,12 +206,20 @@ export async function buildDailyPostAsync(slot, date = new Date()) {
   const topic = pickTopicForSlot(date, slot);
   const ctaLabel = slot === 'evening' ? CTA_EVENING_LABEL : CTA_LABEL;
 
+  const botInfo = await getTelegramBotInfo();
+  const botUsername = botInfo.ok ? botInfo.bot?.username : null;
+
   const generated = await generateTelegramPost(slot, { topic, siteLink: ctaUrl });
   if (generated?.text) {
     const post = {
-      text: prepareTelegramHtml(generated.text),
+      text: appendSiteLinkHtml(prepareTelegramHtml(generated.text)),
       parseMode: 'HTML',
-      replyMarkup: buildCtaInlineKeyboard(ctaUrl, ctaLabel),
+      replyMarkup: buildPostInlineKeyboard({
+        ctaUrl,
+        ctaLabel,
+        botUsername,
+        includeCheckButton: slot === 'evening',
+      }),
       campaign,
       source: 'ai',
     };
@@ -235,8 +234,24 @@ export async function buildDailyPostAsync(slot, date = new Date()) {
         };
       }
     }
+    if (slot === 'morning') {
+      const morningQuiz = await generateMorningQuiz(generated.text);
+      if (morningQuiz) {
+        post.poll = morningQuiz;
+        post.pollScheduleDate = new Date(Date.now() + MORNING_QUIZ_DELAY_SEC * 1000);
+      }
+    }
     return post;
   }
 
-  return buildStaticPost(slot, date);
+  const staticPost = buildStaticPost(slot, date);
+  if (slot === 'evening' && botUsername) {
+    staticPost.replyMarkup = buildPostInlineKeyboard({
+      ctaUrl,
+      ctaLabel: CTA_EVENING_LABEL,
+      botUsername,
+      includeCheckButton: true,
+    });
+  }
+  return staticPost;
 }

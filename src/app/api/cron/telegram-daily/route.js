@@ -66,7 +66,8 @@ export async function GET(request) {
 
   let pollMessageId;
   if (post.poll) {
-    const pollResult = await sendQuizPollToGroup(post.poll);
+    const pollOpts = post.pollScheduleDate ? { scheduleDate: post.pollScheduleDate } : {};
+    const pollResult = await sendQuizPollToGroup(post.poll, pollOpts);
     if (pollResult.ok) {
       pollMessageId = pollResult.data?.result?.message_id;
     } else {

@@ -32,18 +32,35 @@ function escapeHtml(text) {
 export { escapeHtml };
 
 /** Inline CTA button — clicks ~30–40% more than plain links. */
-export function buildCtaInlineKeyboard(url, label = '👉 Check your writing on the site') {
+export function buildCtaInlineKeyboard(url, label = '👉 stratumielts.com — Check your writing') {
   return {
     inline_keyboard: [[{ text: label, url: String(url) }]],
   };
 }
+
+/** Morning: site CTA. Evening: site + DM essay check. */
+export function buildPostInlineKeyboard({ ctaUrl, ctaLabel, botUsername, includeCheckButton = false }) {
+  const row1 = [{ text: ctaLabel, url: String(ctaUrl) }];
+  if (includeCheckButton && botUsername) {
+    return {
+      inline_keyboard: [
+        row1,
+        [{ text: '✅ Check my text', url: `https://t.me/${botUsername}?start=check` }],
+      ],
+    };
+  }
+  return { inline_keyboard: [row1] };
+}
+
+/** Seconds from now for scheduled poll (Telegram schedule_date). */
+export const MORNING_QUIZ_DELAY_SEC = Number(process.env.TELEGRAM_MORNING_QUIZ_DELAY_SEC || 300);
 
 /** Strip raw URLs and unsafe tags from AI output; keep b/i/code. */
 export function prepareTelegramHtml(text) {
   let t = String(text ?? '').trim();
   t = t.replace(/https?:\/\/\S+/gi, '').trim();
   t = t.replace(/\n*(?:👉|🔗|✍️|→)\s*[^\n]*$/u, '').trim();
-  t = t.replace(/<(?!\/?(?:b|i|code|strong|em)\b)[^>]+>/gi, '');
+  t = t.replace(/<(?!\/?(?:b|i|code|strong|em|tg-spoiler|span)\b)[^>]+>/gi, '');
   t = t.replace(/<\/?(strong|em)>/gi, (m) =>
     m.includes('strong') ? (m.startsWith('</') ? '</b>' : '<b>') : m.startsWith('</') ? '</i>' : '<i>'
   );
@@ -104,27 +121,30 @@ export async function sendToGroup(text, options = {}) {
  * @param {string} chatId
  * @param {{ question: string, options: string[], correctOptionId: number, explanation?: string }} poll
  */
-export async function sendTelegramQuizPoll(chatId, poll) {
+export async function sendTelegramQuizPoll(chatId, poll, options = {}) {
   const body = {
     chat_id: chatId,
     question: String(poll.question).slice(0, 300),
     options: poll.options.map((o) => String(o).slice(0, 100)),
     type: 'quiz',
     correct_option_id: poll.correctOptionId,
-    is_anonymous: false,
+    is_anonymous: true,
   };
   if (poll.explanation) {
     body.explanation = String(poll.explanation).slice(0, 200);
   }
+  if (options.scheduleDate) {
+    body.schedule_date = Math.floor(options.scheduleDate.getTime() / 1000);
+  }
   return callTelegramApi('sendPoll', body);
 }
 
-export async function sendQuizPollToGroup(poll) {
+export async function sendQuizPollToGroup(poll, options = {}) {
   const chatId = getTelegramGroupId();
   if (!chatId) {
     return { ok: false, error: 'TELEGRAM_GROUP_ID (or TELEGRAM_CHANNEL_ID) is not configured' };
   }
-  return sendTelegramQuizPoll(chatId, poll);
+  return sendTelegramQuizPoll(chatId, poll, options);
 }
 
 export async function getTelegramBotInfo() {
