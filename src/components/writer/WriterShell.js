@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
-import AuthModal from '@/components/AuthModal';
 import LandingPage from '@/components/LandingPage';
 import GlowFollow from '@/components/GlowFollow';
 import { BankProvider } from '@/context/BankContext';
@@ -22,6 +22,8 @@ import WriterFeedbackBanner from '@/components/writer/WriterFeedbackBanner';
 import WriterFooter from '@/components/writer/WriterFooter';
 import { useWriterWorkspace } from '@/hooks/useWriterWorkspace';
 import 'react-medium-image-zoom/dist/styles.css';
+
+const AuthModal = dynamic(() => import('@/components/AuthModal'), { ssr: false });
 
 export default function WriterShell() {
   const {
@@ -178,18 +180,20 @@ export default function WriterShell() {
             scrollProgress={scrollProgress}
             onScrollToTop={handleScrollToTop}
           />
-          <AuthModal
-            isOpen={isAuthOpen}
-            onClose={() => {
-              setIsAuthOpen(false);
-              setAuthModalMessage(null);
-            }}
-            onLoginSuccess={() => {
-              setIsAuthOpen(false);
-              setAuthModalMessage(null);
-            }}
-            message={authModalMessage}
-          />
+          {isAuthOpen ? (
+            <AuthModal
+              isOpen={isAuthOpen}
+              onClose={() => {
+                setIsAuthOpen(false);
+                setAuthModalMessage(null);
+              }}
+              onLoginSuccess={() => {
+                setIsAuthOpen(false);
+                setAuthModalMessage(null);
+              }}
+              message={authModalMessage}
+            />
+          ) : null}
         </div>
       </div>
     );
@@ -216,19 +220,21 @@ export default function WriterShell() {
           credits={credits}
           onLoginClick={openLogin}
         />
-        <AuthModal
-          isOpen={isAuthOpen}
-          onClose={() => {
-            setIsAuthOpen(false);
-            setAuthModalMessage(null);
-          }}
-          onLoginSuccess={() => {
-            setIsLoggedIn(true);
-            setIsAuthOpen(false);
-            setAuthModalMessage(null);
-          }}
-          message={authModalMessage}
-        />
+        {isAuthOpen ? (
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => {
+              setIsAuthOpen(false);
+              setAuthModalMessage(null);
+            }}
+            onLoginSuccess={() => {
+              setIsLoggedIn(true);
+              setIsAuthOpen(false);
+              setAuthModalMessage(null);
+            }}
+            message={authModalMessage}
+          />
+        ) : null}
 
         <div className="flex flex-1">
           <main className="flex-1 min-w-0 w-full max-w-7xl xl:max-w-screen-2xl mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 pt-4 md:pt-8 pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-8 bg-white dark:bg-slate-950 transition-colors duration-300">

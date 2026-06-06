@@ -12,11 +12,13 @@ import LandingJsonLd from "@/components/landing/LandingJsonLd";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const baseUrl = getMetadataBaseUrl();
@@ -87,7 +89,9 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }) {
-  const session = await safeAuth();
+  // On Vercel, skip server session read for faster TTFB on public pages (client SessionProvider fetches).
+  // Dev keeps server session to avoid ClientFetchError while Turbopack compiles auth routes.
+  const session = process.env.VERCEL === "1" ? null : await safeAuth();
 
   const htmlClass = await getServerHtmlThemeClass();
   const storedTheme = await getServerInitialTheme();
