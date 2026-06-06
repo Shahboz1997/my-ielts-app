@@ -6,15 +6,13 @@ import GoogleProvider from "next-auth/providers/google";
 import { getPrisma, withPrismaRetry } from "@/lib/prisma";
 import { createLazyPrismaAdapter } from "@/lib/lazyPrismaAdapter";
 import bcrypt from "bcryptjs";
-import { ensureAuthPublicUrl } from "@/lib/ensureAuthPublicUrl";
+import { ensureAuthPublicUrlForRequest } from "@/lib/ensureAuthPublicUrl";
 import { formatAuthErrorCause } from "@/lib/formatAuthErrorCause";
 import {
   appendClearAuthCookies,
   isPkceOrOAuthStateError,
   isSessionDecryptionError,
 } from "@/lib/authSessionCookies";
-
-ensureAuthPublicUrl();
 
 // Force dynamic so env vars are read at request time (avoids stale/empty secret)
 export const dynamic = "force-dynamic";
@@ -462,6 +460,7 @@ function oauthCallbackErrorRedirect(request, reason = "google_timeout") {
 
 // App Router requires named GET and POST exports; delegate to NextAuth handlers
 export async function GET(request) {
+  ensureAuthPublicUrlForRequest(request);
   const t0 = Date.now();
   const isOAuthCallback = request.nextUrl.pathname.includes("/callback/");
   try {
@@ -513,6 +512,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  ensureAuthPublicUrlForRequest(request);
   try {
     return await handlers.POST(request);
   } catch (err) {

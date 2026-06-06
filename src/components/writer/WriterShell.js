@@ -2,7 +2,6 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import LandingPage from '@/components/LandingPage';
 import GlowFollow from '@/components/GlowFollow';
@@ -147,6 +146,23 @@ export default function WriterShell() {
 
   const showMarketingLanding =
     (sessionStatus === 'unauthenticated' && !skipAppLanding) || forceLanding;
+
+  if (sessionStatus === 'loading' && !forceLanding) {
+    return (
+      <div
+        className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 bg-[#F9FAFB] dark:bg-[#050505] text-slate-600 dark:text-slate-400"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div
+          className="h-10 w-10 rounded-full border-2 border-indigo-600/30 border-t-indigo-600 animate-spin"
+          role="status"
+          aria-label="Loading"
+        />
+        <p className="text-sm font-medium tracking-tight">STRATUM.ai</p>
+      </div>
+    );
+  }
 
   if (showMarketingLanding) {
     return (

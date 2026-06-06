@@ -94,6 +94,37 @@ function resolveProductionAuthOrigin() {
   );
 }
 
+/**
+ * Per-request auth origin from Host / x-forwarded-host so OAuth callbacks match the
+ * URL the user actually opened (vercel.app vs stratumielts.com).
+ */
+export function ensureAuthPublicUrlForRequest(request) {
+  if (typeof process === "undefined") return;
+
+  const forwarded = request?.headers?.get?.("x-forwarded-host");
+  const host = String(forwarded ? forwarded.split(",")[0] : request?.headers?.get?.("host") || "")
+    .trim()
+    .replace(/:\d+$/, "");
+  if (!host || /^(localhost|127\.0\.0\.1)$/i.test(host)) {
+    ensureAuthPublicUrl();
+    return;
+  }
+
+  const protoHeader = request?.headers?.get?.("x-forwarded-proto");
+  const proto =
+    protoHeader ||
+    (/^(localhost|127\.0\.0\.1)/i.test(host) ? "http" : "https");
+  const origin = stripTrailingSlashes(`${proto}://${host}`);
+
+  try {
+    new URL(origin);
+    process.env.AUTH_URL = origin;
+    process.env.NEXTAUTH_URL = origin;
+  } catch {
+    ensureAuthPublicUrl();
+  }
+}
+
 export function ensureAuthPublicUrl() {
   if (typeof process === "undefined") return;
 

@@ -89,9 +89,14 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }) {
-  // On Vercel, skip server session read for faster TTFB on public pages (client SessionProvider fetches).
-  // Dev keeps server session to avoid ClientFetchError while Turbopack compiles auth routes.
-  const session = process.env.VERCEL === "1" ? null : await safeAuth();
+  // On Vercel, cap server session read so TTFB stays fast on cold start; client SessionProvider fills in.
+  const session =
+    process.env.VERCEL === "1"
+      ? await Promise.race([
+          safeAuth(),
+          new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
+        ])
+      : await safeAuth();
 
   const htmlClass = await getServerHtmlThemeClass();
   const storedTheme = await getServerInitialTheme();
