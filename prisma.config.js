@@ -28,6 +28,13 @@ function normalizePrismaCliUrl(raw) {
       const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
       u.searchParams.set("sslmode", isLocal ? "disable" : "require");
     }
+    const sslmode = (u.searchParams.get("sslmode") || "").toLowerCase();
+    if (
+      ["require", "prefer", "verify-ca"].includes(sslmode) &&
+      !u.searchParams.has("uselibpqcompat")
+    ) {
+      u.searchParams.set("uselibpqcompat", "true");
+    }
 
     return u.toString().replace(/^postgres:/i, "postgresql:");
   } catch {
