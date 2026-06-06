@@ -1,22 +1,58 @@
 import { sendTelegramMessage } from '@/lib/telegram';
+import { checkEssayViaAi } from '@/lib/telegramGeneratePost';
 import {
   buildResourceMessage,
   buildStartMessage,
   buildTipMessage,
   buildTopicMessage,
 } from '@/lib/telegramContent';
+import { prepareTelegramHtml } from '@/lib/telegram';
+import { consumeTelegramLinkToken } from '@/lib/telegramLink';
+
+const CHECK_START_TEXT = [
+  '✅ <b>Check my text</b>',
+  '',
+  'Paste your IELTS Writing Task 1 or Task 2 essay here (plain text).',
+  'I will score it on all 4 criteria: TA/TR, CC, LR, GRA.',
+  '',
+  'Tip: include at least 150 words (Task 1) or 250 words (Task 2) for accurate feedback.',
+].join('\n');
+
+const CHECK_BUSY_TEXT = '⏳ Checking your essay… This may take up to 30 seconds.';
+const CHECK_TOO_SHORT = 'Please send at least 80 words so I can give meaningful feedback.';
+const CHECK_AI_OFF =
+  'AI checking is temporarily unavailable. Open STRATUM.ai for full feedback on your writing.';
 
 function commandFromText(text) {
-  const first = String(text || '').trim().split(/\s+/)[0]?.toLowerCase() || '';
-  if (!first.startsWith('/')) return '';
-  return first.split('@')[0];
+  const parts = String(text || '').trim().split(/\s+/);
+  const first = parts[0]?.toLowerCase() || '';
+  if (!first.startsWith('/')) return { cmd: '', args: '' };
+  const cmd = first.split('@')[0];
+  const args = parts.slice(1).join(' ').trim();
+  return { cmd, args };
 }
 
-function replyForCommand(cmd) {
+function wordCount(text) {
+  return String(text || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function replyForCommand(cmd, args) {
   switch (cmd) {
     case '/start':
+      if (args.startsWith('link_')) {
+        return { linkToken: args.slice(5) };
+      }
+      if (args === 'check' || args.startsWith('check_')) {
+        return { text: CHECK_START_TEXT };
+      }
+      return buildStartMessage();
     case '/help':
       return buildStartMessage();
+    case '/check':
+      return { text: CHECK_START_TEXT };
     case '/tip':
       return buildTipMessage();
     case '/topic':
@@ -34,11 +70,34 @@ export async function handleTelegramMessage(message) {
   const text = message?.text;
   if (!chatId || !text) return { handled: false };
 
-  const cmd = commandFromText(text);
-  let reply = cmd ? replyForCommand(cmd) : null;
+  const isPrivate = message?.chat?.type === 'private';
+  const { cmd, args } = commandFromText(text);
+  let reply = cmd ? replyForCommand(cmd, args) : null;
+
+  if (reply?.linkToken) {
+    const linkResult = await consumeTelegramLinkToken(reply.linkToken, message);
+    reply = { text: linkResult.text || 'Link failed.' };
+  }
 
   if (!reply && text.startsWith('/')) {
-    reply = { text: 'Unknown command. Available: /start /tip /topic /resource /help' };
+    reply = { text: 'Unknown command. Try /start /check /tip /topic /resource /help' };
+  }
+
+  if (!reply && isPrivate && !text.startsWith('/')) {
+    if (wordCount(text) >= 80) {
+      await sendTelegramMessage(chatId, CHECK_BUSY_TEXT, { parse_mode: 'HTML' });
+      const result = await checkEssayViaAi(text);
+      if (result?.text) {
+        reply = { text: prepareTelegramHtml(result.text) };
+      } else {
+        reply = { text: CHECK_AI_OFF };
+      }
+    } else {
+      reply = {
+        text:
+          'Send at least 80 words for essay feedback, or use:\n/check — check essay\n/tip · /topic · /resource\n\nTo link reminders: Settings → Connect Telegram on stratumielts.com',
+      };
+    }
   }
 
   if (!reply) return { handled: false };
@@ -52,7 +111,7 @@ export async function handleTelegramMessage(message) {
     parse_mode: 'HTML',
     ...(payload.replyMarkup ? { reply_markup: payload.replyMarkup } : {}),
   });
-  return { handled: true, ok: result.ok, cmd: cmd || text };
+  return { handled: true, ok: result.ok, cmd: cmd || 'essay' };
 }
 
 /** @param {object} update */

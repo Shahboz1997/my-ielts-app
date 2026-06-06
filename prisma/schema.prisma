@@ -26,6 +26,11 @@ model User {
   /// Comma-separated JS weekday numbers 0=Sun … 6=Sat (e.g. "1,2,3,4,5" Mon–Fri)
   practiceReminderDays     String   @default("1,2,3,4,5")
   practiceReminderLastSent DateTime?
+  /// Telegram DM for practice reminders (/settings link flow)
+  telegramChatId                   String?   @unique
+  telegramLinkedAt                 DateTime?
+  practiceRemindersTelegramEnabled Boolean   @default(false)
+  telegramLinkTokens               TelegramLinkToken[]
   accounts      Account[]
   sessions      Session[]
   checks          Check[]
@@ -117,6 +122,19 @@ model FavoriteTemplate {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, templateId])
+}
+
+/// One-time tokens for linking Telegram chat_id to a User (t.me/bot?start=link_TOKEN).
+model TelegramLinkToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// Fixed-window API rate limits (userId or IP scope + route).

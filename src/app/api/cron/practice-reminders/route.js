@@ -5,7 +5,9 @@ import { NextResponse } from 'next/server';
 import { getPrisma } from '@/lib/prisma';
 import { getZonedParts, zonedDateKey } from '@/lib/zonedTime';
 import { sendPracticeReminderEmail } from '@/lib/reminderMail';
+import { sendPracticeReminderTelegram } from '@/lib/reminderTelegram';
 import { verifyCronRequest } from '@/lib/cronAuth';
+import { isTelegramConfigured } from '@/lib/telegram';
 
 /** Minutes after scheduled time still eligible (daily Vercel cron ≈ once/day UTC). */
 const REMINDER_WINDOW_MINUTES = 25;
@@ -25,6 +27,10 @@ function inReminderWindow(parts, hour, minute) {
   return now >= tgt && now <= tgt + REMINDER_WINDOW_MINUTES;
 }
 
+function hasEmailDelivery() {
+  return Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+}
+
 /**
  * Practice reminder cron — single entry point (see vercel.json).
  *
@@ -35,27 +41,41 @@ export async function GET(request) {
   const auth = verifyCronRequest(request);
   if (!auth.ok) return auth.response;
 
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[cron/practice-reminders] EMAIL_USER/EMAIL_PASS missing; skip');
+  const emailReady = hasEmailDelivery();
+  const telegramReady = isTelegramConfigured();
+  if (!emailReady && !telegramReady) {
+    console.warn('[cron/practice-reminders] no email or telegram configured; skip');
     return NextResponse.json(
-      { ok: false, error: 'EMAIL_USER/EMAIL_PASS missing' },
+      { ok: false, error: 'EMAIL or TELEGRAM_BOT_TOKEN required' },
       { status: 503 }
     );
   }
 
   const prisma = getPrisma();
   const now = new Date();
-  let sent = 0;
+  let sentEmail = 0;
+  let sentTelegram = 0;
   let skipped = 0;
   let failed = 0;
 
   const users = await prisma.user.findMany({
-    where: { practiceRemindersEnabled: true },
+    where: {
+      OR: [
+        { practiceRemindersEnabled: true },
+        {
+          practiceRemindersTelegramEnabled: true,
+          telegramChatId: { not: null },
+        },
+      ],
+    },
     select: {
       id: true,
       email: true,
       name: true,
       language: true,
+      practiceRemindersEnabled: true,
+      practiceRemindersTelegramEnabled: true,
+      telegramChatId: true,
       practiceReminderHour: true,
       practiceReminderMinute: true,
       practiceReminderTimezone: true,
@@ -87,35 +107,77 @@ export async function GET(request) {
       }
     }
 
-    if (!u.email || !String(u.email).includes('@')) {
-      skipped++;
-      continue;
+    const locale = u.language === 'ru' ? 'ru' : 'en';
+    let anySent = false;
+
+    if (u.practiceRemindersEnabled && emailReady && u.email && String(u.email).includes('@')) {
+      const res = await sendPracticeReminderEmail({
+        to: u.email,
+        name: u.name,
+        locale,
+      });
+      if (res.ok) {
+        sentEmail++;
+        anySent = true;
+      } else {
+        failed++;
+        console.warn('[cron/practice-reminders] email failed', u.id, u.email, res.reason || 'unknown');
+      }
     }
 
-    const res = await sendPracticeReminderEmail({
-      to: u.email,
-      name: u.name,
-      locale: u.language === 'ru' ? 'ru' : 'en',
-    });
+    if (
+      u.practiceRemindersTelegramEnabled &&
+      telegramReady &&
+      u.telegramChatId
+    ) {
+      const res = await sendPracticeReminderTelegram({
+        chatId: u.telegramChatId,
+        name: u.name,
+        locale,
+      });
+      if (res.ok) {
+        sentTelegram++;
+        anySent = true;
+      } else {
+        failed++;
+        console.warn(
+          '[cron/practice-reminders] telegram failed',
+          u.id,
+          u.telegramChatId,
+          res.reason || 'unknown'
+        );
+        if (res.reason?.includes('blocked') || res.reason?.includes('deactivated')) {
+          await prisma.user.update({
+            where: { id: u.id },
+            data: { practiceRemindersTelegramEnabled: false },
+          });
+        }
+      }
+    }
 
-    if (res.ok) {
+    if (anySent) {
       await prisma.user.update({
         where: { id: u.id },
         data: { practiceReminderLastSent: now },
       });
-      sent++;
+    } else if (
+      (u.practiceRemindersEnabled && emailReady) ||
+      (u.practiceRemindersTelegramEnabled && telegramReady && u.telegramChatId)
+    ) {
+      skipped++;
     } else {
-      failed++;
-      console.warn(
-        '[cron/practice-reminders] send failed',
-        u.id,
-        u.email,
-        res.reason || 'unknown'
-      );
+      skipped++;
     }
   }
 
-  const summary = { ok: true, checked: users.length, sent, skipped, failed };
+  const summary = {
+    ok: true,
+    checked: users.length,
+    sentEmail,
+    sentTelegram,
+    skipped,
+    failed,
+  };
   console.log('[cron/practice-reminders]', summary);
   return NextResponse.json(summary);
 }

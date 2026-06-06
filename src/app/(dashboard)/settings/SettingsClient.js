@@ -1,7 +1,7 @@
 "use client";
 
-import { UserCircle, Mail, Bell, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { UserCircle, Mail, Bell, Loader2, Send } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 const TZ_OPTIONS = [
@@ -38,12 +38,33 @@ function parseDaysString(s) {
 
 export default function SettingsClient({ user, reminders }) {
   const isRu = user?.language === "ru";
-  const [enabled, setEnabled] = useState(Boolean(reminders?.practiceRemindersEnabled));
+  const [emailEnabled, setEmailEnabled] = useState(Boolean(reminders?.practiceRemindersEnabled));
+  const [telegramEnabled, setTelegramEnabled] = useState(
+    Boolean(reminders?.practiceRemindersTelegramEnabled)
+  );
+  const [telegramLinked, setTelegramLinked] = useState(Boolean(reminders?.telegramChatId));
+  const [telegramConfigured, setTelegramConfigured] = useState(true);
   const [hour, setHour] = useState(reminders?.practiceReminderHour ?? 19);
   const [minute, setMinute] = useState(reminders?.practiceReminderMinute ?? 0);
   const [tz, setTz] = useState(reminders?.practiceReminderTimezone || "UTC");
   const [days, setDays] = useState(() => new Set(parseDaysString(reminders?.practiceReminderDays)));
   const [saving, setSaving] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkPending, setLinkPending] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const pollRef = useRef(null);
+
+  const isLocalHost = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const h = window.location.hostname;
+    return h === "localhost" || h === "127.0.0.1" || h.startsWith("192.168.");
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const tzSelectOptions = useMemo(() => {
     const base = [...TZ_OPTIONS];
@@ -77,6 +98,75 @@ export default function SettingsClient({ user, reminders }) {
     });
   };
 
+  const connectTelegram = async () => {
+    if (isLocalHost) {
+      toast.error(
+        isRu
+          ? "Привязка работает только на stratumielts.com — откройте настройки там"
+          : "Linking only works on stratumielts.com — open settings there"
+      );
+      window.open("https://stratumielts.com/settings", "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    setLinkLoading(true);
+    try {
+      const res = await fetch("/api/user/telegram-link", { method: "POST" });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || res.statusText);
+      window.open(j.linkUrl, "_blank", "noopener,noreferrer");
+      setLinkPending(true);
+      toast.success(
+        isRu
+          ? "В Telegram нажмите Start (не пишите /start вручную)"
+          : "In Telegram tap Start (do not type /start manually)"
+      );
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = setInterval(async () => {
+        try {
+          const statusRes = await fetch("/api/user/telegram-link");
+          if (!statusRes.ok) return;
+          const status = await statusRes.json();
+          if (status.linked) {
+            setTelegramLinked(true);
+            setLinkPending(false);
+            setTelegramConfigured(status.configured !== false);
+            toast.success(isRu ? "Telegram привязан" : "Telegram connected");
+            if (pollRef.current) clearInterval(pollRef.current);
+          }
+        } catch {
+          /* ignore */
+        }
+      }, 3000);
+      setTimeout(() => {
+        if (pollRef.current) clearInterval(pollRef.current);
+      }, 3 * 60 * 1000);
+    } catch (err) {
+      toast.error(err?.message || (isRu ? "Не удалось создать ссылку" : "Could not create link"));
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const disconnectTelegram = async () => {
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/user/telegram-link", { method: "DELETE" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || res.statusText);
+      }
+      setTelegramLinked(false);
+      setLinkPending(false);
+      setTelegramEnabled(false);
+      toast.success(isRu ? "Telegram отключён" : "Telegram disconnected");
+    } catch (err) {
+      toast.error(err?.message || (isRu ? "Ошибка" : "Failed"));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
   const saveReminders = async () => {
     setSaving(true);
     try {
@@ -84,7 +174,8 @@ export default function SettingsClient({ user, reminders }) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          practiceRemindersEnabled: enabled,
+          practiceRemindersEnabled: emailEnabled,
+          practiceRemindersTelegramEnabled: telegramEnabled,
           practiceReminderHour: hour,
           practiceReminderMinute: minute,
           practiceReminderTimezone: tz,
@@ -137,26 +228,14 @@ export default function SettingsClient({ user, reminders }) {
         <div className="flex items-center gap-2 mb-4">
           <Bell className="w-4 h-4 text-indigo-600" strokeWidth={1.5} />
           <h2 className="text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400">
-            {isRu ? "Напоминания о практике (email)" : "Practice reminders (email)"}
+            {isRu ? "Напоминания о практике" : "Practice reminders"}
           </h2>
         </div>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           {isRu
-            ? "Напоминания отправляются с сервера по расписанию. Если письмо не приходит в выбранное время, значит расписание на хостинге ограничено — подключите внешний планировщик или используйте тариф/настройку с более частыми запусками."
-            : "Reminders are sent from the server on a schedule. If emails don’t arrive at the selected time, the hosting schedule is likely limited — use an external scheduler or a plan/config that runs more frequently."}
+            ? "Одно расписание — доставка на email и/или в Telegram. Сервер проверяет время по cron; на Hobby Vercel запуск ~раз в сутки."
+            : "One schedule — delivery via email and/or Telegram. The server checks time on a cron; on Vercel Hobby that runs about once per day."}
         </p>
-
-        <label className="flex items-center gap-3 cursor-pointer mb-4">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span className="text-sm text-slate-800 dark:text-slate-200">
-            {isRu ? "Включить напоминания" : "Enable reminders"}
-          </span>
-        </label>
 
         <div className="space-y-3 mb-4">
           <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -187,9 +266,9 @@ export default function SettingsClient({ user, reminders }) {
           </select>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-6">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
-            {isRu ? "Дни (0 = вс, 1 = пн … 6 = сб)" : "Days (0 = Sun … 6 = Sat)"}
+            {isRu ? "Дни недели" : "Days of week"}
           </p>
           <div className="flex flex-wrap gap-2">
             {WEEKDAYS.map((d) => (
@@ -206,6 +285,113 @@ export default function SettingsClient({ user, reminders }) {
                 {isRu ? d.ru : d.en}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4 mb-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {isRu ? "Каналы доставки" : "Delivery channels"}
+          </p>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={emailEnabled}
+              onChange={(e) => setEmailEnabled(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-sm text-slate-800 dark:text-slate-200">
+              {isRu ? "Email" : "Email"} — {user?.email ?? "—"}
+            </span>
+          </label>
+
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+            <div className="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
+              <Send className="w-4 h-4 text-sky-500 shrink-0" strokeWidth={1.5} />
+              <span className="font-medium">Telegram</span>
+              {telegramLinked ? (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                  {isRu ? "привязан" : "connected"}
+                </span>
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {isRu ? "не привязан" : "not connected"}
+                </span>
+              )}
+            </div>
+
+            {!telegramConfigured ? (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                {isRu
+                  ? "Бот не настроен на сервере (TELEGRAM_BOT_TOKEN)."
+                  : "Bot not configured on server (TELEGRAM_BOT_TOKEN)."}
+              </p>
+            ) : telegramLinked ? (
+              <button
+                type="button"
+                onClick={disconnectTelegram}
+                disabled={disconnecting}
+                className="text-xs text-red-600 hover:text-red-500 disabled:opacity-60"
+              >
+                {disconnecting
+                  ? isRu
+                    ? "Отключение…"
+                    : "Disconnecting…"
+                  : isRu
+                    ? "Отвязать Telegram"
+                    : "Disconnect Telegram"}
+              </button>
+            ) : (
+              <div className="space-y-2">
+                {isLocalHost ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
+                    {isRu
+                      ? "На localhost привязка не сработает: webhook бота идёт на stratumielts.com. Откройте настройки на сайте."
+                      : "Linking won't work on localhost — the bot webhook hits stratumielts.com. Use settings on the live site."}
+                    {" "}
+                    <a
+                      href="https://stratumielts.com/settings"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline font-medium"
+                    >
+                      stratumielts.com/settings
+                    </a>
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={connectTelegram}
+                  disabled={linkLoading}
+                  className="inline-flex items-center gap-2 min-h-[36px] px-3 rounded-lg bg-sky-600 text-white text-xs font-medium hover:bg-sky-500 disabled:opacity-60"
+                >
+                  {linkLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  {isRu ? "Подключить Telegram" : "Connect Telegram"}
+                </button>
+                {linkPending ? (
+                  <p className="text-xs text-sky-700 dark:text-sky-300">
+                    {isRu
+                      ? "1. В открывшемся Telegram нажмите Start · 2. Дождитесь «привязан» здесь · Не вводите /start вручную"
+                      : "1. Tap Start in the Telegram tab · 2. Wait for “connected” here · Don't type /start manually"}
+                  </p>
+                ) : null}
+              </div>
+            )}
+
+            <label
+              className={`flex items-center gap-3 ${telegramLinked ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+            >
+              <input
+                type="checkbox"
+                checked={telegramEnabled}
+                disabled={!telegramLinked}
+                onChange={(e) => setTelegramEnabled(e.target.checked)}
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+              />
+              <span className="text-sm text-slate-800 dark:text-slate-200">
+                {isRu ? "Включить напоминания в Telegram" : "Enable Telegram reminders"}
+              </span>
+            </label>
           </div>
         </div>
 
