@@ -115,7 +115,7 @@ PWA is wired in `next.config.mjs` (`@ducanh2912/next-pwa`). It is **disabled in 
 Schedule is defined in [`vercel.json`](vercel.json):
 
 ```json
-{ "path": "/api/cron/practice-reminders", "schedule": "0 12 * * *" }
+{ "path": "/api/cron/practice-reminders", "schedule": "0 18 * * *" }
 ```
 
 - **Endpoint:** `GET /api/cron/practice-reminders`

@@ -142,8 +142,8 @@ export default function SettingsClient({ user, reminders }) {
         </div>
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           {isRu
-            ? "Email-напоминания по расписанию. Сервер проверяет время по cron; на Hobby Vercel запуск ~раз в сутки."
-            : "Email reminders on your schedule. The server checks time on a cron; on Vercel Hobby that runs about once per day."}
+            ? "Email приходит вечером в тот же день, после выбранного времени (проверка ~раз в сутки, 18:00 UTC)."
+            : "Email arrives the same evening after your chosen time (checked once daily at 18:00 UTC)."}
         </p>
 
         <div className="space-y-3 mb-4">

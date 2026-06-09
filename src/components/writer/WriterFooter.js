@@ -1,7 +1,17 @@
 'use client';
 
 import { AnimatePresence } from 'framer-motion';
-import { COPYRIGHT_LINE, TELEGRAM_CHANNEL_LABEL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
+import {
+  COPYRIGHT_LINE,
+  FACEBOOK_PAGE_LABEL,
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_PAGE_LABEL,
+  INSTAGRAM_PAGE_URL,
+  TELEGRAM_CHANNEL_LABEL,
+  TELEGRAM_CHANNEL_URL,
+} from '@/lib/support';
+import FacebookIcon from '@/components/icons/FacebookIcon';
+import InstagramIcon from '@/components/icons/InstagramIcon';
 import TelegramIcon from '@/components/icons/TelegramIcon';
 import WriterFeedbackForm from '@/components/writer/footer/WriterFeedbackForm';
 import { WriterFooterBrand, WriterFooterLegal, WriterFooterResources } from '@/components/writer/footer/WriterFooterNav';
@@ -80,10 +90,28 @@ export default function WriterFooter({
               href={TELEGRAM_CHANNEL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors"
+              aria-label={TELEGRAM_CHANNEL_LABEL}
+              className="inline-flex items-center hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors"
             >
               <TelegramIcon className="h-4 w-4 shrink-0 text-[#229ED9]" />
-              {TELEGRAM_CHANNEL_LABEL}
+            </a>
+            <a
+              href={FACEBOOK_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={FACEBOOK_PAGE_LABEL}
+              className="inline-flex items-center hover:text-[#1877F2] dark:hover:text-[#1877F2] transition-colors"
+            >
+              <FacebookIcon className="h-4 w-4 shrink-0 text-[#1877F2]" />
+            </a>
+            <a
+              href={INSTAGRAM_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={INSTAGRAM_PAGE_LABEL}
+              className="inline-flex items-center hover:text-[#E4405F] dark:hover:text-[#E4405F] transition-colors"
+            >
+              <InstagramIcon className="h-4 w-4 shrink-0 text-[#E4405F]" />
             </a>
           </div>
         </div>

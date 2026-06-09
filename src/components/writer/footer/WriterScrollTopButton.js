@@ -13,7 +13,7 @@ export default function WriterScrollTopButton({ darkMode, showScrollTop, scrollP
       exit={{ opacity: 0, scale: 0.5, y: 20 }}
       className="fixed z-[100] flex items-center justify-center group"
       style={{
-        right: 'calc(1rem + env(safe-area-inset-right) + 4.25rem)',
+        right: 'calc(1rem + env(safe-area-inset-right) + 4.25rem - 40px)',
         bottom: 'calc(1rem + env(safe-area-inset-bottom))',
       }}
     >

@@ -3,8 +3,22 @@
 import React from 'react';
 import Link from 'next/link';
 import { Layers } from 'lucide-react';
+import FacebookIcon from '@/components/icons/FacebookIcon';
+import InstagramIcon from '@/components/icons/InstagramIcon';
 import TelegramIcon from '@/components/icons/TelegramIcon';
-import { BUSINESS_ADDRESS, COPYRIGHT_LINE, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL, TELEGRAM_CHANNEL_LABEL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
+import {
+  BUSINESS_ADDRESS,
+  COPYRIGHT_LINE,
+  SUPPORT_EMAIL,
+  SUPPORT_PHONE_TEL,
+  CONTACT_SUPPORT_LABEL,
+  FACEBOOK_PAGE_LABEL,
+  FACEBOOK_PAGE_URL,
+  INSTAGRAM_PAGE_LABEL,
+  INSTAGRAM_PAGE_URL,
+  TELEGRAM_CHANNEL_LABEL,
+  TELEGRAM_CHANNEL_URL,
+} from '@/lib/support';
 
 export default function Footer() {
   return (
@@ -72,15 +86,33 @@ export default function Footer() {
           <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-white">
             {COPYRIGHT_LINE}
           </p>
-          <div className="flex flex-wrap items-center justify-center text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 sm:gap-x-3 text-xs text-slate-500 dark:text-slate-400">
             <a
               href={TELEGRAM_CHANNEL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors"
+              aria-label={TELEGRAM_CHANNEL_LABEL}
+              className="inline-flex items-center hover:text-[#229ED9] dark:hover:text-[#229ED9] transition-colors"
             >
               <TelegramIcon className="h-4 w-4 shrink-0 text-[#229ED9]" />
-              {TELEGRAM_CHANNEL_LABEL}
+            </a>
+            <a
+              href={FACEBOOK_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={FACEBOOK_PAGE_LABEL}
+              className="inline-flex items-center hover:text-[#1877F2] dark:hover:text-[#1877F2] transition-colors"
+            >
+              <FacebookIcon className="h-4 w-4 shrink-0 text-[#1877F2]" />
+            </a>
+            <a
+              href={INSTAGRAM_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={INSTAGRAM_PAGE_LABEL}
+              className="inline-flex items-center hover:text-[#E4405F] dark:hover:text-[#E4405F] transition-colors"
+            >
+              <InstagramIcon className="h-4 w-4 shrink-0 text-[#E4405F]" />
             </a>
           </div>
         </div>

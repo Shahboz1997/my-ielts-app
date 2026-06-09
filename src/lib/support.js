@@ -27,6 +27,14 @@ export const CONTACT_SUPPORT_LABEL = 'Contact support';
 export const TELEGRAM_CHANNEL_URL = 'https://t.me/+yb4-_ZjVPUgwOWIy';
 export const TELEGRAM_CHANNEL_LABEL = 'Join us on Telegram';
 
+/** Facebook page — STRATUM.ai community */
+export const FACEBOOK_PAGE_URL = 'https://www.facebook.com/share/1DU54kSfUs/';
+export const FACEBOOK_PAGE_LABEL = 'Follow us on Facebook';
+
+/** Instagram profile — STRATUM.ai */
+export const INSTAGRAM_PAGE_URL = 'https://www.instagram.com/stratum573?igsh=MXJrZzZ5Y2JkaXMweA==';
+export const INSTAGRAM_PAGE_LABEL = 'Follow us on Instagram';
+
 export const REGISTERED_AGENT_NAME = 'Registered Agents Inc';
 export const REGISTERED_AGENT_ADDRESS = '30 N Gould St Ste R, Sheridan, WY 82801, USA';
 

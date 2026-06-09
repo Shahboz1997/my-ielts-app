@@ -7,9 +7,6 @@ import { getZonedParts, zonedDateKey } from '@/lib/zonedTime';
 import { sendPracticeReminderEmail } from '@/lib/reminderMail';
 import { verifyCronRequest } from '@/lib/cronAuth';
 
-/** Minutes after scheduled time still eligible (daily Vercel cron ≈ once/day UTC). */
-const REMINDER_WINDOW_MINUTES = 25;
-
 function parseDaySet(s) {
   if (typeof s !== 'string' || !s.trim()) return new Set([1, 2, 3, 4, 5]);
   const nums = s
@@ -19,10 +16,11 @@ function parseDaySet(s) {
   return new Set(nums.length ? nums : [1, 2, 3, 4, 5]);
 }
 
-function inReminderWindow(parts, hour, minute) {
+/** True when local scheduled time has already passed today (evening cron sends same day). */
+function isReminderDue(parts, hour, minute) {
   const now = parts.hour * 60 + parts.minute;
   const tgt = hour * 60 + minute;
-  return now >= tgt && now <= tgt + REMINDER_WINDOW_MINUTES;
+  return now >= tgt;
 }
 
 function hasEmailDelivery() {
@@ -33,7 +31,7 @@ function hasEmailDelivery() {
  * Practice reminder cron — single entry point (see vercel.json).
  *
  * Auth: Authorization: Bearer <CRON_SECRET> only.
- * Hobby plan: cron may run at most once per day — frequent schedules fail deployment.
+ * Hobby plan: cron runs once per day (18:00 UTC). Sends if local scheduled time has passed.
  */
 export async function GET(request) {
   const auth = verifyCronRequest(request);
@@ -79,7 +77,7 @@ export async function GET(request) {
       skipped++;
       continue;
     }
-    if (!inReminderWindow(parts, u.practiceReminderHour ?? 19, u.practiceReminderMinute ?? 0)) {
+    if (!isReminderDue(parts, u.practiceReminderHour ?? 19, u.practiceReminderMinute ?? 0)) {
       skipped++;
       continue;
     }
