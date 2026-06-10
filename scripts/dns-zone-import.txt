@@ -1,0 +1,5 @@
+; Import: vercel dns import stratumielts.com scripts/dns-zone-import.txt
+; Only adds DMARC + Null MX (SPF already exists on apex)
+
+_dmarc	IN	TXT	"v=DMARC1; p=reject; pct=100; rua=mailto:supportstratum@gmail.com; fo=1"
+@	IN	MX	0	.
