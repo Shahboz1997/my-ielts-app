@@ -27,6 +27,11 @@ export const CONTACT_SUPPORT_LABEL = 'Contact support';
 export const TELEGRAM_CHANNEL_URL = 'https://t.me/+yb4-_ZjVPUgwOWIy';
 export const TELEGRAM_CHANNEL_LABEL = 'Join us on Telegram';
 
+/** Telegram bot — DM essay check & commands */
+export const TELEGRAM_BOT_USERNAME = 'Stratum_iltes_writing_bot';
+export const TELEGRAM_BOT_URL = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=check`;
+export const TELEGRAM_BOT_LABEL = 'STRATUM IELTS Writing Bot';
+
 /** Facebook page — STRATUM.ai community */
 export const FACEBOOK_PAGE_URL = 'https://www.facebook.com/share/1DU54kSfUs/';
 export const FACEBOOK_PAGE_LABEL = 'Follow us on Facebook';

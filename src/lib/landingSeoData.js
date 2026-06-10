@@ -84,3 +84,30 @@ export const LANDING_FAQ_ITEMS = [
 
 export const LANDING_GUEST_OFFER =
   'Create a free account for full GPT-4o analysis, saved history, and writing credits.';
+
+export const LANDING_TELEGRAM = {
+  tagline: 'Telegram',
+  title: 'Practice on Telegram — tips, quizzes & AI essay check',
+  description:
+    'Follow our channel for twice-daily IELTS Writing content, or open the STRATUM bot in a private chat to paste your essay and get instant band feedback on all four criteria.',
+  features: [
+    {
+      title: 'Morning writing tips',
+      description:
+        'Collocations, grammar fixes, and Band 7.5+ vocabulary — delivered every morning with a short quiz five minutes later.',
+    },
+    {
+      title: 'Evening practice topic',
+      description:
+        'A fresh Task 1 or Task 2 prompt each evening, plus a native Telegram quiz to test what you learned.',
+    },
+    {
+      title: 'Check my text (DM)',
+      description:
+        'Send your essay directly to the bot — 80+ words, all four IELTS criteria scored in under 30 seconds. No account required.',
+    },
+  ],
+  commands: ['/check', '/tip', '/topic', '/resource'],
+  cta: 'Open Telegram bot',
+  channelCta: 'Join Telegram channel',
+};

@@ -3,8 +3,10 @@ import {
   LANDING_FAQ_ITEMS,
   LANDING_FEATURES,
   LANDING_HERO,
+  LANDING_TELEGRAM,
   LANDING_WORKFLOW_STEPS,
 } from '@/lib/landingSeoData';
+import { TELEGRAM_BOT_URL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
 import LandingAbOfferLine from '@/components/landing/LandingAbOfferLine';
 import LandingSeoSignInButton from '@/components/landing/LandingSeoSignInButton';
 
@@ -101,6 +103,46 @@ export default function LandingSeoMainContent() {
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.a}</p>
               </details>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="telegram"
+        className="border-b border-slate-200/80 px-4 py-12 dark:border-white/10"
+        aria-labelledby="telegram-heading"
+      >
+        <div className="mx-auto max-w-5xl">
+          <h2 id="telegram-heading" className="text-center text-2xl font-black uppercase tracking-tight">
+            {LANDING_TELEGRAM.title}
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {LANDING_TELEGRAM.description}
+          </p>
+          <ul className="mt-8 grid gap-6 sm:grid-cols-3">
+            {LANDING_TELEGRAM.features.map((f) => (
+              <li
+                key={f.title}
+                className="rounded-2xl border border-sky-200/80 bg-white p-5 dark:border-sky-800/40 dark:bg-slate-900/60"
+              >
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{f.description}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={TELEGRAM_BOT_URL}
+              className="inline-flex rounded-xl bg-[#2AABEE] px-6 py-3 text-sm font-bold text-white hover:bg-[#229ED9]"
+            >
+              {LANDING_TELEGRAM.cta}
+            </a>
+            <a
+              href={TELEGRAM_CHANNEL_URL}
+              className="inline-flex rounded-xl border border-sky-300 px-6 py-3 text-sm font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-600 dark:text-sky-200 dark:hover:bg-sky-950/40"
+            >
+              {LANDING_TELEGRAM.channelCta}
+            </a>
           </div>
         </div>
       </section>

@@ -31,9 +31,15 @@ import {
   LineChart,
   BookOpen,
   Mail,
+  Sun,
+  Moon,
+  MessageCircle,
 } from 'lucide-react';
 import { TASK1_TIPS, TASK2_TIPS, LETTER_TIPS } from '@/lib/ieltsGuidelines';
 import NeuralSyncShowcase from '@/components/NeuralSyncShowcase';
+import TelegramIcon from '@/components/icons/TelegramIcon';
+import { TELEGRAM_BOT_URL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
+import { LANDING_TELEGRAM } from '@/lib/landingSeoData';
 
 const appleEase = [0.16, 1, 0.3, 1];
 const fadeInUp = {
@@ -597,6 +603,131 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               <div className="shimmer-layer animate-shimmer" aria-hidden />
               <span className="btn-stratum-text">{abCopy.bottomCta}</span>
             </button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Telegram — channel + bot */}
+      <section
+        id="telegram"
+        aria-labelledby="section-telegram"
+        className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-[#E8F7FC] via-[#F9FAFB] to-[#F9FAFB] dark:from-sky-950/20 dark:via-[#050505] dark:to-[#050505] border-b border-white/5"
+      >
+        <div className="pointer-events-none absolute inset-0" aria-hidden>
+          <div className="absolute -top-28 left-1/2 h-72 w-[44rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(42,171,238,0.16)_0%,transparent_60%)] dark:bg-[radial-gradient(circle_at_center,rgba(42,171,238,0.2)_0%,transparent_60%)] blur-2xl" />
+          <div className="absolute -bottom-40 left-[-8rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.12)_0%,transparent_65%)] dark:bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.14)_0%,transparent_65%)] blur-2xl" />
+        </div>
+        <div className="max-w-6xl mx-auto px-4 relative">
+          <motion.div {...fadeInUp} className="text-center mb-9 sm:mb-11">
+            <span className="tagline-pill mb-2 block w-fit mx-auto text-slate-500 dark:text-slate-400 font-medium tracking-wide">
+              {LANDING_TELEGRAM.tagline}
+            </span>
+            <h2
+              id="section-telegram"
+              className="text-xl sm:text-2xl md:text-3xl font-black tracking-tighter uppercase text-slate-900 dark:text-white"
+            >
+              {LANDING_TELEGRAM.title}
+            </h2>
+            <p className="mt-3 text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
+              {LANDING_TELEGRAM.description}
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-5 sm:gap-6 mb-10">
+            {[
+              {
+                Icon: Sun,
+                title: LANDING_TELEGRAM.features[0].title,
+                blurb: LANDING_TELEGRAM.features[0].description,
+                accent: 'from-amber-400/18 to-transparent',
+                iconBg: 'bg-amber-100/90 dark:bg-amber-900/30 ring-amber-200/60 dark:ring-amber-600/30',
+                iconColor: 'text-amber-600 dark:text-amber-300',
+              },
+              {
+                Icon: Moon,
+                title: LANDING_TELEGRAM.features[1].title,
+                blurb: LANDING_TELEGRAM.features[1].description,
+                accent: 'from-indigo-500/16 to-transparent',
+                iconBg: 'bg-indigo-100/90 dark:bg-indigo-900/35 ring-indigo-200/60 dark:ring-indigo-600/30',
+                iconColor: 'text-indigo-600 dark:text-indigo-300',
+              },
+              {
+                Icon: CheckCircle,
+                title: LANDING_TELEGRAM.features[2].title,
+                blurb: LANDING_TELEGRAM.features[2].description,
+                accent: 'from-sky-500/18 to-transparent',
+                iconBg: 'bg-sky-100/90 dark:bg-sky-900/35 ring-sky-200/60 dark:ring-sky-600/30',
+                iconColor: 'text-sky-600 dark:text-sky-300',
+              },
+            ].map(({ Icon, title, blurb, accent, iconBg, iconColor }) => (
+              <motion.div
+                key={title}
+                {...fadeInUp}
+                className="group relative overflow-hidden rounded-[2rem] border border-slate-200/70 dark:border-white/10 bg-white/85 dark:bg-white/5 backdrop-blur-md p-6 sm:p-7 shadow-2xl shadow-black/5 dark:shadow-black/25 transition-all duration-300 hover:border-sky-300/40 dark:hover:border-sky-500/25 hover:shadow-black/10 dark:hover:shadow-black/40"
+              >
+                <div
+                  className={`pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-gradient-to-br ${accent} blur-2xl opacity-90`}
+                  aria-hidden
+                />
+                <div className="relative">
+                  <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl ${iconBg} ring-1 transition-transform duration-300 group-hover:scale-[1.05]`}>
+                    <Icon className={`h-6 w-6 ${iconColor}`} strokeWidth={1.5} />
+                  </div>
+                  <h3 className="text-base font-semibold tracking-wide text-slate-900 dark:text-white mb-2">{title}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{blurb}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            {...fadeInUp}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 rounded-[1.85rem] border border-dashed border-sky-300/50 dark:border-sky-500/30 bg-sky-50/60 dark:bg-sky-950/20 px-6 py-5 shadow-sm shadow-black/5 dark:shadow-black/25"
+          >
+            <div className="flex items-center gap-3 text-left">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#2AABEE] text-white shadow-sm shadow-sky-500/30">
+                <TelegramIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+                  @Stratum_iltes_writing_bot
+                </p>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                  Paste your essay in a private chat — get TA/TR, CC, LR &amp; GRA scores in seconds.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2.5 shrink-0 w-full sm:w-auto">
+              <a
+                href={TELEGRAM_BOT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#2AABEE] px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white shadow-sm shadow-sky-500/25 transition hover:bg-[#229ED9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F9FAFB] dark:focus-visible:ring-offset-[#050505]"
+              >
+                <TelegramIcon className="h-4 w-4" />
+                {LANDING_TELEGRAM.cta}
+              </a>
+              <a
+                href={TELEGRAM_CHANNEL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-sky-200/80 dark:border-sky-500/30 bg-white/90 dark:bg-slate-900/80 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-sky-700 dark:text-sky-200 shadow-sm transition hover:bg-sky-50 dark:hover:bg-sky-950/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
+              >
+                {LANDING_TELEGRAM.channelCta}
+              </a>
+            </div>
+          </motion.div>
+
+          <motion.div {...fadeInUp} className="mt-8 flex flex-wrap justify-center gap-2.5 max-w-2xl mx-auto">
+            {LANDING_TELEGRAM.commands.map((cmd) => (
+              <span
+                key={cmd}
+                className="inline-flex items-center gap-2 rounded-full border border-sky-200/80 dark:border-sky-500/20 bg-white/70 dark:bg-white/5 px-3.5 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-700 dark:text-slate-200 shadow-sm shadow-black/5 dark:shadow-black/30 backdrop-blur-md"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" strokeWidth={2} />
+                {cmd}
+              </span>
+            ))}
           </motion.div>
         </div>
       </section>

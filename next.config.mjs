@@ -1,5 +1,6 @@
 import withPWAInit from '@ducanh2912/next-pwa';
 import { getAllowedImageRemotePatterns } from './src/lib/allowedImageHosts.mjs';
+import { getSecurityHeadersForNextConfig } from './src/lib/securityHeaders.js';
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -31,6 +32,15 @@ const nextConfig = {
   
   images: {
     remotePatterns: getAllowedImageRemotePatterns(),
+  },
+
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: getSecurityHeadersForNextConfig(),
+      },
+    ];
   },
 };
 

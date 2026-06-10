@@ -1,0 +1,5 @@
+Contact: mailto:supportstratum@gmail.com
+Preferred-Languages: en
+Canonical: https://stratumielts.com/.well-known/security.txt
+Policy: https://stratumielts.com/terms
+Expires: 2027-06-11T00:00:00.000Z

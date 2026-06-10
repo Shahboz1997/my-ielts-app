@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { isAdminEmail } from '@/lib/admin';
 import { allAuthCookieNames, appendClearAuthCookies } from '@/lib/authSessionCookies';
+import { applySecurityHeaders } from '@/lib/securityHeaders';
 import {
   getAuthSecretMaterial,
   getTokenEmail,
@@ -43,8 +44,9 @@ function requestHasAuthSessionCookie(request) {
   return false;
 }
 
-function withStaleSessionCookieClear(response, shouldClear) {
-  return shouldClear ? appendClearAuthCookies(response) : response;
+function finalize(response, staleSession) {
+  const cleared = staleSession ? appendClearAuthCookies(response) : response;
+  return applySecurityHeaders(cleared);
 }
 
 export async function proxy(request) {
@@ -55,57 +57,57 @@ export async function proxy(request) {
 
   if (pathname.startsWith('/api/admin')) {
     if (!authed) {
-      return withStaleSessionCookieClear(
+      return finalize(
         jsonAuthRequired('Sign in to access admin API.'),
         staleSession
       );
     }
     if (!isAdminEmail(getTokenEmail(token))) {
-      return withStaleSessionCookieClear(jsonForbidden('Forbidden'), staleSession);
+      return finalize(jsonForbidden('Forbidden'), staleSession);
     }
-    return withStaleSessionCookieClear(nextWithAuthHeaders(request, token), staleSession);
+    return finalize(nextWithAuthHeaders(request, token), staleSession);
   }
 
   if (pathname.startsWith('/api/tts')) {
     if (request.method !== 'POST') {
-      return withStaleSessionCookieClear(NextResponse.next(), staleSession);
+      return finalize(NextResponse.next(), staleSession);
     }
     if (!authed) {
-      return withStaleSessionCookieClear(
+      return finalize(
         jsonAuthRequired('Sign in to use AI features.'),
         staleSession
       );
     }
-    return withStaleSessionCookieClear(nextWithAuthHeaders(request, token), staleSession);
+    return finalize(nextWithAuthHeaders(request, token), staleSession);
   }
 
   if (pathname.startsWith('/api/check')) {
     if (request.method === 'DELETE') {
       if (!authed) {
-        return withStaleSessionCookieClear(
+        return finalize(
           jsonAuthRequired('Sign in to manage your archive.'),
           staleSession
         );
       }
-      return withStaleSessionCookieClear(nextWithAuthHeaders(request, token), staleSession);
+      return finalize(nextWithAuthHeaders(request, token), staleSession);
     }
 
     if (request.method === 'POST') {
       const body = await readJsonBody(request);
       if (body && isAuxiliaryOpenAiCheckRequest(body)) {
         if (authed) {
-          return withStaleSessionCookieClear(nextWithAuthHeaders(request, token), staleSession);
+          return finalize(nextWithAuthHeaders(request, token), staleSession);
         }
-        return withStaleSessionCookieClear(NextResponse.next(), staleSession);
+        return finalize(NextResponse.next(), staleSession);
       }
       if (authed) {
-        return withStaleSessionCookieClear(nextWithAuthHeaders(request, token), staleSession);
+        return finalize(nextWithAuthHeaders(request, token), staleSession);
       }
-      return withStaleSessionCookieClear(NextResponse.next(), staleSession);
+      return finalize(NextResponse.next(), staleSession);
     }
   }
 
-  return withStaleSessionCookieClear(NextResponse.next(), staleSession);
+  return finalize(NextResponse.next(), staleSession);
 }
 
 export const config = {
