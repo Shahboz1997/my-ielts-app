@@ -5,7 +5,7 @@
 #   2. Run: $env:VERCEL_TOKEN="..."; node scripts/setup-vercel-dns.mjs
 #
 # Or CLI after `vercel login`:
-#   vercel dns add stratumielts.com _dmarc TXT 'v=DMARC1; p=reject; pct=100; rua=mailto:supportstratum@gmail.com; fo=1'
+#   vercel dns add stratumielts.com _dmarc TXT 'v=DMARC1; p=reject; pct=100; fo=1'
 #   vercel dns add stratumielts.com @ MX . 0
 #
 # Verify after 15–48h: https://mxtoolbox.com/SuperTool.aspx?action=mx%3astratumielts.com
@@ -20,10 +20,10 @@ v=spf1 -all
 
 # --- DMARC (recommended after SPF) ---
 # Type: TXT | Host: _dmarc | TTL: 3600
-v=DMARC1; p=none; rua=mailto:supportstratum@gmail.com; fo=1
+v=DMARC1; p=reject; pct=100; fo=1
 
-# After monitoring 2–4 weeks, tighten policy:
-# v=DMARC1; p=quarantine; pct=100; rua=mailto:supportstratum@gmail.com
+# No rua=mailto: — external mailboxes (e.g. gmail.com) trigger MXToolbox warnings
+# unless that domain publishes DMARC report authorization for yours.
 
 # --- DKIM ---
 # Only needed when sending FROM @stratumielts.com (Google Workspace, Resend, etc.)

@@ -15,7 +15,7 @@ const RECORDS_TO_ENSURE = [
   {
     name: '_dmarc',
     type: 'TXT',
-    value: 'v=DMARC1; p=reject; pct=100; rua=mailto:supportstratum@gmail.com; fo=1',
+    value: 'v=DMARC1; p=reject; pct=100; fo=1',
     comment: 'DMARC policy — stratumielts.com does not send mail',
   },
   {
