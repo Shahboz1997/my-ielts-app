@@ -66,7 +66,7 @@ const TransformationSlider = ({ darkMode, onCtaClick }) => {
       </div>
 
       <motion.div
-        className="rounded-3xl border border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800/30 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none overflow-hidden transition-all duration-200"
+        className="rounded-3xl bg-white dark:bg-slate-800/30 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none overflow-hidden transition-all duration-200"
         initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}

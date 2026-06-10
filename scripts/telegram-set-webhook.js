@@ -11,17 +11,20 @@
 const token = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const secret = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
 
+const PRODUCTION_ORIGIN = 'https://stratumielts.com';
+
 function siteOrigin() {
+  if (process.env.TELEGRAM_WEBHOOK_URL) {
+    return process.env.TELEGRAM_WEBHOOK_URL.trim();
+  }
   const raw =
-    process.env.TELEGRAM_WEBHOOK_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.AUTH_URL ||
     process.env.NEXTAUTH_URL ||
     '';
-  if (process.env.TELEGRAM_WEBHOOK_URL) return process.env.TELEGRAM_WEBHOOK_URL.trim();
   const base = String(raw).trim().replace(/\/$/, '');
-  if (!base) return '';
-  return `${base}/api/telegram/webhook`;
+  if (base.startsWith('https://')) return `${base}/api/telegram/webhook`;
+  return `${PRODUCTION_ORIGIN}/api/telegram/webhook`;
 }
 
 async function main() {
@@ -62,6 +65,7 @@ async function main() {
     body: JSON.stringify({
       commands: [
         { command: 'start', description: 'Welcome & link to STRATUM.ai' },
+        { command: 'check', description: 'Check your essay (AI feedback)' },
         { command: 'tip', description: 'Task 1/2 template tip' },
         { command: 'topic', description: 'Random essay prompt' },
         { command: 'resource', description: 'Useful study link' },

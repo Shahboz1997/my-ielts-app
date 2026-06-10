@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { SessionProvider, useSession } from "next-auth/react";
 import { Toaster } from "react-hot-toast";
-import { BankTopicsNavProvider } from "@/context/BankTopicsNavContext";
 import { WordListProvider } from "@/context/WordListContext";
 import UserLibrarySync from "@/components/UserLibrarySync";
 import AddToHomeScreenBanner from "@/components/AddToHomeScreenBanner";
@@ -56,10 +55,8 @@ export function Providers({ children, session }) {
       <UserLibrarySync />
       <Toaster position="top-center" />
       <WordListProvider>
-        <BankTopicsNavProvider>
-          {children}
-          <AddToHomeScreenBanner />
-        </BankTopicsNavProvider>
+        {children}
+        <AddToHomeScreenBanner />
       </WordListProvider>
     </SessionProvider>
   );

@@ -4,9 +4,6 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import LandingPage from '@/components/LandingPage';
-import GlowFollow from '@/components/GlowFollow';
-import { BankProvider } from '@/context/BankContext';
-import WritingBankLazy from '@/components/lazy/WritingBankLazy';
 import TaskEditorToolbar from '@/components/writer/TaskEditorToolbar';
 import Task1Editor from '@/components/writer/Task1Editor';
 import Task2Editor from '@/components/writer/Task2Editor';
@@ -167,7 +164,6 @@ export default function WriterShell() {
   if (showMarketingLanding) {
     return (
       <div className="relative min-h-[100dvh] bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-300 overflow-y-auto overflow-x-hidden pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-0">
-        <GlowFollow />
         <div className="relative z-0 min-h-[100dvh]">
           <LandingPage
             onLoginClick={openLogin}
@@ -217,7 +213,6 @@ export default function WriterShell() {
 
   return (
     <div className="relative min-h-[100dvh] flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-y-auto overflow-x-hidden transition-colors duration-300 pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-0">
-      <GlowFollow />
       <WriterFeedbackBanner
         feedbackBanner={feedbackBanner}
         onDismiss={() => setFeedbackBanner(null)}
@@ -425,11 +420,6 @@ export default function WriterShell() {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
-            )}
-            {activeTab === 'Bank' && (
-              <BankProvider>
-                <WritingBankLazy darkMode={darkMode} />
-              </BankProvider>
             )}
           </main>
         </div>

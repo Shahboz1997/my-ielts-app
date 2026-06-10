@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
-const NAV_TABS = ['Home', 'Bank', 'Task 1', 'Task 2'];
+const NAV_TABS = ['Home', 'Task 1', 'Task 2'];
 
 export function WriterFooterBrand() {
   return (

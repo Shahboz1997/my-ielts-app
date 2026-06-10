@@ -246,11 +246,7 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
       <section aria-labelledby="section-stratum-analytics" className="py-12 sm:py-16 bg-[#F9FAFB] dark:bg-[#050505] border-b border-white/5">
         <motion.div {...fadeInUp}>
           <div className="max-w-6xl mx-auto px-4">
-            <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[2rem] p-1">
-              <div className="rounded-[1.8rem] bg-white/80 dark:bg-white/5">
-                <TransformationSlider darkMode={darkMode} onCtaClick={onFullAnalysisClick} />
-              </div>
-            </div>
+            <TransformationSlider darkMode={darkMode} onCtaClick={onFullAnalysisClick} />
           </div>
         </motion.div>
         <div className="mt-8 max-w-5xl mx-auto px-4 sm:px-6">
@@ -391,11 +387,11 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
       </section>
 
       {/* STRATUM METHODOLOGY — Expert IELTS Guidelines */}
-      <section className="py-12 sm:py-16 bg-[#050505] dark:bg-[#050505] border-b border-white/5">
+      <section className="py-12 sm:py-16 bg-white dark:bg-[#050505] border-b border-slate-200/80 dark:border-white/5">
         <div className="max-w-5xl mx-auto px-4">
           <motion.div {...fadeInUp} className="text-center mb-10">
             <span className="tagline-pill mb-2 block w-fit mx-auto text-slate-500 dark:text-slate-400 font-medium tracking-wide">Expert Guidelines</span>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tighter uppercase text-white">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tighter uppercase text-slate-900 dark:text-white">
               STRATUM METHODOLOGY
             </h2>
             <p className="mt-3 text-slate-500 dark:text-slate-400 text-sm font-medium tracking-wide max-w-2xl mx-auto leading-relaxed">
@@ -406,9 +402,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
             {/* Task 1 Academic */}
             <motion.div
               {...fadeInUp}
-              className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10"
+              className="rounded-3xl border border-slate-200/70 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-md p-6 sm:p-8 shadow-2xl shadow-black/5 dark:shadow-black/25"
             >
-              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-indigo-400 mb-6">
+              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-indigo-600 dark:text-indigo-400 mb-6">
                 Task 1 · Academic
               </h3>
               <ul className="space-y-4">
@@ -421,9 +417,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true, margin: '-24px' }}
                       transition={{ delay: i * 0.08, duration: 0.4 }}
-                      className="flex items-center gap-3 text-slate-300 dark:text-slate-300"
+                      className="flex items-center gap-3 text-slate-700 dark:text-slate-300"
                     >
-                      {Icon && <Icon className="w-4 h-4 shrink-0 text-indigo-400" strokeWidth={1.5} />}
+                      {Icon && <Icon className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" strokeWidth={1.5} />}
                       <span className="text-sm font-medium">{tip.label}</span>
                     </motion.li>
                   );
@@ -433,9 +429,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
             {/* Task 1 GT Letter */}
             <motion.div
               {...fadeInUp}
-              className="rounded-3xl border border-teal-500/20 bg-teal-950/20 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10"
+              className="rounded-3xl border border-teal-200/80 dark:border-teal-500/20 bg-teal-50/80 dark:bg-teal-950/20 backdrop-blur-md p-6 sm:p-8 shadow-2xl shadow-black/5 dark:shadow-black/25"
             >
-              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-teal-400 mb-6">
+              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-teal-600 dark:text-teal-400 mb-6">
                 Task 1 · GT Letter
               </h3>
               <ul className="space-y-4">
@@ -448,9 +444,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true, margin: '-24px' }}
                       transition={{ delay: i * 0.08, duration: 0.4 }}
-                      className="flex items-center gap-3 text-slate-300"
+                      className="flex items-center gap-3 text-slate-700 dark:text-slate-300"
                     >
-                      {Icon && <Icon className="w-4 h-4 shrink-0 text-teal-400" strokeWidth={1.5} />}
+                      {Icon && <Icon className="w-4 h-4 shrink-0 text-teal-600 dark:text-teal-400" strokeWidth={1.5} />}
                       <span className="text-sm font-medium">{tip.label}</span>
                     </motion.li>
                   );
@@ -460,9 +456,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
             {/* Task 2 */}
             <motion.div
               {...fadeInUp}
-              className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 sm:p-8 shadow-xl shadow-black/10"
+              className="rounded-3xl border border-slate-200/70 dark:border-white/10 bg-white dark:bg-white/5 backdrop-blur-md p-6 sm:p-8 shadow-2xl shadow-black/5 dark:shadow-black/25"
             >
-              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-indigo-400 mb-6">
+              <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-indigo-600 dark:text-indigo-400 mb-6">
                 Task 2 · Essay
               </h3>
               <ul className="space-y-4">
@@ -475,9 +471,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true, margin: '-24px' }}
                       transition={{ delay: i * 0.08, duration: 0.4 }}
-                      className="flex items-center gap-3 text-slate-300 dark:text-slate-300"
+                      className="flex items-center gap-3 text-slate-700 dark:text-slate-300"
                     >
-                      {Icon && <Icon className="w-4 h-4 shrink-0 text-indigo-400" strokeWidth={1.5} />}
+                      {Icon && <Icon className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" strokeWidth={1.5} />}
                       <span className="text-sm font-medium">{tip.label}</span>
                     </motion.li>
                   );

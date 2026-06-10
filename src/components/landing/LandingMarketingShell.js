@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { AnimatePresence } from 'framer-motion';
 import AuthModal from '@/components/AuthModal';
-import GlowFollow from '@/components/GlowFollow';
 import LandingLegalFooter from '@/components/landing/LandingLegalFooter';
 
 export default function LandingMarketingShell({ isAuthenticated, children }) {
@@ -13,8 +12,6 @@ export default function LandingMarketingShell({ isAuthenticated, children }) {
 
   return (
     <div className="relative min-h-screen bg-white font-sans antialiased text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
-      <GlowFollow />
-
       {isAuthenticated ? (
         <div className="mx-auto w-full max-w-4xl px-4 pt-6">
           <div className="rounded-2xl border border-amber-300/30 bg-amber-50/70 px-4 py-3 text-amber-900 backdrop-blur dark:border-amber-400/20 dark:bg-amber-950/20 dark:text-amber-200">

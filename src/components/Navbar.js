@@ -32,8 +32,8 @@ const Navbar = ({
   }, [isMenuOpen]);
 
   const primaryItems = ['Task 1', 'Task 2'];
-  const secondaryItems = ['Home', 'Bank', 'Archive'];
-  const menuItems = ['Home', 'Bank', ...primaryItems, 'Archive'];
+  const secondaryItems = ['Home', 'Archive'];
+  const menuItems = ['Home', ...primaryItems, 'Archive'];
   const handleThemeToggle = () => {
     if (!themeMounted) return;
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');

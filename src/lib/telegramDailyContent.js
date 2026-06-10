@@ -150,7 +150,7 @@ function buildEveningPostStatic(date, campaign, ctaUrl) {
     '',
     `✍️ <b>${escapeHtml(taskLabel)}</b>${topic?.subtype ? ` · ${escapeHtml(subtypeLabel(topic.subtype))}` : ''}`,
     '',
-    `<i>${escapeHtml(topic?.title || 'Pick a topic in the Bank and write an essay today.')}</i>`,
+    `<i>${escapeHtml(topic?.title || 'Pick a practice topic and write an essay today.')}</i>`,
     '',
     `⏱ ${words}`,
     '',

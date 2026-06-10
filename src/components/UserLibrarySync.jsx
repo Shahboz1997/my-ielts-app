@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { syncUserLibraryOnLogin } from '@/lib/userLibraryClient.js';
 
-/** Merges word list + favorite templates from localStorage with DB after login. */
+/** Merges word list from localStorage with DB after login. */
 export default function UserLibrarySync() {
   const { data: session, status } = useSession();
   const syncedUserIdRef = useRef(null);

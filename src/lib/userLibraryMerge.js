@@ -21,12 +21,3 @@ export function mergeWordLists(local, server) {
     .sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0))
     .slice(0, 500);
 }
-
-export function mergeFavoriteTemplateIds(local, server) {
-  const ids = new Set();
-  for (const id of [...(server || []), ...(local || [])]) {
-    const n = Number(id);
-    if (Number.isFinite(n) && n > 0) ids.add(n);
-  }
-  return [...ids].sort((a, b) => a - b);
-}

@@ -64,7 +64,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   }, []);
   const [rightPanelTab, setRightPanelTab] = useState('vocabulary');
   const [focusedId, setFocusedId] = useState(null);
-  const [promptSaved, setPromptSaved] = useState(false);
   /** Краткая подсветка карточки после клика по подсветке в тексте (click-to-focus). */
   const [flashErrorCardId, setFlashErrorCardId] = useState(null);
   const [accordionOpen, setAccordionOpen] = useState(null);
@@ -152,37 +151,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   const errorWordsSet = useMemo(() => buildErrorWordsSet(feedback.errors, corrections), [feedback.errors, corrections]);
   const weakWordsSet = useMemo(() => getWeakWordsSet(lexicalUpgrade), [lexicalUpgrade]);
   const useTypedErrorHighlight = viewMode === 'feedback' && errors.length > 0;
-
-  const handleSavePromptToBank = useCallback(() => {
-    if (!promptText) return;
-    try {
-      const key = 'ielts_saved_prompts';
-      const raw = localStorage.getItem(key);
-      const prev = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(prev) ? prev : [];
-      const now = new Date();
-      const date = now.toISOString().slice(0, 10);
-      const item = {
-        id: `saved-${now.getTime()}`,
-        type: taskTypeNormalized,
-        promptText,
-        date,
-        sourceCheckId: check?.id || null,
-        createdAt: now.toISOString(),
-      };
-      const next = [item, ...list].slice(0, 200);
-      localStorage.setItem(key, JSON.stringify(next));
-      try {
-        window.dispatchEvent(new Event('ielts_saved_prompts_updated'));
-      } catch {
-        // ignore
-      }
-      setPromptSaved(true);
-      window.setTimeout(() => setPromptSaved(false), 1400);
-    } catch {
-      // ignore
-    }
-  }, [promptText, taskTypeNormalized, check?.id]);
 
   const handleInsertLinkingWord = useCallback((w) => {
     if (!setUserText) return;
@@ -608,16 +576,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                 ) : null}
               </div>
               <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto sm:max-w-full sm:justify-self-end sm:justify-end">
-                {promptText && (
-                  <button
-                    type="button"
-                    onClick={handleSavePromptToBank}
-                    className="shrink-0 rounded-full bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 sm:px-3 sm:py-2 sm:text-sm whitespace-nowrap"
-                    title="Add prompt to Bank"
-                  >
-                    {promptSaved ? 'Saved' : 'Add to Bank'}
-                  </button>
-                )}
                 <div className="flex min-w-0 flex-1 basis-[12rem] rounded-full bg-slate-100 p-0.5 dark:bg-slate-800 sm:flex-none sm:basis-auto">
                   <button
                     type="button"

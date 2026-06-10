@@ -50,10 +50,10 @@ export function useWriterPersistence({
           if (w.task1Kind === 'gt_letter') setPromptT1Letter(w.promptT1);
           else setPromptT1Academic(w.promptT1);
         }
-        const savedTab = w.activeTab === 'Topics' ? 'Home' : w.activeTab;
+        const savedTab = w.activeTab === 'Topics' || w.activeTab === 'Bank' ? 'Home' : w.activeTab;
         if (
           typeof savedTab === 'string' &&
-          (savedTab === 'Task 1' || savedTab === 'Task 2' || savedTab === 'Home' || savedTab === 'Bank')
+          (savedTab === 'Task 1' || savedTab === 'Task 2' || savedTab === 'Home')
         ) {
           setActiveTab(savedTab);
         }

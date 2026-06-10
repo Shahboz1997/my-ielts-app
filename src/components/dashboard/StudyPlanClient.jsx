@@ -14,30 +14,9 @@ import {
 } from 'recharts';
 import { BookOpen, Bell, TrendingDown, ExternalLink, PenLine, ListChecks } from 'lucide-react';
 
-const BANK_NAV_KEY = 'stratum_bank_topics_nav';
-
 function openStratumPractice(router, inApp) {
   if (!inApp?.tab) return;
   try {
-    if (inApp.taskType) {
-      const prev = (() => {
-        try {
-          const raw = localStorage.getItem(BANK_NAV_KEY);
-          return raw ? JSON.parse(raw) : {};
-        } catch {
-          return {};
-        }
-      })();
-      localStorage.setItem(
-        BANK_NAV_KEY,
-        JSON.stringify({
-          ...prev,
-          taskType: inApp.taskType,
-          subtype: inApp.subtype || '',
-          page: 1,
-        })
-      );
-    }
     sessionStorage.setItem(
       'stratum_study_plan_nav',
       JSON.stringify({

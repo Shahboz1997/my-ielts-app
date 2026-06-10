@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Layers,
-  Home,
+  PenLine,
   Clock,
   Sliders,
   LogOut,
@@ -18,7 +18,7 @@ import CambridgeSidebarLookup from '@/components/CambridgeSidebarLookup';
 import WordListPanel from '@/components/WordListPanel';
 
 const mainNavItems = [
-  { name: 'Home', href: '/', icon: Home, isHome: true },
+  { name: 'Writer', href: '/', icon: PenLine, isHome: true },
   { name: 'Study plan', href: '/study-plan', icon: Target },
   { name: 'My Checks', href: '/history', icon: Clock },
 ];
@@ -137,7 +137,7 @@ export default function Sidebar({ user, credits }) {
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          aria-label="Go to Home"
+          aria-label="Go to Writer"
         >
           <Layers className="w-5 h-5 shrink-0 text-indigo-500 dark:text-indigo-400 transition-transform duration-200 group-hover:scale-110 [filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]" strokeWidth={1.5} />
           <motion.span

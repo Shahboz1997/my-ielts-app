@@ -172,8 +172,8 @@ export function buildWeeklySteps(weakKeys, subtopicSeries, locale) {
     {
       step: 2,
       text: isRu
-        ? `Напишите эссе в Bank и проверьте фокус на: ${subLabel}.`
-        : `Write one essay from the Bank focusing on: ${subLabel}.`,
+        ? `Напишите эссе в Task 2 и проверьте фокус на: ${subLabel}.`
+        : `Write one Task 2 essay focusing on: ${subLabel}.`,
     },
     {
       step: 3,

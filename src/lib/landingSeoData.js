@@ -23,11 +23,6 @@ export const LANDING_FEATURES = [
     description:
       'Save checks to your archive, track criterion trends, and build a writing profile from real practice data.',
   },
-  {
-    title: 'Topic & template bank',
-    description:
-      'Practice with curated IELTS prompts and writing templates; favourite items sync across devices when signed in.',
-  },
 ];
 
 export const LANDING_WORKFLOW_STEPS = [

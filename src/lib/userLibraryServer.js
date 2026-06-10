@@ -56,29 +56,3 @@ export async function replaceWordListForUser(prisma, userId, items) {
 
   return getWordListForUser(prisma, userId);
 }
-
-export async function getFavoriteTemplateIdsForUser(prisma, userId) {
-  const rows = await prisma.favoriteTemplate.findMany({
-    where: { userId },
-    orderBy: { templateId: 'asc' },
-    select: { templateId: true },
-  });
-  return rows.map((r) => r.templateId);
-}
-
-export async function replaceFavoriteTemplateIdsForUser(prisma, userId, templateIds) {
-  const ids = [...new Set((Array.isArray(templateIds) ? templateIds : []).map(Number).filter((n) => Number.isFinite(n) && n > 0))];
-
-  await prisma.$transaction([
-    prisma.favoriteTemplate.deleteMany({ where: { userId } }),
-    ...(ids.length
-      ? [
-          prisma.favoriteTemplate.createMany({
-            data: ids.map((templateId) => ({ userId, templateId })),
-          }),
-        ]
-      : []),
-  ]);
-
-  return ids;
-}

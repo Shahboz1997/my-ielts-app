@@ -8,7 +8,7 @@
         "source": "British Council",
         "durationMin": 10,
         "kind": "read",
-        "inApp": { "tab": "Bank", "taskType": "task2" }
+        "inApp": { "tab": "Task 2" }
       },
       {
         "title": "Planning your writing",
@@ -37,7 +37,7 @@
         "source": "British Council",
         "durationMin": 12,
         "kind": "read",
-        "inApp": { "tab": "Bank", "taskType": "task2" }
+        "inApp": { "tab": "Task 2" }
       }
     ],
     "lr": [
@@ -55,7 +55,7 @@
         "source": "British Council",
         "durationMin": 10,
         "kind": "read",
-        "inApp": { "tab": "Bank" }
+        "inApp": { "tab": "Home" }
       },
       {
         "title": "B1–B2 vocabulary topics",
@@ -64,7 +64,7 @@
         "source": "British Council",
         "durationMin": 15,
         "kind": "read",
-        "inApp": { "tab": "Bank", "taskType": "task2" }
+        "inApp": { "tab": "Task 2" }
       }
     ],
     "gra": [
@@ -97,7 +97,7 @@
         "source": "British Council",
         "durationMin": 8,
         "kind": "read",
-        "inApp": { "tab": "Bank", "taskType": "task1", "subtype": "graph" }
+        "inApp": { "tab": "Task 1", "task1Kind": "academic" }
       }
     ],
     "data_contradiction": [
@@ -174,7 +174,7 @@
         "source": "British Council",
         "durationMin": 10,
         "kind": "read",
-        "inApp": { "tab": "Bank", "taskType": "task2" }
+        "inApp": { "tab": "Task 2" }
       }
     ],
     "register": [
@@ -196,7 +196,7 @@
         "source": "British Council",
         "durationMin": 8,
         "kind": "read",
-        "inApp": { "tab": "Bank" }
+        "inApp": { "tab": "Home" }
       }
     ],
     "word_choice": [
@@ -207,7 +207,7 @@
         "source": "British Council",
         "durationMin": 10,
         "kind": "read",
-        "inApp": { "tab": "Bank", "taskType": "task2" }
+        "inApp": { "tab": "Task 2" }
       }
     ]
   },
@@ -219,7 +219,7 @@
       "source": "British Council",
       "durationMin": 10,
       "kind": "read",
-      "inApp": { "tab": "Bank", "taskType": "task1", "subtype": "letter" }
+      "inApp": { "tab": "Task 1", "task1Kind": "gt_letter" }
     },
     {
       "title": "Formal and informal emails",

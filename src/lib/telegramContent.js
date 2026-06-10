@@ -60,7 +60,7 @@ export function buildStartMessage() {
 
 export function buildTipMessage() {
   const t = randomItem(templates);
-  if (!t) return { text: 'No templates in the bank yet.' };
+  if (!t) return { text: 'No templates available yet.' };
   const lines = [
     `💡 <b>${escapeHtml(t.title)}</b>`,
     '',
@@ -74,7 +74,7 @@ export function buildTipMessage() {
 
 export function buildTopicMessage() {
   const t = randomItem(topics);
-  if (!t) return { text: 'No topics in the bank yet.' };
+  if (!t) return { text: 'No topics available yet.' };
   const text = [
     `✍️ <b>Practice prompt</b> (${escapeHtml(t.type)} · ${escapeHtml(t.subtype || '')})`,
     '',
@@ -86,7 +86,7 @@ export function buildTopicMessage() {
 export function buildResourceMessage() {
   const pool = allResourcesFlat();
   const r = randomItem(pool);
-  if (!r) return { text: 'No resources in the bank yet.' };
+  if (!r) return { text: 'No resources available yet.' };
   const text = [
     `📖 <b>${escapeHtml(r.titleRu || r.title)}</b>`,
     r.durationMin ? `⏱ ~${r.durationMin} min` : '',

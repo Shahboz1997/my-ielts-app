@@ -136,11 +136,11 @@ export default function Task2ComparisonLab({ darkMode }) {
 
         <motion.div
           {...container}
-          className="relative rounded-[2.5rem] border border-slate-200/60 dark:border-white/10 bg-slate-900/20 dark:bg-slate-900/30 backdrop-blur-3xl shadow-2xl overflow-hidden pointer-events-none"
+          className="relative rounded-[2.5rem] border border-slate-200/60 dark:border-white/10 bg-slate-900/20 dark:bg-slate-900/30 backdrop-blur-3xl overflow-hidden pointer-events-none"
         >
           {/* VS badge */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 pointer-events-none">
-            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-200/90 dark:bg-slate-600/90 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-sm backdrop-blur-sm">
+            <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-200/90 dark:bg-slate-600/90 text-slate-700 dark:text-slate-200 text-xs font-bold backdrop-blur-sm">
               VS
             </span>
           </div>
@@ -149,7 +149,7 @@ export default function Task2ComparisonLab({ darkMode }) {
             {/* Left — Band 5.5 with Grammar (red) & Vocabulary (indigo) always visible */}
             <motion.div
               {...leftPanel}
-              className="relative p-5 sm:p-6 lg:p-8 bg-slate-50/80 dark:bg-slate-900/40 min-h-[200px] flex flex-col transition-shadow duration-300 hover:shadow-[0_0_40px_-8px_rgba(99,102,241,0.25)] dark:hover:shadow-[0_0_40px_-8px_rgba(99,102,241,0.2)]"
+              className="relative p-5 sm:p-6 lg:p-8 bg-slate-50/80 dark:bg-slate-900/40 min-h-[200px] flex flex-col"
             >
               <div className="mb-3">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
@@ -197,7 +197,7 @@ export default function Task2ComparisonLab({ darkMode }) {
             {/* Right — Band 8.5 Suggested Rewrite, highlights always on */}
             <motion.div
               {...rightPanel}
-              className="relative p-5 sm:p-6 lg:p-8 bg-white/60 dark:bg-slate-800/30 min-h-[200px] flex flex-col transition-shadow duration-300 hover:shadow-[0_0_40px_-8px_rgba(99,102,241,0.25)] dark:hover:shadow-[0_0_40px_-8px_rgba(99,102,241,0.2)]"
+              className="relative p-5 sm:p-6 lg:p-8 bg-white/60 dark:bg-slate-800/30 min-h-[200px] flex flex-col"
             >
               <div className="mb-3">
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">

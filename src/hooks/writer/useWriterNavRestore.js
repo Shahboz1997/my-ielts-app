@@ -43,8 +43,8 @@ export function useWriterNavRestore({
       const fromQuery = sp.get('tab');
       const fromStore = sessionStorage.getItem('stratum_nav_tab');
       const t = fromQuery || fromStore;
-      const tab = t === 'Topics' ? 'Home' : t;
-      if (tab === 'Bank' || tab === 'Home' || tab === 'Task 1' || tab === 'Task 2') {
+      const tab = t === 'Topics' || t === 'Bank' ? 'Home' : t;
+      if (tab === 'Home' || tab === 'Task 1' || tab === 'Task 2') {
         setActiveTab(tab);
       }
       if (fromQuery) {
@@ -58,8 +58,8 @@ export function useWriterNavRestore({
       if (studyNavRaw) {
         sessionStorage.removeItem('stratum_study_plan_nav');
         const nav = JSON.parse(studyNavRaw);
-        const navTab = nav.tab === 'Topics' ? 'Home' : nav.tab;
-        if (navTab === 'Bank' || navTab === 'Home' || navTab === 'Task 1' || navTab === 'Task 2') {
+        const navTab = nav.tab === 'Topics' || nav.tab === 'Bank' ? 'Home' : nav.tab;
+        if (navTab === 'Home' || navTab === 'Task 1' || navTab === 'Task 2') {
           setActiveTab(navTab);
         }
         if (nav.task1Kind === 'gt_letter' || nav.task1Kind === 'academic') {
@@ -82,7 +82,8 @@ export function useWriterNavRestore({
           setLetterMeta((prev) => ({ ...prev, ...p.letterMeta }));
         }
         if (!fromQuery && !fromStore && p.activeTab) {
-          setActiveTab(p.activeTab === 'Topics' ? 'Home' : p.activeTab);
+          const prefillTab = p.activeTab === 'Topics' || p.activeTab === 'Bank' ? 'Home' : p.activeTab;
+          setActiveTab(prefillTab);
         }
         setImage(null);
       }
