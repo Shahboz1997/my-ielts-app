@@ -17,6 +17,10 @@ export function useWriterArchive({
   promptT2,
   activeResultT1,
   activeResultT2,
+  tutorCommentT1,
+  tutorCommentT2,
+  setTutorCommentT1,
+  setTutorCommentT2,
   image,
   setEssayT1,
   setEssayT2,
@@ -54,6 +58,14 @@ export function useWriterArchive({
   useEffect(() => {
     setArchiveSavedT2(false);
   }, [activeResultT2]);
+
+  useEffect(() => {
+    setArchiveSavedT1(false);
+  }, [tutorCommentT1]);
+
+  useEffect(() => {
+    setArchiveSavedT2(false);
+  }, [tutorCommentT2]);
 
   const clearArchive = async () => {
     if (!window.confirm('Are you sure you want to clear the entire archive?')) return;
@@ -93,6 +105,9 @@ export function useWriterArchive({
     if (entry.taskType === 'Task 1') {
       setEssayT1(entry.essay || '');
       setResultT1(entry.fullData || null);
+      setTutorCommentT1(
+        typeof entry.fullData?.tutor_comment === 'string' ? entry.fullData.tutor_comment : ''
+      );
       if (entry.image) setImage(entry.image);
       const prompt = entry.question || entry.prompt || '';
       if (entry.fullData?.task1Kind === 'gt_letter' || (entry.taskType === 'Task 1' && entry.fullData?.letterMeta)) {
@@ -106,6 +121,9 @@ export function useWriterArchive({
     } else {
       setEssayT2(entry.essay || '');
       setResultT2(entry.fullData || null);
+      setTutorCommentT2(
+        typeof entry.fullData?.tutor_comment === 'string' ? entry.fullData.tutor_comment : ''
+      );
       const prompt = entry.question || entry.prompt || '';
       if (prompt) setPromptT2(prompt);
       setActiveTab('Task 2');
@@ -119,6 +137,7 @@ export function useWriterArchive({
     const currentEssay = activeTab === 'Task 1' ? essayT1 : essayT2;
     const currentPrompt = activeTab === 'Task 1' ? promptT1Active : promptT2;
     const currentResult = activeTab === 'Task 1' ? activeResultT1 : activeResultT2;
+    const currentTutorComment = activeTab === 'Task 1' ? tutorCommentT1 : tutorCommentT2;
 
     if (!currentResult) {
       toast.error('Nothing to save. Run an analysis first.');
@@ -141,7 +160,7 @@ export function useWriterArchive({
       let checkId = isHistoryCheckId(existingCheckId) ? existingCheckId : null;
 
       if (checkId) {
-        const syncRes = await syncResultScoresToServer(currentResult, currentEssay);
+        const syncRes = await syncResultScoresToServer(currentResult, currentEssay, currentTutorComment);
         if (!syncRes.ok) {
           toast.error(syncRes.error || 'Could not update saved check.');
           return;
@@ -152,7 +171,7 @@ export function useWriterArchive({
           content: currentEssay,
           score: currentResult.overall_band,
           promptText: currentPrompt || '',
-          feedback: { ...currentResult, text: currentEssay },
+          feedback: { ...currentResult, text: currentEssay, tutor_comment: currentTutorComment || '' },
         });
 
         if (!ok) {
@@ -181,7 +200,12 @@ export function useWriterArchive({
         essay: currentEssay,
         question: currentPrompt || 'No prompt provided',
         image: activeTab === 'Task 1' ? image : null,
-        fullData: { ...currentResult, savedId: checkId || currentResult.savedId || null, text: currentEssay },
+        fullData: {
+          ...currentResult,
+          savedId: checkId || currentResult.savedId || null,
+          text: currentEssay,
+          tutor_comment: currentTutorComment || '',
+        },
       };
       const updated = [newEntry, ...archive];
       setArchive(updated);

@@ -29,6 +29,24 @@ function SectionHeader({ kicker, title, subtitle, badge }) {
   );
 }
 
+function TutorNotes({ comment }) {
+  const body = String(comment || '').trim();
+  if (!body) return null;
+
+  return (
+    <section className="mt-8">
+      <SectionHeader
+        kicker="Tutor review"
+        title="Tutor's notes"
+        subtitle="Personal feedback from your instructor."
+      />
+      <article className={`${T.panel} border-amber-200 bg-amber-50/50 p-5 sm:p-6`}>
+        <p className="whitespace-pre-wrap text-sm font-semibold leading-relaxed text-slate-800">{body}</p>
+      </article>
+    </section>
+  );
+}
+
 function CriteriaBreakdown({ criteria, isTask1 }) {
   const cards = [
     {
@@ -570,6 +588,7 @@ export default function SharedReportDetails({ task }) {
 
   return (
     <div className="mt-6 space-y-2">
+      <TutorNotes comment={task.tutorComment} />
       <CriteriaBreakdown criteria={task.criteria} isTask1={isTask1} />
       {isGtLetter && task.letterStrategy ? (
         <LetterStrategyPanel strategy={task.letterStrategy} />

@@ -505,6 +505,7 @@ function renderLexicalUpgradeSection({
  * @param {string|null} [opts.chartImage] - data URL for Task 1 chart
  * @param {string} [opts.promptText]
  * @param {'academic'|'gt_letter'} [opts.task1Kind]
+ * @param {string} [opts.tutorComment]
  */
 export function generateStratumWritingPdf({
   isT1,
@@ -513,6 +514,7 @@ export function generateStratumWritingPdf({
   chartImage = null,
   promptText = '',
   task1Kind = 'academic',
+  tutorComment = '',
 }) {
   const isGtLetter =
     isT1 && (task1Kind === 'gt_letter' || result?.task1Kind === 'gt_letter');
@@ -700,6 +702,31 @@ export function generateStratumWritingPdf({
     renderEssayWords(paragraph);
   });
   y += 12;
+
+  const safeTutorComment = sanitizePdfText(
+    String(tutorComment || result?.tutor_comment || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .trim()
+  );
+  if (safeTutorComment) {
+    y = ensureSpace(y, 28);
+    doc.setTextColor(...amberText);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text("Tutor's notes", MARGIN, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...greyText);
+    const tutorLines = doc.splitTextToSize(safeTutorComment, CONTENT_WIDTH);
+    tutorLines.forEach((line) => {
+      y = ensureSpace(y, 5);
+      doc.text(line, MARGIN, y);
+      y += 4.5;
+    });
+    y += SECTION_GAP;
+  }
 
   // Keep all four criteria on a readable page: break before section 2 if little room left
   if (y > BODY_BOTTOM - 95) {

@@ -1,24 +1,31 @@
-import { sendTelegramMessage } from '@/lib/telegram';
-import { checkEssayViaAi } from '@/lib/telegramGeneratePost';
+import {
+  buildCtaInlineKeyboard,
+  prepareTelegramHtml,
+  sendTelegramMessage,
+  sendTelegramMessageParts,
+} from '@/lib/telegram';
+import { checkEssayForTelegram } from '@/lib/telegramEssayCheck';
 import {
   buildResourceMessage,
   buildStartMessage,
   buildTipMessage,
   buildTopicMessage,
 } from '@/lib/telegramContent';
-import { prepareTelegramHtml } from '@/lib/telegram';
+import { PRODUCTION_SITE_ORIGIN } from '@/lib/publicSiteUrl';
 
 const CHECK_START_TEXT = [
   '✅ <b>Check my text</b>',
   '',
-  'Paste your IELTS Writing Task 1 or Task 2 essay here (plain text).',
-  'I will score it on all 4 criteria: TA/TR, CC, LR, GRA.',
+  'Paste your IELTS Writing Task 1 or Task 2 essay (plain text).',
+  'Deep check: band scores, error highlights, C1/C2 vocabulary, idea depth, Band 9 rewrite excerpt.',
   '',
-  'Tip: include at least 150 words (Task 1) or 250 words (Task 2) for accurate feedback.',
+  'Optional: paste the <b>task question</b> on the line above the essay for sharper Task Achievement scoring.',
+  '',
+  'Minimum ~80 words. Task 1: 150+ · Task 2: 250+ for exam-realistic feedback.',
 ].join('\n');
 
-const CHECK_BUSY_TEXT = '⏳ Checking your essay… This may take up to 30 seconds.';
-const CHECK_TOO_SHORT = 'Please send at least 80 words so I can give meaningful feedback.';
+const CHECK_BUSY_TEXT =
+  '⏳ Running a <b>deep</b> IELTS check (same engine as STRATUM.ai)… Usually 60–90 seconds.';
 const CHECK_AI_OFF =
   'AI checking is temporarily unavailable. Open STRATUM.ai for full feedback on your writing.';
 
@@ -77,7 +84,19 @@ export async function handleTelegramMessage(message) {
   if (!reply && isPrivate && !text.startsWith('/')) {
     if (wordCount(text) >= 80) {
       await sendTelegramMessage(chatId, CHECK_BUSY_TEXT, { parse_mode: 'HTML' });
-      const result = await checkEssayViaAi(text);
+      const result = await checkEssayForTelegram(text);
+      if (result?.messages?.length) {
+        const parts = result.messages.map((m) => prepareTelegramHtml(m));
+        const cta = buildCtaInlineKeyboard(
+          PRODUCTION_SITE_ORIGIN,
+          '👉 Full rewrite + highlights on STRATUM.ai'
+        );
+        const sent = await sendTelegramMessageParts(chatId, parts, {
+          parse_mode: 'HTML',
+          reply_markup: cta,
+        });
+        return { handled: true, ok: sent.ok, cmd: 'essay-deep' };
+      }
       if (result?.text) {
         reply = { text: prepareTelegramHtml(result.text) };
       } else {

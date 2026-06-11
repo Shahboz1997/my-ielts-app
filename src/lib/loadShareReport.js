@@ -122,6 +122,7 @@ async function fetchShareChecksFromDb(t1Id, t2Id, ref) {
         letterStrategy: isTask1 && fb.letter_strategy ? fb.letter_strategy : null,
         task1Kind: fb.task1Kind === 'gt_letter' ? 'gt_letter' : 'academic',
         originalEssay: typeof c.content === 'string' ? c.content : '',
+        tutorComment: typeof fb.tutor_comment === 'string' ? fb.tutor_comment.trim() : '',
         suggestedRewrite:
           typeof fb.suggested_rewrite === 'string' ? fb.suggested_rewrite : '',
         errors: Array.isArray(fb.errors) ? fb.errors : [],

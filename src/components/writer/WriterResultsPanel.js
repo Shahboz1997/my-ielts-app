@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, Loader2, RotateCcw, Share2 } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { LoadingState, EmptyState } from '@/components/stratum';
 import CreditsExhaustedCallout from '@/components/CreditsExhaustedCallout';
 import { IELTS_BAND_STEPS, isManualScoringActive } from '@/lib/writer/manualScoring';
@@ -18,10 +18,6 @@ export default function WriterResultsPanel({
   loading,
   activeResult,
   darkMode,
-  onDownloadReport,
-  onShareReport,
-  shareLoading,
-  hasSavedAnalysis,
   onCriteriaScoreChange,
   onResetToAiScores,
   showCreditsExhausted,
@@ -102,40 +98,6 @@ export default function WriterResultsPanel({
                 </div>
               </div>
             </header>
-
-            <div className="border-b border-slate-100 px-4 py-4 dark:border-white/5 sm:px-6">
-              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[1fr_auto]">
-                <button
-                  type="button"
-                  onClick={() => onDownloadReport?.()}
-                  className="group/btn flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3.5 text-[11px] font-black uppercase tracking-widest text-white transition-all hover:bg-indigo-500 active:scale-[0.97] sm:min-h-0 sm:py-3.5 sm:text-xs"
-                >
-                  <Download className="h-4 w-4 shrink-0 transition-transform group-hover/btn:translate-y-0.5 sm:h-5 sm:w-5" />
-                  <span className="truncate">Official PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onShareReport?.()}
-                  disabled={shareLoading}
-                  className="flex min-h-[3.25rem] w-full min-w-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 min-[400px]:w-auto min-[400px]:min-w-[3.25rem] min-[400px]:max-w-[3.25rem] min-[400px]:px-0 sm:min-h-0 sm:min-w-0 sm:max-w-none sm:px-5"
-                  title={
-                    hasSavedAnalysis
-                      ? 'Share full analysis'
-                      : 'Sign in and analyze to get a share link'
-                  }
-                  aria-label="Share analysis"
-                >
-                  {shareLoading ? (
-                    <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden />
-                  ) : (
-                    <Share2 className="h-5 w-5 shrink-0" aria-hidden />
-                  )}
-                  <span className="text-[11px] font-black uppercase tracking-widest min-[400px]:hidden sm:inline sm:text-xs">
-                    {shareLoading ? 'Loading…' : 'Share'}
-                  </span>
-                </button>
-              </div>
-            </div>
 
             <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-2">

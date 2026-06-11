@@ -8,6 +8,7 @@ import TaskEditorToolbar from '@/components/writer/TaskEditorToolbar';
 import Task1Editor from '@/components/writer/Task1Editor';
 import Task2Editor from '@/components/writer/Task2Editor';
 import EssayEditor from '@/components/writer/EssayEditor';
+import TutorCommentSection from '@/components/writer/TutorCommentSection';
 import TaskEditorActions from '@/components/writer/TaskEditorActions';
 import WriterHomeLabs from '@/components/writer/WriterHomeLabs';
 import WriterResultsPanel from '@/components/writer/WriterResultsPanel';
@@ -89,6 +90,8 @@ export default function WriterShell() {
     setIsFocused,
     playClickSound,
     saveCurrentToArchive,
+    activeTutorComment,
+    setActiveTutorComment,
     activeResult,
     isSaved,
     isSavingArchive,
@@ -325,11 +328,21 @@ export default function WriterShell() {
                           onBlur={() => setIsFocused(false)}
                           playClickSound={playClickSound}
                         />
-                        <TaskEditorActions
+                        <TutorCommentSection
+                          value={activeTutorComment}
+                          onChange={setActiveTutorComment}
                           onSave={saveCurrentToArchive}
+                          onShare={shareReport}
+                          onPdf={downloadReport}
                           saveDisabled={!activeResult}
                           isSaved={isSaved}
                           isSaving={isSavingArchive}
+                          shareLoading={shareLoading}
+                          pdfDisabled={!activeResult}
+                          hasSavedAnalysis={Boolean(activeResultT1?.savedId || activeResultT2?.savedId)}
+                          darkMode={darkMode}
+                        />
+                        <TaskEditorActions
                           error={error}
                           errorIs401={errorIs401}
                           onDismissError={() => {
@@ -354,10 +367,6 @@ export default function WriterShell() {
                       loading={activeTab === 'Task 1' ? loadingT1 : loadingT2}
                       activeResult={activeResult}
                       darkMode={darkMode}
-                      onDownloadReport={downloadReport}
-                      onShareReport={shareReport}
-                      shareLoading={shareLoading}
-                      hasSavedAnalysis={Boolean(activeResultT1?.savedId || activeResultT2?.savedId)}
                       onCriteriaScoreChange={handleCriteriaScoreChange}
                       onResetToAiScores={handleResetToAiScores}
                       showCreditsExhausted={showCreditsExhausted && !activeResult}

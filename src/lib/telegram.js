@@ -101,6 +101,28 @@ export async function sendTelegramMessage(chatId, text, options = {}) {
   return callTelegramApi('sendMessage', body);
 }
 
+/** Send multiple HTML messages in order (e.g. deep essay feedback). */
+export async function sendTelegramMessageParts(chatId, parts, options = {}) {
+  const { delayMs = 400, ...lastOptions } = options;
+  const messages = (Array.isArray(parts) ? parts : []).filter((p) => String(p || '').trim());
+  if (!messages.length) return { ok: false, error: 'empty' };
+
+  let last = { ok: false };
+  for (let i = 0; i < messages.length; i++) {
+    const isLast = i === messages.length - 1;
+    last = await sendTelegramMessage(
+      chatId,
+      messages[i],
+      isLast ? lastOptions : { parse_mode: 'HTML' }
+    );
+    if (!last.ok) return last;
+    if (!isLast && delayMs > 0) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return last;
+}
+
 export async function sendToChannel(text, options = {}) {
   return sendToGroup(text, options);
 }

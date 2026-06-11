@@ -80,6 +80,10 @@ export const LANDING_FAQ_ITEMS = [
     q: 'Do I need an account to use STRATUM?',
     a: 'Yes. Create a free account to run essay checks, save history, and use your included credits. Sign in from the home page to open the writing lab.',
   },
+  {
+    q: 'Can tutors add personal feedback and share reports with students?',
+    a: 'Yes. After AI analysis, use Tutor\'s notes below the essay for custom feedback. Adjust criterion scores manually if needed, then Save to Archive, Share a link, or download an Official PDF — tutor notes appear in the shared report and PDF.',
+  },
 ];
 
 export const LANDING_GUEST_OFFER =
@@ -95,19 +99,26 @@ export const LANDING_TELEGRAM = {
       title: 'Morning writing tips',
       description:
         'Collocations, grammar fixes, and Band 7.5+ vocabulary — delivered every morning with a short quiz five minutes later.',
+      command: '/tip',
+      commandHint: 'vocabulary & grammar tip in DM',
     },
     {
       title: 'Evening practice topic',
       description:
         'A fresh Task 1 or Task 2 prompt each evening, plus a native Telegram quiz to test what you learned.',
+      command: '/topic',
+      commandHint: 'daily writing prompt',
     },
     {
       title: 'Check my text (DM)',
       description:
         'Send your essay directly to the bot — 80+ words, all four IELTS criteria scored in under 30 seconds. No account required.',
+      command: '/check',
+      commandHint: 'full band breakdown',
     },
   ],
-  commands: ['/check', '/tip', '/topic', '/resource'],
+  resourceCommand: '/resource',
+  resourceHint: 'curated study links matched to your weak areas',
   cta: 'Open Telegram bot',
   channelCta: 'Join Telegram channel',
 };

@@ -41,25 +41,6 @@ export default function LandingSeoMainContent() {
         </div>
       </header>
 
-      <section className="border-b border-slate-200/80 px-4 py-12 dark:border-white/10" aria-labelledby="features-heading">
-        <div className="mx-auto max-w-5xl">
-          <h2 id="features-heading" className="text-center text-2xl font-black uppercase tracking-tight">
-            Why STRATUM for IELTS Writing
-          </h2>
-          <ul className="mt-8 grid gap-6 sm:grid-cols-2">
-            {LANDING_FEATURES.map((f) => (
-              <li
-                key={f.title}
-                className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900/60"
-              >
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{f.description}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
       <section className="border-b border-slate-200/80 px-4 py-12 dark:border-white/10" aria-labelledby="workflow-heading">
         <div className="mx-auto max-w-5xl">
           <h2 id="workflow-heading" className="text-center text-2xl font-black uppercase tracking-tight">
@@ -79,6 +60,13 @@ export default function LandingSeoMainContent() {
               </li>
             ))}
           </ol>
+          <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {LANDING_FEATURES.map((f) => f.description).join(' ')}
+          </p>
+          <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            Tutors: leave notes below the student essay, adjust bands manually, then Save to Archive, Share a link, or
+            export an Official PDF — notes included in every format.
+          </p>
         </div>
       </section>
 
@@ -130,20 +118,17 @@ export default function LandingSeoMainContent() {
               </li>
             ))}
           </ul>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href={TELEGRAM_BOT_URL}
-              className="inline-flex rounded-xl bg-[#2AABEE] px-6 py-3 text-sm font-bold text-white hover:bg-[#229ED9]"
-            >
+          <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            Commands: <strong>/check</strong> essay scores · <strong>/tip</strong> morning tip · <strong>/topic</strong>{' '}
+            evening prompt · <strong>{LANDING_TELEGRAM.resourceCommand}</strong> {LANDING_TELEGRAM.resourceHint}.{' '}
+            <a href={TELEGRAM_BOT_URL} className="font-semibold text-sky-700 underline dark:text-sky-300">
               {LANDING_TELEGRAM.cta}
             </a>
-            <a
-              href={TELEGRAM_CHANNEL_URL}
-              className="inline-flex rounded-xl border border-sky-300 px-6 py-3 text-sm font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-600 dark:text-sky-200 dark:hover:bg-sky-950/40"
-            >
+            {' · '}
+            <a href={TELEGRAM_CHANNEL_URL} className="font-semibold text-sky-700 underline dark:text-sky-300">
               {LANDING_TELEGRAM.channelCta}
             </a>
-          </div>
+          </p>
         </div>
       </section>
 

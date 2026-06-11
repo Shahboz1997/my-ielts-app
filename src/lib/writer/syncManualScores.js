@@ -9,7 +9,7 @@ export { needsScoringSync };
  * @param {object} result
  * @param {string} [essayText]
  */
-export async function syncResultScoresToServer(result, essayText = '') {
+export async function syncResultScoresToServer(result, essayText = '', tutorComment = '') {
   const id = typeof result?.savedId === 'string' ? result.savedId.trim() : '';
   if (!isHistoryCheckId(id)) {
     return { ok: false, error: 'No saved check id' };
@@ -19,6 +19,7 @@ export async function syncResultScoresToServer(result, essayText = '') {
   const feedback = {
     ...result,
     text: essayText || result.text || '',
+    tutor_comment: typeof tutorComment === 'string' ? tutorComment : result.tutor_comment || '',
   };
 
   const { ok, data } = await patchHistoryCheck(id, {

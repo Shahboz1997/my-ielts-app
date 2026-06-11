@@ -8,6 +8,7 @@ import {
   needsScoringSync,
   resetManualScoring,
 } from '@/lib/writer/manualScoring';
+import { isHistoryCheckId } from '@/lib/writer/archiveHistory';
 import { syncResultScoresToServer } from '@/lib/writer/syncManualScores';
 
 export { syncResultScoresToServer };
@@ -18,6 +19,8 @@ export function useWriterManualScoring({
   essayT2,
   activeResultT1,
   activeResultT2,
+  tutorCommentT1,
+  tutorCommentT2,
   setResultT1,
   setResultT2,
 }) {
@@ -78,16 +81,17 @@ export function useWriterManualScoring({
 
   const syncBothTasksIfNeeded = useCallback(async () => {
     const tasks = [
-      { result: activeResultT1, essay: essayT1 },
-      { result: activeResultT2, essay: essayT2 },
+      { result: activeResultT1, essay: essayT1, tutorComment: tutorCommentT1 },
+      { result: activeResultT2, essay: essayT2, tutorComment: tutorCommentT2 },
     ];
-    for (const { result, essay } of tasks) {
-      if (!needsScoringSync(result)) continue;
-      const res = await syncResultScoresToServer(result, essay);
+    for (const { result, essay, tutorComment } of tasks) {
+      const id = typeof result?.savedId === 'string' ? result.savedId.trim() : '';
+      if (!isHistoryCheckId(id)) continue;
+      const res = await syncResultScoresToServer(result, essay, tutorComment);
       if (!res.ok) return res;
     }
     return { ok: true };
-  }, [activeResultT1, activeResultT2, essayT1, essayT2]);
+  }, [activeResultT1, activeResultT2, essayT1, essayT2, tutorCommentT1, tutorCommentT2]);
 
   return {
     handleCriteriaScoreChange,
