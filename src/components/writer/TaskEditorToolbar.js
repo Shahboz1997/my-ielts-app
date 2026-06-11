@@ -1,7 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Clock, Pause, Play, Trash2 } from 'lucide-react';
+import { ChevronDown, Clock, Pause, Play, Trash2 } from 'lucide-react';
+import {
+  TASK_TYPE_OPTIONS,
+  findTaskTypeOption,
+  resolveTaskTypeOptionId,
+} from '@/lib/writer/constants';
 import { formatTime } from '@/lib/writer/wordCount';
 
 export default function TaskEditorToolbar({
@@ -15,57 +20,61 @@ export default function TaskEditorToolbar({
   timerActive,
   setTimerActive,
 }) {
+  const selectedId = resolveTaskTypeOptionId(activeTab, task1Kind);
+  const selectedOption = findTaskTypeOption(selectedId);
+
+  const handleTaskTypeChange = (optionId) => {
+    const option = findTaskTypeOption(optionId);
+    setActiveTab(option.tab);
+    if (option.task1Kind) {
+      setTask1Kind(option.task1Kind);
+      if (option.task1Kind === 'gt_letter') setImageUploadError(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 mb-8">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center justify-between lg:justify-start w-full lg:w-auto gap-4 shrink-0 flex-wrap">
-          <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
-            {['Task 1', 'Task 2'].map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium tracking-tight transition-all ${
-                  activeTab === tab
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400'
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 sm:gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-start justify-between lg:justify-start w-full lg:w-auto gap-4 shrink-0 flex-wrap">
+          <label className="space-y-1.5 block w-full sm:min-w-[280px] sm:max-w-md">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              Question type
+            </span>
+            <div className="relative">
+              <select
+                value={selectedId}
+                onChange={(e) => handleTaskTypeChange(e.target.value)}
+                aria-label="Question type"
+                className={`w-full appearance-none rounded-xl border px-4 py-2.5 pr-10 text-sm font-semibold tracking-tight transition-all outline-none focus:ring-2 focus:ring-indigo-500/40 ${
+                  selectedOption.task1Kind === 'gt_letter'
+                    ? 'border-teal-200 bg-teal-50/60 text-teal-900 dark:border-teal-800/60 dark:bg-teal-950/30 dark:text-teal-100'
+                    : selectedId === 'task2'
+                      ? 'border-indigo-200 bg-indigo-50/60 text-indigo-900 dark:border-indigo-800/60 dark:bg-indigo-950/30 dark:text-indigo-100'
+                      : 'border-indigo-200 bg-indigo-50/60 text-indigo-900 dark:border-indigo-800/60 dark:bg-indigo-950/30 dark:text-indigo-100'
                 }`}
               >
-                {tab}
-              </button>
-            ))}
-          </div>
-          {activeTab === 'Task 1' && (
-            <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setTask1Kind('academic')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  task1Kind === 'academic' ? 'bg-indigo-600 text-white' : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                Academic
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTask1Kind('gt_letter');
-                  setImageUploadError(null);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  task1Kind === 'gt_letter' ? 'bg-teal-600 text-white' : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                GT Letter
-              </button>
+                {TASK_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                aria-hidden
+              />
             </div>
-          )}
+            <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              {selectedOption.description}
+            </p>
+          </label>
           <div className="lg:hidden">
             <button
               type="button"
               onClick={onClearDraft}
               className="p-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 rounded-xl transition-all"
               title="Clear Draft"
+              aria-label="Clear draft"
             >
               <Trash2 className="w-5 h-5" />
             </button>
@@ -101,6 +110,7 @@ export default function TaskEditorToolbar({
           <button
             type="button"
             onClick={() => setTimerActive(!timerActive)}
+            aria-label={timerActive ? 'Pause timer' : 'Start timer'}
             className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all active:scale-95 ${
               timerActive ? 'bg-amber-500 hover:bg-amber-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}

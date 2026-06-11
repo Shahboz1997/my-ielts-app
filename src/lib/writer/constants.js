@@ -1,5 +1,44 @@
 export const STRATUM_WORKSPACE_STORAGE_KEY = 'ielts_stratum_workspace_v1';
 
+/** Display labels for writing task types (internal tab/kind values stay unchanged). */
+export const TASK_TYPE_OPTIONS = [
+  {
+    id: 'task2',
+    tab: 'Task 2',
+    label: 'Task 2 — Essay',
+    shortLabel: 'Task 2',
+    description: 'Opinion, discussion, or problem-solution essay. Minimum 250 words.',
+  },
+  {
+    id: 'academic_t1',
+    tab: 'Task 1',
+    task1Kind: 'academic',
+    label: 'Academic Task 1 — Chart / Graph',
+    shortLabel: 'Task 1 · Chart',
+    description: 'Describe charts, graphs, tables, or diagrams. Minimum 150 words.',
+  },
+  {
+    id: 'gt_t1',
+    tab: 'Task 1',
+    task1Kind: 'gt_letter',
+    label: 'General Task 1 — Letter',
+    shortLabel: 'Task 1 · Letter',
+    description: 'Formal or informal letter with bullet points. Minimum 150 words.',
+  },
+];
+
+/** @param {'Task 1'|'Task 2'} activeTab @param {'academic'|'gt_letter'} task1Kind */
+export function resolveTaskTypeOptionId(activeTab, task1Kind) {
+  if (activeTab === 'Task 2') return 'task2';
+  if (task1Kind === 'gt_letter') return 'gt_t1';
+  return 'academic_t1';
+}
+
+/** @param {string} id */
+export function findTaskTypeOption(id) {
+  return TASK_TYPE_OPTIONS.find((o) => o.id === id) ?? TASK_TYPE_OPTIONS[0];
+}
+
 export const DEFAULT_PROMPT_T1_ACADEMIC =
   'Summarize the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.';
 
