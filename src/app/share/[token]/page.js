@@ -38,13 +38,13 @@ export async function generateMetadata({ params }) {
   const token = String(p?.token || "");
   const verified = verifyShareToken(token);
   if (!verified.ok) {
-    return { title: "Shared report — STRATUM.ai", robots: { index: false, follow: false } };
+    return { title: "Shared report — stratum", robots: { index: false, follow: false } };
   }
 
   const ref = verified.data.ref;
   const title = ref
     ? `Shared IELTS report — @${ref}`
-    : "Shared IELTS report — STRATUM.ai";
+    : "Shared IELTS report — stratum";
   const description =
     "IELTS Writing analysis: criteria, lexical upgrade, corrections, and side-by-side draft vs academic rewrite.";
 
@@ -79,7 +79,7 @@ export default async function SharePage({ params }) {
       <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-400">STRATUM.ai</p>
+            <p className="text-[10px] font-black normal-case tracking-[0.35em] text-slate-400">stratum</p>
             <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
               Shared IELTS Writing Analysis
               <span className="ml-2 text-slate-400">

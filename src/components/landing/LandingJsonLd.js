@@ -8,7 +8,7 @@ export default function LandingJsonLd() {
   const webApp = {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
-    name: 'STRATUM.ai',
+    name: 'stratum',
     url: base,
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'Web',

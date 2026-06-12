@@ -2,8 +2,8 @@ import LegalPageLayout from '@/components/LegalPageLayout';
 import { BUSINESS_ADDRESS, LEGAL_COMPANY_NAME, REGISTERED_AGENT_ADDRESS, REGISTERED_AGENT_NAME, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export const metadata = {
-  title: 'Privacy Policy | STRATUM.ai',
-  description: 'STRATUM.ai privacy policy: how we collect, use, and protect your data.',
+  title: 'Privacy Policy | stratum',
+  description: 'stratum privacy policy: how we collect, use, and protect your data.',
 };
 
 const LAST_UPDATED = 'February 19, 2026';
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
       <section>
         <h2>Company</h2>
         <p>
-          {LEGAL_COMPANY_NAME} operates STRATUM.ai. Principal office and mailing address:{' '}
+          {LEGAL_COMPANY_NAME} operates stratum. Principal office and mailing address:{' '}
           {BUSINESS_ADDRESS}. Registered agent: {REGISTERED_AGENT_NAME},{' '}
           {REGISTERED_AGENT_ADDRESS}.
         </p>

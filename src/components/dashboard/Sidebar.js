@@ -129,7 +129,7 @@ export default function Sidebar({ user, credits }) {
           p-4
         "
       >
-        {/* Logo: STRATUM.ai — Layers icon + bold, wide-tracked */}
+        {/* Logo: stratum — Layers icon + bold, wide-tracked */}
         <motion.button
           type="button"
           onClick={goHome}
@@ -141,12 +141,12 @@ export default function Sidebar({ user, credits }) {
         >
           <Layers className="w-5 h-5 shrink-0 text-indigo-500 dark:text-indigo-400 transition-transform duration-200 group-hover:scale-110 [filter:drop-shadow(0_0_5px_rgba(79,70,229,0.5))]" strokeWidth={1.5} />
           <motion.span
-            className="font-black tracking-[0.2em] text-lg text-slate-900 dark:text-slate-100 select-none uppercase"
+            className="font-black tracking-[0.2em] text-lg text-slate-900 dark:text-slate-100 select-none normal-case"
             style={{ textShadow: '0 0 20px rgba(99,102,241,0.2)' }}
             animate={{ opacity: [1, 0.9, 1] }}
             transition={{ opacity: { repeat: Infinity, duration: 2.5, ease: 'easeInOut' }}}
           >
-            STRATUM<span className="text-indigo-500 dark:text-indigo-400">.</span>ai
+            stratum
           </motion.span>
         </motion.button>
 

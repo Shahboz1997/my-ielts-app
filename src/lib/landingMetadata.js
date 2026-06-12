@@ -5,7 +5,7 @@ import { LANDING_HERO } from '@/lib/landingSeoData';
 const baseUrl = getMetadataBaseUrl();
 
 export const landingPageMetadata = {
-  title: 'STRATUM.ai — IELTS Writing Task 1 & Task 2 AI Examiner',
+  title: 'stratum — IELTS Writing Task 1 & Task 2 AI Examiner',
   description: LANDING_HERO.description,
   keywords: [
     'IELTS writing checker',
@@ -15,7 +15,7 @@ export const landingPageMetadata = {
     'band score feedback',
     'GT letter IELTS',
     'academic writing IELTS',
-    'STRATUM.ai',
+    'stratum',
   ],
   alternates: {
     canonical: '/',
@@ -24,14 +24,14 @@ export const landingPageMetadata = {
     type: 'website',
     locale: 'en_US',
     url: baseUrl,
-    siteName: 'STRATUM.ai',
-    title: 'STRATUM.ai — IELTS Writing AI Examiner',
+    siteName: 'stratum',
+    title: 'stratum — IELTS Writing AI Examiner',
     description: LANDING_HERO.description,
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'STRATUM.ai IELTS Writing' }],
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'stratum IELTS Writing' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'STRATUM.ai — IELTS Writing AI Examiner',
+    title: 'stratum — IELTS Writing AI Examiner',
     description: LANDING_HERO.description,
     images: ['/og-image.png'],
   },

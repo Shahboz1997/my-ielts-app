@@ -54,14 +54,14 @@ const Navbar = ({
             <button
               type="button"
               onClick={() => setActiveTab('Home')}
-              className="group flex items-center gap-1 min-[400px]:gap-1.5 sm:gap-2 font-black cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg uppercase shrink-0 transition-all duration-200 max-w-[42vw] min-[400px]:max-w-none"
+              className="group flex items-center gap-1 min-[400px]:gap-1.5 sm:gap-2 font-black cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg shrink-0 transition-all duration-200 max-w-[42vw] min-[400px]:max-w-none"
               aria-label="Go to Home"
             >
               <span className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 ring-1 ring-indigo-500/20 transition-all duration-200 group-hover:bg-indigo-500/15 group-hover:ring-indigo-500/30 group-active:scale-95">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110" strokeWidth={2} />
               </span>
-              <span className={`inline truncate text-[10px] min-[400px]:text-base sm:text-xl md:text-2xl tracking-[0.1em] min-[400px]:tracking-[0.12em] sm:tracking-[0.15em] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                STRATUM<span className="text-indigo-500 dark:text-indigo-400">.</span>ai
+              <span className={`inline truncate normal-case text-[10px] min-[400px]:text-base sm:text-xl md:text-2xl tracking-[0.1em] min-[400px]:tracking-[0.12em] sm:tracking-[0.15em] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                stratum
               </span>
             </button>
           </div>

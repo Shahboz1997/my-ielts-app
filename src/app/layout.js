@@ -26,8 +26,8 @@ const baseUrl = getMetadataBaseUrl();
 export const metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'STRATUM.ai — Premium IELTS Intelligence',
-    template: '%s | STRATUM.ai',
+    default: 'stratum — Premium IELTS Intelligence',
+    template: '%s | stratum',
   },
   description:
     'Elevate your IELTS score with Stratum. Precision AI-driven evaluation for Task 1 and Task 2. Master the exam, stratum by stratum.',
@@ -49,21 +49,21 @@ export const metadata = {
     type: 'website',
     locale: 'en_US',
     url: baseUrl,
-    siteName: 'STRATUM',
-    title: 'STRATUM.ai | Next-Gen IELTS Preparation',
+    siteName: 'stratum',
+    title: 'stratum | Next-Gen IELTS Preparation',
     description: 'Get instant Band 9.0 feedback and AI-powered essay analysis.',
     images: ['/og-image.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'STRATUM.ai | Next-Gen IELTS Preparation',
+    title: 'stratum | Next-Gen IELTS Preparation',
     description: 'Get instant Band 9.0 feedback and AI-powered essay analysis.',
     images: ['/og-image.png'],
   },
   manifest: '/site.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'STRATUM.ai',
+    title: 'stratum',
     statusBarStyle: 'black-translucent',
   },
   icons: {
@@ -174,7 +174,7 @@ export default async function RootLayout({ children }) {
 //       ? 'http://localhost:3000' 
 //       : 'https://stratum.ai'
 //   ),
-//   title: "STRATUM.ai | AI IELTS Writing Checker & Examiner",
+//   title: "stratum | AI IELTS Writing Checker & Examiner",
 //   description: "Improve your IELTS Writing score with AI...",
 //   // ... остальные метаданные
 // };

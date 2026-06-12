@@ -160,7 +160,7 @@ export default function WriterShell() {
           role="status"
           aria-label="Loading"
         />
-        <p className="text-sm font-medium tracking-tight">STRATUM.ai</p>
+        <p className="text-sm font-medium tracking-tight normal-case">stratum</p>
       </div>
     );
   }

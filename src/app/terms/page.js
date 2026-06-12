@@ -2,8 +2,8 @@ import LegalPageLayout from '@/components/LegalPageLayout';
 import { BUSINESS_ADDRESS, LEGAL_COMPANY_NAME, REGISTERED_AGENT_ADDRESS, REGISTERED_AGENT_NAME, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export const metadata = {
-  title: 'Terms of Service | STRATUM.ai',
-  description: 'STRATUM.ai terms of service: service description, credits, and user conduct.',
+  title: 'Terms of Service | stratum',
+  description: 'stratum terms of service: service description, credits, and user conduct.',
 };
 
 const LAST_UPDATED = 'February 19, 2026';
@@ -14,7 +14,7 @@ export default function TermsPage() {
       <section>
         <h2>Service description</h2>
         <p>
-          STRATUM.ai provides AI-based IELTS writing evaluation for educational purposes. The
+          stratum provides AI-based IELTS writing evaluation for educational purposes. The
           service gives you band-style scores and feedback on Task 1 and Task 2 essays. It is not
           affiliated with IDP or British Council and is intended to support practice and
           self-improvement only.
@@ -44,7 +44,7 @@ export default function TermsPage() {
       <section>
         <h2>Disclaimer</h2>
         <p>
-          The band score and feedback provided by STRATUM.ai are AI-generated estimates based on
+          The band score and feedback provided by stratum are AI-generated estimates based on
           public IELTS band descriptors. They do not constitute an official IELTS result from IDP or
           British Council and cannot be used in place of an actual exam. Use the service for
           practice and guidance only.
@@ -63,7 +63,7 @@ export default function TermsPage() {
         <h2>Company</h2>
         <p>
           These Terms of Service are entered into with {LEGAL_COMPANY_NAME}, which operates
-          STRATUM.ai. Principal office and mailing address: {BUSINESS_ADDRESS}. Registered agent:{' '}
+          stratum. Principal office and mailing address: {BUSINESS_ADDRESS}. Registered agent:{' '}
           {REGISTERED_AGENT_NAME}, {REGISTERED_AGENT_ADDRESS}.
         </p>
       </section>

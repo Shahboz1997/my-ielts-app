@@ -2,8 +2,8 @@ import LegalPageLayout from '@/components/LegalPageLayout';
 import { BUSINESS_ADDRESS, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export const metadata = {
-  title: 'Refund Policy | STRATUM.ai',
-  description: 'STRATUM.ai refund policy: credits, subscriptions, and refund eligibility.',
+  title: 'Refund Policy | stratum',
+  description: 'stratum refund policy: credits, subscriptions, and refund eligibility.',
 };
 
 const LAST_UPDATED = 'February 19, 2026';
