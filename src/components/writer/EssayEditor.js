@@ -36,19 +36,19 @@ export default function EssayEditor({
 }) {
   return (
     <>
-      <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+      <div className="mb-5 sm:mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
         <div
-          className={`p-1.5 sm:p-2 rounded-xl border transition-all duration-300 ${
+          className={`overflow-hidden rounded-2xl transition-all duration-200 ${
             isPromptOpen
               ? darkMode
-                ? 'border-slate-800 bg-slate-900/40 shadow-sm'
-                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 shadow-sm'
-              : 'border-transparent bg-transparent opacity-50 hover:opacity-100'
+                ? 'bg-slate-900/30'
+                : 'bg-slate-50/80'
+              : 'bg-transparent hover:bg-slate-50/60 dark:hover:bg-slate-900/20'
           }`}
         >
           <div
             onClick={() => setIsPromptOpen(!isPromptOpen)}
-            className="flex justify-between items-center cursor-pointer px-1"
+            className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4 transition-colors duration-200"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -57,52 +57,61 @@ export default function EssayEditor({
                 setIsPromptOpen(!isPromptOpen);
               }
             }}
+            aria-expanded={isPromptOpen}
           >
-            <div className="flex items-center gap-1">
+            <div className="min-w-0 flex-1">
               <span
-                className={`text-xs font-semibold tracking-tight transition-colors ${
-                  isPromptOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'
+                className={`block text-sm font-semibold tracking-tight transition-colors duration-200 ${
+                  isPromptOpen ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200'
                 }`}
               >
                 {activeTab} Topic
               </span>
-              {!isPromptOpen && <div className="w-0.5 h-0.5 rounded-full bg-indigo-400/50" />}
+              {!isPromptOpen && promptValue && (
+                <p className="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">
+                  {promptValue}
+                </p>
+              )}
             </div>
-            <ChevronDown
-              className={`w-4 h-4 transition-all duration-300 ${
-                isPromptOpen ? 'text-indigo-500 rotate-0' : 'text-slate-400 -rotate-180'
+            <span
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
+                isPromptOpen
+                  ? 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-400'
+                  : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'
               }`}
-            />
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-200 ${isPromptOpen ? 'rotate-180' : 'rotate-0'}`}
+                strokeWidth={2}
+              />
+            </span>
           </div>
 
           <div
-            className={`grid transition-all duration-500 ease-in-out ${
-              isPromptOpen ? 'grid-rows-[1fr] opacity-100 mt-1' : 'grid-rows-[0fr] opacity-0 mt-0'
+            className={`grid transition-all duration-300 ease-in-out ${
+              isPromptOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
             }`}
           >
             <div className="overflow-hidden">
-              <textarea
-                value={promptValue}
-                onChange={(e) => {
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${e.target.scrollHeight}px`;
-                  onPromptChange(e.target.value);
-                }}
-                ref={(el) => {
-                  if (el) {
-                    el.style.height = 'auto';
-                    el.style.height = `${el.scrollHeight}px`;
-                  }
-                }}
-                className={`w-full bg-transparent outline-none text-[11px] sm:text-[12px] font-medium leading-[1.3] italic resize-none placeholder:text-slate-300 overflow-hidden ${
-                  darkMode ? 'text-slate-300' : 'text-slate-500'
-                }`}
-                placeholder="Enter topic..."
-              />
-              <div className="flex justify-end pr-1 opacity-20">
-                <p className="text-[5px] font-extrabold uppercase tracking-tighter text-slate-500 dark:text-slate-400">
-                  Essential
-                </p>
+              <div className="px-4 pb-4 pt-1 sm:px-5 sm:pb-5 sm:pt-2">
+                <textarea
+                  value={promptValue}
+                  onChange={(e) => {
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                    onPromptChange(e.target.value);
+                  }}
+                  ref={(el) => {
+                    if (el) {
+                      el.style.height = 'auto';
+                      el.style.height = `${el.scrollHeight}px`;
+                    }
+                  }}
+                  className={`w-full resize-none overflow-hidden bg-transparent text-sm font-medium leading-relaxed outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 ${
+                    darkMode ? 'text-slate-300' : 'text-slate-600'
+                  }`}
+                  placeholder="Enter topic..."
+                />
               </div>
             </div>
           </div>

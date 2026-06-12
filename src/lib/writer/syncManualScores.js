@@ -16,15 +16,23 @@ export async function syncResultScoresToServer(result, essayText = '', tutorComm
   }
 
   const score = Number(result.overall_band);
-  const feedback = {
-    ...result,
+  const tutorCommentValue =
+    typeof tutorComment === 'string' ? tutorComment : result.tutor_comment || '';
+
+  const feedbackPatch = {
+    tutor_comment: tutorCommentValue,
     text: essayText || result.text || '',
-    tutor_comment: typeof tutorComment === 'string' ? tutorComment : result.tutor_comment || '',
   };
+
+  if (needsScoringSync(result)) {
+    feedbackPatch.criteria = result.criteria;
+    feedbackPatch.overall_band = result.overall_band;
+    feedbackPatch.scoring = result.scoring;
+  }
 
   const { ok, data } = await patchHistoryCheck(id, {
     score: Number.isFinite(score) ? score : 0,
-    feedback,
+    feedbackPatch,
   });
 
   if (!ok) {

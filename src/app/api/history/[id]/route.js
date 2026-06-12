@@ -3,8 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { safeAuth } from '@/lib/safeAuth';
-import { getHistoryCheckForUser, formatHistoryDbError } from '@/lib/historyChecks';
-import { getPrisma } from '@/lib/prisma';
+import { getHistoryCheckForUser, patchHistoryCheckForUser, formatHistoryDbError } from '@/lib/historyChecks';
 import { writingProfileTag } from '@/lib/writingProfileCache.js';
 
 export async function GET(_request, { params }) {
@@ -61,9 +60,35 @@ export async function PATCH(request, { params }) {
   }
 
   let feedbackValue = body?.feedback;
-  if (feedbackValue === undefined) {
-    return NextResponse.json({ error: 'Missing feedback' }, { status: 400 });
+  let feedbackPatch = body?.feedbackPatch;
+  const tutorComment =
+    typeof body?.tutorComment === 'string'
+      ? body.tutorComment
+      : typeof body?.tutor_comment === 'string'
+        ? body.tutor_comment
+        : undefined;
+  const essayText = typeof body?.essayText === 'string' ? body.essayText : undefined;
+
+  if (feedbackPatch !== undefined && feedbackPatch !== null) {
+    if (typeof feedbackPatch === 'string') {
+      try {
+        feedbackPatch = JSON.parse(feedbackPatch);
+      } catch {
+        return NextResponse.json({ error: 'Invalid feedbackPatch JSON' }, { status: 400 });
+      }
+    }
+    if (typeof feedbackPatch !== 'object' || Array.isArray(feedbackPatch)) {
+      return NextResponse.json({ error: 'Invalid feedbackPatch' }, { status: 400 });
+    }
   }
+
+  const hasPartialPatch =
+    feedbackPatch != null || tutorComment !== undefined || essayText !== undefined;
+
+  if (feedbackValue === undefined && !hasPartialPatch) {
+    return NextResponse.json({ error: 'Missing feedback or feedbackPatch' }, { status: 400 });
+  }
+
   if (typeof feedbackValue === 'string') {
     try {
       feedbackValue = JSON.parse(feedbackValue);
@@ -73,23 +98,16 @@ export async function PATCH(request, { params }) {
   }
 
   try {
-    const prisma = getPrisma();
-    const existing = await prisma.check.findFirst({
-      where: { id, userId: session.user.id },
-      select: { id: true },
+    const updated = await patchHistoryCheckForUser(session.user.id, id, {
+      score: scoreNum,
+      feedback: feedbackValue,
+      feedbackPatch,
+      tutorComment,
+      essayText,
     });
-    if (!existing) {
+    if (!updated) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
-
-    const updated = await prisma.check.update({
-      where: { id },
-      data: {
-        ...(scoreNum !== null ? { score: scoreNum } : {}),
-        feedback: feedbackValue,
-      },
-      select: { id: true, score: true },
-    });
 
     try {
       revalidateTag(writingProfileTag(session.user.id));

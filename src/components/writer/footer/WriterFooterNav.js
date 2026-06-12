@@ -1,5 +1,6 @@
 'use client';
 
+import { Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 
@@ -8,8 +9,16 @@ const NAV_TABS = ['Home', 'Task 1', 'Task 2'];
 export function WriterFooterBrand() {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-        STRATUM<span className="text-indigo-600">.ai</span>
+      <div className="flex items-center gap-2">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 ring-1 ring-indigo-500/20 dark:bg-indigo-500/15 sm:h-9 sm:w-9"
+          aria-hidden
+        >
+          <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400 sm:h-5 sm:w-5" strokeWidth={2} />
+        </span>
+        <span className="font-black uppercase text-base tracking-[0.12em] text-slate-900 dark:text-white sm:text-xl sm:tracking-[0.15em]">
+          STRATUM<span className="text-indigo-500 dark:text-indigo-400">.</span>ai
+        </span>
       </div>
       <p className="text-sm font-medium text-slate-700 dark:text-slate-400">AI IELTS Examiner</p>
     </div>

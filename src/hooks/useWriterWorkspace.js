@@ -22,6 +22,7 @@ import { useWriterScrollUi } from '@/hooks/writer/useWriterScrollUi';
 import { useWriterFeedback } from '@/hooks/writer/useWriterFeedback';
 import { useWriterTimer } from '@/hooks/writer/useWriterTimer';
 import { useWriterManualScoring } from '@/hooks/writer/useWriterManualScoring';
+import { preloadSpeechVoices, speakText } from '@/lib/speakText';
 
 export function useWriterWorkspace() {
   const [essayT2, setEssayT2] = useState('');
@@ -254,6 +255,10 @@ export function useWriterWorkspace() {
   const showCreditsExhausted =
     credits <= 0 && (activeTab === 'Task 1' || activeTab === 'Task 2');
 
+  useEffect(() => {
+    preloadSpeechVoices();
+  }, []);
+
   // Stuck spinner after network timeout or credits exhausted mid-request.
   useEffect(() => {
     if (credits > 0) return;
@@ -370,13 +375,7 @@ export function useWriterWorkspace() {
   };
 
   const speak = (text) => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const ut = new SpeechSynthesisUtterance(text);
-      ut.lang = 'en-US';
-      ut.rate = 0.85;
-      window.speechSynthesis.speak(ut);
-    }
+    speakText(text, { lang: 'en-US', rate: 0.85 });
   };
 
   const currentWordCount = getEssayWordCount(activeTab === 'Task 1' ? essayT1 : essayT2);

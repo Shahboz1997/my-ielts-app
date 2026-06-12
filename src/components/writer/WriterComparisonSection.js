@@ -2,7 +2,6 @@
 
 import { CheckCircle } from 'lucide-react';
 import ComparisonLab from '@/components/ComparisonLab';
-import CreditsExhaustedCallout from '@/components/CreditsExhaustedCallout';
 import SuggestedRewriteKaraoke from '@/components/dashboard/SuggestedRewriteKaraoke';
 
 export default function WriterComparisonSection({
@@ -10,8 +9,6 @@ export default function WriterComparisonSection({
   activeAnalyzeLoading,
   activeTab,
   darkMode,
-  showCreditsExhausted,
-  onContactSupport,
   karaokeAudio,
 }) {
   const showRewrite = Boolean(activeResult && !activeAnalyzeLoading && activeResult.suggested_rewrite);
@@ -34,10 +31,6 @@ export default function WriterComparisonSection({
             className="w-full"
           />
         </div>
-      )}
-
-      {showCreditsExhausted && showRewrite && (
-        <CreditsExhaustedCallout className="w-full" onContactSupport={onContactSupport} />
       )}
 
       {showRewrite && (

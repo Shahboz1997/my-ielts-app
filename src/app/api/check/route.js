@@ -348,13 +348,14 @@ Do NOT write the candidate's letter. Do NOT include band descriptors or examiner
     const mainAccess = await resolveMainCheckAccess(req, session);
     if (!mainAccess.ok) return mainAccess.response;
 
-    const { getPrisma } = await import('@/lib/prisma');
+    const { getPrisma, withPrismaRetry } = await import('@/lib/prisma');
     const userId = mainAccess.userId;
-    const prisma = userId ? getPrisma() : null;
 
     let persistAfterCheck = false;
-    if (userId && prisma) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (userId) {
+      const user = await withPrismaRetry(() =>
+        getPrisma().user.findUnique({ where: { id: userId } })
+      );
       if (!user) {
         console.warn('[/api/check] Session user not in DB; running analysis without save.', { userId });
       } else {
@@ -412,15 +413,17 @@ Do NOT write the candidate's letter. Do NOT include band descriptors or examiner
       }
     }
 
-    if (persistAfterCheck && userId && prisma) {
-      const { savedId, creditsRemaining } = await persistCheckResult({
-        prisma,
-        userId,
-        userText,
-        promptText,
-        isT1,
-        result,
-      });
+    if (persistAfterCheck && userId) {
+      const { savedId, creditsRemaining } = await withPrismaRetry(() =>
+        persistCheckResult({
+          prisma: getPrisma(),
+          userId,
+          userText,
+          promptText,
+          isT1,
+          result,
+        })
+      );
       return NextResponse.json({ ...result, savedId, creditsRemaining });
     }
 

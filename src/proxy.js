@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { isAdminEmail } from '@/lib/admin';
 import { allAuthCookieNames, appendClearAuthCookies } from '@/lib/authSessionCookies';
-import { applySecurityHeaders } from '@/lib/securityHeaders';
+import { applySecurityHeaders } from '@/lib/securityHeaders.mjs';
 import {
   getAuthSecretMaterial,
   getTokenEmail,

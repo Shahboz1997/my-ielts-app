@@ -13,12 +13,8 @@ export default function IdeaDevelopmentPanel({ activeTab, activeResult, darkMode
     : '—';
 
   return (
-    <section
-      className={`w-full overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
-        darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
-      }`}
-    >
-      <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 dark:border-white/5 dark:bg-white/5 sm:p-5">
+    <section className="w-full min-w-0">
+      <div className="border-y border-slate-100 bg-slate-50/60 p-4 dark:border-white/5 dark:bg-white/5 sm:rounded-2xl sm:border sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">

@@ -17,6 +17,7 @@ import WriterArchivePanel from '@/components/writer/WriterArchivePanel';
 import WriterComparisonSection from '@/components/writer/WriterComparisonSection';
 import WriterFeedbackBanner from '@/components/writer/WriterFeedbackBanner';
 import WriterFooter from '@/components/writer/WriterFooter';
+import CreditsExhaustedCallout from '@/components/CreditsExhaustedCallout';
 import { useWriterWorkspace } from '@/hooks/useWriterWorkspace';
 import 'react-medium-image-zoom/dist/styles.css';
 
@@ -89,12 +90,12 @@ export default function WriterShell() {
     renderColoredText,
     setIsFocused,
     playClickSound,
-    saveCurrentToArchive,
     activeTutorComment,
     setActiveTutorComment,
-    activeResult,
+    saveCurrentToArchive,
     isSaved,
     isSavingArchive,
+    activeResult,
     error,
     errorIs401,
     setError,
@@ -275,7 +276,7 @@ export default function WriterShell() {
                 <div className="flex flex-col gap-6 lg:gap-8">
                   <div className="flex flex-col gap-6 lg:gap-8 xl:grid xl:grid-cols-[1fr_min(380px,32%)] xl:items-start xl:gap-6">
                     <div className="order-1 flex min-w-0 w-full flex-col gap-6 lg:gap-8 xl:col-start-1 xl:row-start-1">
-                      <div className="p-4 sm:p-6 xl:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                      <div className="p-5 sm:p-7 xl:p-8 rounded-2xl sm:rounded-[1.75rem] bg-white dark:bg-slate-900/80 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_rgba(15,23,42,0.04),0_12px_48px_rgba(15,23,42,0.03)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_32px_rgba(0,0,0,0.25)] transition-all duration-300">
                         <TaskEditorToolbar
                           activeTab={activeTab}
                           setActiveTab={setActiveTab}
@@ -331,16 +332,13 @@ export default function WriterShell() {
                         <TutorCommentSection
                           value={activeTutorComment}
                           onChange={setActiveTutorComment}
-                          onSave={saveCurrentToArchive}
-                          onShare={shareReport}
-                          onPdf={downloadReport}
-                          saveDisabled={!activeResult}
-                          isSaved={isSaved}
-                          isSaving={isSavingArchive}
-                          shareLoading={shareLoading}
-                          pdfDisabled={!activeResult}
-                          hasSavedAnalysis={Boolean(activeResultT1?.savedId || activeResultT2?.savedId)}
                           darkMode={darkMode}
+                          onSave={() =>
+                            saveCurrentToArchive({ tutorCommentOverride: activeTutorComment })
+                          }
+                          saveDisabled={!activeResult || !session?.user}
+                          saveLoading={isSavingArchive}
+                          isSaved={isSaved}
                         />
                         <TaskEditorActions
                           error={error}
@@ -360,6 +358,14 @@ export default function WriterShell() {
                           creditsExhausted={credits <= 0}
                         />
                       </div>
+                      {showCreditsExhausted && !activeResult && (
+                        <CreditsExhaustedCallout
+                          onContactSupport={() => {
+                            setShowSupportModal(false);
+                            scrollToFeedbackForm();
+                          }}
+                        />
+                      )}
                     </div>
 
                     <WriterResultsPanel
@@ -369,11 +375,12 @@ export default function WriterShell() {
                       darkMode={darkMode}
                       onCriteriaScoreChange={handleCriteriaScoreChange}
                       onResetToAiScores={handleResetToAiScores}
-                      showCreditsExhausted={showCreditsExhausted && !activeResult}
-                      onContactSupport={() => {
-                        setShowSupportModal(false);
-                        scrollToFeedbackForm();
-                      }}
+                      onPdf={downloadReport}
+                      onShare={shareReport}
+                      pdfDisabled={!activeResult}
+                      shareDisabled={!activeResult}
+                      shareLoading={shareLoading}
+                      hasSavedAnalysis={Boolean(activeResultT1?.savedId || activeResultT2?.savedId)}
                     />
 
                     <WriterDetailedAnalysisLazy
@@ -406,11 +413,6 @@ export default function WriterShell() {
                     activeAnalyzeLoading={activeAnalyzeLoading}
                     activeTab={activeTab}
                     darkMode={darkMode}
-                    showCreditsExhausted={showCreditsExhausted}
-                    onContactSupport={() => {
-                      setShowSupportModal(false);
-                      scrollToFeedbackForm();
-                    }}
                     karaokeAudio={karaokeAudio}
                   />
                 </div>

@@ -1,8 +1,7 @@
 'use client';
 
-import { RotateCcw } from 'lucide-react';
+import { Download, Loader2, RotateCcw, Share2 } from 'lucide-react';
 import { LoadingState, EmptyState } from '@/components/stratum';
-import CreditsExhaustedCallout from '@/components/CreditsExhaustedCallout';
 import { IELTS_BAND_STEPS, isManualScoringActive } from '@/lib/writer/manualScoring';
 import { clampCriterionScore } from '@/lib/ielts/computeOverallBand';
 
@@ -20,11 +19,22 @@ export default function WriterResultsPanel({
   darkMode,
   onCriteriaScoreChange,
   onResetToAiScores,
-  showCreditsExhausted,
-  onContactSupport,
+  onPdf,
+  onShare,
+  pdfDisabled,
+  shareDisabled,
+  shareLoading,
+  hasSavedAnalysis,
 }) {
   const manualActive = isManualScoringActive(activeResult);
   const aiOverall = activeResult?.scoring?.ai?.overall_band;
+
+  const btnBase =
+    'inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium normal-case tracking-normal transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50';
+
+  const btnNeutral = darkMode
+    ? 'border border-amber-500/25 bg-slate-900/60 text-amber-100 hover:bg-slate-900/80'
+    : 'border border-amber-200/90 bg-white text-amber-950 hover:bg-amber-50';
 
   return (
     <aside
@@ -38,8 +48,6 @@ export default function WriterResultsPanel({
         >
           <LoadingState />
         </div>
-      ) : showCreditsExhausted ? (
-        <CreditsExhaustedCallout onContactSupport={onContactSupport} />
       ) : !activeResult ? (
         <div
           className={`min-h-0 rounded-3xl border border-dashed transition-all ${darkMode ? 'border-slate-700 bg-slate-900/20' : 'border-slate-200 bg-slate-50/80'}`}
@@ -57,49 +65,79 @@ export default function WriterResultsPanel({
             }`}
           >
             <header
-              className={`border-b px-4 py-5 sm:px-6 sm:py-6 ${
+              className={`flex flex-row items-center justify-between gap-4 border-b px-4 py-5 sm:px-6 sm:py-6 ${
                 darkMode ? 'border-slate-800 bg-slate-900' : 'border-indigo-100 bg-indigo-50/40'
               }`}
             >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1">
-                  <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
-                    Results
-                  </p>
-                  <h4 className="mt-1 text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
-                    Band Score
-                  </h4>
-                  <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0">
-                    <span className="font-black leading-none tracking-tighter text-indigo-600 dark:text-indigo-400 text-[2.75rem] min-[380px]:text-5xl sm:text-6xl">
-                      <span data-testid="results-overall-band">{activeResult.overall_band}</span>
-                    </span>
-                    <span className="text-base font-light text-slate-400 dark:text-slate-500 min-[380px]:text-lg sm:text-xl">
-                      / 9.0
-                    </span>
-                  </div>
-                  {manualActive && aiOverall != null && Number(aiOverall) !== Number(activeResult.overall_band) && (
-                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                      AI estimate: {aiOverall} — adjusted manually
-                    </p>
+              <p className="min-w-0 text-[10px] font-extrabold uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+                Results
+              </p>
+              <div
+                className="flex shrink-0 flex-row items-center gap-2"
+                role="group"
+                aria-label="Results actions"
+              >
+                <button
+                  type="button"
+                  onClick={onShare}
+                  disabled={shareLoading || shareDisabled}
+                  className={`${btnBase} ${btnNeutral}`}
+                  title={
+                    hasSavedAnalysis
+                      ? 'Share full analysis with tutor notes'
+                      : 'Run analysis while signed in to share'
+                  }
+                  aria-label="Share analysis"
+                >
+                  {shareLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                  ) : (
+                    <Share2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
-                  {!manualActive && (
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                      Tap a criterion score below to adjust (teacher review).
-                    </p>
-                  )}
-                </div>
-                <div className="flex w-full shrink-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:w-auto sm:justify-end sm:text-right dark:border-slate-700 dark:bg-slate-800 md:px-4">
-                  <p className="text-[8px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                    {manualActive ? 'Manual review' : 'AI Engine'}
-                  </p>
-                  <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                    {manualActive ? 'Adjusted' : 'v4.2 PRO'}
-                  </p>
-                </div>
+                  <span>{shareLoading ? 'Loading…' : 'Share'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onPdf}
+                  disabled={pdfDisabled}
+                  className={`group/btn ${btnBase} bg-indigo-600 text-white hover:bg-indigo-500`}
+                  title="Download official PDF report with tutor notes"
+                  aria-label="Download PDF report"
+                >
+                  <Download
+                    className="h-3.5 w-3.5 shrink-0 transition-transform group-hover/btn:translate-y-0.5"
+                    aria-hidden
+                  />
+                  <span>Official PDF</span>
+                </button>
               </div>
             </header>
 
             <div className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+              <div className="min-w-0 space-y-1">
+                <h4 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
+                  Band Score
+                </h4>
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0">
+                  <span className="font-black leading-none tracking-tighter text-indigo-600 dark:text-indigo-400 text-[2.75rem] min-[380px]:text-5xl sm:text-6xl">
+                    <span data-testid="results-overall-band">{activeResult.overall_band}</span>
+                  </span>
+                  <span className="text-base font-light text-slate-400 dark:text-slate-500 min-[380px]:text-lg sm:text-xl">
+                    / 9.0
+                  </span>
+                </div>
+                {manualActive && aiOverall != null && Number(aiOverall) !== Number(activeResult.overall_band) && (
+                  <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                    AI estimate: {aiOverall} — adjusted manually
+                  </p>
+                )}
+                {!manualActive && (
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                    Tap a criterion score below to adjust (teacher review).
+                  </p>
+                )}
+              </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
                   Criteria Breakdown

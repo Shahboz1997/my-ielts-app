@@ -1,6 +1,6 @@
 import withPWAInit from '@ducanh2912/next-pwa';
 import { getAllowedImageRemotePatterns } from './src/lib/allowedImageHosts.mjs';
-import { getSecurityHeadersForNextConfig } from './src/lib/securityHeaders.js';
+import { getSecurityHeadersForNextConfig } from './src/lib/securityHeaders.mjs';
 
 const withPWA = withPWAInit({
   dest: 'public',

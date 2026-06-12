@@ -28,10 +28,10 @@ function rateLimitBucketKey(scope, route, windowStartMs, windowMs) {
 }
 
 async function consumeRateLimitBucket(bucketKey, { limit, windowMs }) {
-  const prisma = getPrisma();
   const now = new Date();
 
   return withPrismaRetry(async () => {
+    const prisma = getPrisma();
     const existing = await prisma.aiRateLimitBucket.findUnique({
       where: { bucketKey },
     });

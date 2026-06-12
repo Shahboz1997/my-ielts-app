@@ -33,7 +33,7 @@ export default function WriterDetailedAnalysis(props) {
   if (!activeResult || activeAnalyzeLoading) return null;
 
   return (
-    <div className="order-3 min-w-0 w-full space-y-6 xl:col-span-2 xl:col-start-1 xl:row-start-2">
+    <div className="order-3 min-w-0 w-full space-y-6 -mx-0.5 sm:-mx-3.5 lg:-mx-[22px] xl:-mx-7.5 xl:col-span-2 xl:col-start-1 xl:row-start-2">
       <IdeaDevelopmentPanel activeTab={activeTab} activeResult={activeResult} darkMode={darkMode} />
       <CorrectionsList
         activeTab={activeTab}

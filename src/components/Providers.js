@@ -24,7 +24,7 @@ function AuthDbWarm() {
     warmDbLastAt = now;
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    const timer = setTimeout(() => controller.abort(), 25_000);
 
     void fetch("/api/auth/warm-db", { cache: "no-store", signal: controller.signal })
       .catch(() => {})

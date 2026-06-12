@@ -282,8 +282,15 @@ const TRANSIENT_NETWORK_CODES = new Set([
   "EPIPE",
 ]);
 
+function isEndedPoolError(error) {
+  const message = String(error?.message || "");
+  return /Cannot use a pool after calling end on the pool/i.test(message);
+}
+
 function isTransientDbError(error) {
   if (!error) return false;
+
+  if (isEndedPoolError(error)) return true;
 
   const codes = [error.code, error.cause?.code, error.meta?.code].filter(Boolean);
   if (codes.some((code) => TRANSIENT_PRISMA_CODES.has(code))) return true;
@@ -365,6 +372,7 @@ export async function withPrismaRetry(operation, opts = {}) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
     try {
+      await resetPrismaChain;
       return await operation();
     } catch (e) {
       lastError = e;

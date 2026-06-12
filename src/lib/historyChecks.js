@@ -104,6 +104,67 @@ export async function getHistoryCheckForUser(userId, id) {
   });
 }
 
+export async function patchHistoryCheckForUser(
+  userId,
+  id,
+  { score = null, feedback, feedbackPatch, tutorComment, essayText } = {}
+) {
+  let patch = feedbackPatch;
+  if (!patch && (typeof tutorComment === 'string' || typeof essayText === 'string')) {
+    patch = {};
+    if (typeof tutorComment === 'string') patch.tutor_comment = tutorComment;
+    if (typeof essayText === 'string') patch.text = essayText;
+  }
+
+  return withPrismaRetry(
+    async () => {
+      const prisma = getPrisma();
+
+      if (patch && typeof patch === 'object' && !Array.isArray(patch)) {
+        const patchJson = JSON.stringify(patch);
+        const rows =
+          score !== null
+            ? await prisma.$queryRaw`
+                UPDATE "Check"
+                SET
+                  score = ${score},
+                  feedback = COALESCE(feedback, '{}'::jsonb) || ${patchJson}::jsonb
+                WHERE id = ${id} AND "userId" = ${userId}
+                RETURNING id, score
+              `
+            : await prisma.$queryRaw`
+                UPDATE "Check"
+                SET feedback = COALESCE(feedback, '{}'::jsonb) || ${patchJson}::jsonb
+                WHERE id = ${id} AND "userId" = ${userId}
+                RETURNING id, score
+              `;
+
+        const row = rows?.[0];
+        if (!row) return null;
+        return { id: row.id, score: row.score };
+      }
+
+      if (feedback === undefined) return null;
+
+      const existing = await prisma.check.findFirst({
+        where: { id, userId },
+        select: { id: true },
+      });
+      if (!existing) return null;
+
+      return prisma.check.update({
+        where: { id },
+        data: {
+          ...(score !== null ? { score } : {}),
+          feedback,
+        },
+        select: { id: true, score: true },
+      });
+    },
+    { attempts: 5 }
+  );
+}
+
 export function formatHistoryDbError(err) {
   const code = err?.code || err?.cause?.code;
   const msg = String(err?.message || '');

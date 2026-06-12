@@ -7,7 +7,17 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const isDev = process.env.NODE_ENV === "development";
-const WARM_DB_TIMEOUT_MS = 12_000;
+
+function resolveWarmDbTimeoutMs() {
+  const defaultConnectMs = isDev ? 15_000 : 60_000;
+  const connectMs = Math.max(
+    3_000,
+    Number.parseInt(process.env.PG_CONNECT_TIMEOUT_MS || String(defaultConnectMs), 10) ||
+      defaultConnectMs
+  );
+  // Must exceed PG connect timeout × retry attempts so we don't abort mid-handshake.
+  return connectMs * 3 + 5_000;
+}
 
 function withTimeout(promise, ms) {
   return Promise.race([
@@ -24,7 +34,7 @@ export async function GET() {
   try {
     await withTimeout(
       withPrismaRetry(() => getPrisma().$queryRaw`SELECT 1`, { attempts: 3 }),
-      WARM_DB_TIMEOUT_MS
+      resolveWarmDbTimeoutMs()
     );
     return NextResponse.json({ ok: true, ms: Date.now() - t0 });
   } catch (e) {

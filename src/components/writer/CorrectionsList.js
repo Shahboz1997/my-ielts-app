@@ -30,12 +30,8 @@ export default function CorrectionsList({
   })();
 
   return (
-    <section
-      className={`w-full min-w-0 overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
-        darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
-      }`}
-    >
-      <header className="border-b border-slate-100 px-4 py-4 dark:border-white/5 sm:px-6 sm:py-5">
+    <section className="w-full min-w-0">
+      <header className="border-b border-slate-100 py-4 dark:border-white/5 sm:py-5">
         <h3 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 sm:text-lg">
           Detailed Corrections
         </h3>
@@ -44,8 +40,8 @@ export default function CorrectionsList({
         </p>
       </header>
 
-      <div className="p-4 sm:p-6">
-        <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:gap-6">
+      <div className="pb-4 sm:pb-6">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-0 sm:gap-6">
           <AnimatePresence mode="popLayout">
             {correctionItems.length > 0 ? (
               correctionItems.map((err, i) => {
@@ -55,6 +51,9 @@ export default function CorrectionsList({
                 const canApply =
                   recommended.length > 0 &&
                   recommended.toLowerCase() !== String(err.original || '').trim().toLowerCase();
+                const speakTextValue =
+                  recommended || String(err.original || '').trim() || String(err.explanation || '').trim();
+                const canSpeak = speakTextValue.length > 0;
                 return (
                   <motion.div
                     key={err.original + i}
@@ -62,7 +61,7 @@ export default function CorrectionsList({
                     exit={{ opacity: 0, x: 50, scale: 0.9, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.4, ease: 'circOut' }}
                     layout
-                    className="group w-full p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300 hover:border-indigo-200 dark:hover:border-indigo-800/30 overflow-hidden"
+                    className="group w-full border-y border-slate-200 bg-white py-6 transition-all duration-300 dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl sm:border sm:p-10 sm:shadow-sm sm:hover:border-indigo-200 dark:sm:hover:border-indigo-800/30 overflow-hidden"
                   >
                     <div className="flex min-w-0 w-full flex-col gap-6 sm:flex-row sm:items-stretch sm:gap-6">
                       <div className="min-w-0 flex-1 space-y-8">
@@ -94,8 +93,12 @@ export default function CorrectionsList({
                             </span>
                             <button
                               type="button"
-                              onClick={() => speak(recommended || err.explanation || '')}
-                              className="group/btn p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-green-500 transition-all active:scale-90 shadow-sm"
+                              onClick={() => speak?.(speakTextValue)}
+                              disabled={!canSpeak}
+                              aria-label={
+                                canSpeak ? `Listen to recommended correction: ${speakTextValue}` : 'Nothing to listen to'
+                              }
+                              className="group/btn p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-green-500 transition-all active:scale-90 shadow-sm disabled:opacity-40 disabled:pointer-events-none disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-800"
                             >
                               <svg xmlns="http://www.w3.org" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-slate-400 group-hover/btn:text-white transition-colors">
                                 <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.35 2.595.341 1.24 1.518 1.905 2.659 1.905h1.93l4.5 4.5c.945.945 2.561.276 2.561-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.808 3.807 3.808 9.98 0 13.788a.75.75 0 11-1.06-1.06 8.25 8.25 0 000-11.668.75.75 0 010-1.06z" />
