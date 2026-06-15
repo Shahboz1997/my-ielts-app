@@ -31,6 +31,16 @@ function escapeHtml(text) {
 
 export { escapeHtml };
 
+export const STRATUM_SITE_URL = 'https://stratumielts.com/';
+export const STRATUM_SITE_LINK_HTML = `<a href="${STRATUM_SITE_URL}">${STRATUM_SITE_URL}</a>`;
+
+/** Append stratumielts.com link if not already present (after prepareTelegramHtml). */
+export function appendStratumSiteLink(text) {
+  const t = String(text ?? '').trim();
+  if (t.includes('stratumielts.com')) return t;
+  return `${t}\n${STRATUM_SITE_LINK_HTML}`;
+}
+
 /** Inline CTA button — clicks ~30–40% more than plain links. */
 export function buildCtaInlineKeyboard(url, label = '👉 stratumielts.com — Check your writing') {
   return {

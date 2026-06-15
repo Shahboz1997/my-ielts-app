@@ -26,7 +26,8 @@ const START_TEXT = [
   '/topic — random essay prompt',
   '/resource — useful link',
   '',
-  `✍️ <a href="${appOrigin}/?utm_source=telegram&utm_medium=bot&utm_campaign=start">Open STRATUM.ai</a>`,
+  '✍️ <b>stratum</b>',
+  `<a href="${appOrigin}/?utm_source=telegram&utm_medium=bot&utm_campaign=start">https://stratumielts.com/</a>`,
 ].join('\n');
 
 async function tgGet(method, params = {}) {

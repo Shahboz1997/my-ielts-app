@@ -24,7 +24,7 @@ export default function LinkingWordsSection({ activeTab, activeResult, triggerHi
       <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         Found in your essay
       </p>
-      <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 custom-scrollbar sm:mx-0 sm:flex-wrap sm:overflow-visible">
+      <div className="flex flex-wrap gap-2">
         {(linkingWords?.found?.length ?? 0) > 0 ? (
           linkingWords.found.map((w, i) => (
             <span key={`${w}-${i}`} className="inline-flex shrink-0 items-center gap-1">

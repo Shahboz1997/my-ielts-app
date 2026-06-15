@@ -1,4 +1,5 @@
 import {
+  appendStratumSiteLink,
   buildCtaInlineKeyboard,
   prepareTelegramHtml,
   sendTelegramMessage,
@@ -25,9 +26,9 @@ const CHECK_START_TEXT = [
 ].join('\n');
 
 const CHECK_BUSY_TEXT =
-  '⏳ Running a <b>deep</b> IELTS check (same engine as STRATUM.ai)… Usually 60–90 seconds.';
+  '⏳ Running a <b>deep</b> IELTS check (same engine as stratum)… Usually 60–90 seconds.';
 const CHECK_AI_OFF =
-  'AI checking is temporarily unavailable. Open STRATUM.ai for full feedback on your writing.';
+  'AI checking is temporarily unavailable. Open stratum for full feedback on your writing.';
 
 function commandFromText(text) {
   const parts = String(text || '').trim().split(/\s+/);
@@ -86,10 +87,15 @@ export async function handleTelegramMessage(message) {
       await sendTelegramMessage(chatId, CHECK_BUSY_TEXT, { parse_mode: 'HTML' });
       const result = await checkEssayForTelegram(text);
       if (result?.messages?.length) {
-        const parts = result.messages.map((m) => prepareTelegramHtml(m));
+        const parts = result.messages.map((m) => {
+          const sanitized = prepareTelegramHtml(m);
+          return sanitized.includes('Full highlighted rewrite on stratum')
+            ? appendStratumSiteLink(sanitized)
+            : sanitized;
+        });
         const cta = buildCtaInlineKeyboard(
           PRODUCTION_SITE_ORIGIN,
-          '👉 Full rewrite + highlights on STRATUM.ai'
+          '👉 Full rewrite + highlights on stratum'
         );
         const sent = await sendTelegramMessageParts(chatId, parts, {
           parse_mode: 'HTML',

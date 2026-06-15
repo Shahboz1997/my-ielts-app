@@ -81,11 +81,21 @@ html, body {
 .essay-scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 .dark .essay-scroll-thin::-webkit-scrollbar-thumb { background: #475569; }
 
-/* Feedback dashboard cards: fill flex parent, content scrolls */
+/* Feedback dashboard cards: fill flex parent, content scrolls (desktop side-by-side layout) */
 .feedback-card-scroll {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Horizontal chip strips: allow vertical page scroll to pass through on touch devices */
+.touch-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 .feedback-card-scroll::-webkit-scrollbar { width: 3px; }
 .feedback-card-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }

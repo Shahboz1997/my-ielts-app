@@ -435,7 +435,8 @@ async def cmd_start(message: Message) -> None:
         "👋 <b>Welcome to STRATUM IELTS Writing!</b>\n\n"
         "Commands:\n/check — send your essay for AI feedback\n"
         "/tip — writing advice\n\n"
-        f"✍️ <a href=\"{SITE_URL}/?utm_source=telegram&utm_medium=bot\">Open STRATUM.ai</a>",
+        "✍️ <b>stratum</b>\n"
+        f"<a href=\"{SITE_URL}/?utm_source=telegram&utm_medium=bot\">https://stratumielts.com/</a>",
         parse_mode=ParseMode.HTML,
     )
 

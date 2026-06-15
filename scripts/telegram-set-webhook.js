@@ -64,7 +64,7 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       commands: [
-        { command: 'start', description: 'Welcome & link to STRATUM.ai' },
+        { command: 'start', description: 'Welcome & link to stratumielts.com' },
         { command: 'check', description: 'Check your essay (AI feedback)' },
         { command: 'tip', description: 'Task 1/2 template tip' },
         { command: 'topic', description: 'Random essay prompt' },

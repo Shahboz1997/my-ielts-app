@@ -7,7 +7,7 @@ import PlagiarismAlert from '@/components/writer/linguistic/PlagiarismAlert';
 import LexicalUpgradeSection from '@/components/writer/linguistic/LexicalUpgradeSection';
 
 function insightCardShell(darkMode) {
-  return `flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border shadow-sm ring-1 ring-slate-900/[0.04] transition-[box-shadow,border-color] duration-300 hover:shadow-md sm:rounded-3xl dark:ring-white/[0.06] xl:max-h-[min(72vh,42rem)] ${
+  return `flex min-h-0 min-w-0 flex-col overflow-visible rounded-2xl border shadow-sm ring-1 ring-slate-900/[0.04] transition-[box-shadow,border-color] duration-300 hover:shadow-md sm:rounded-3xl dark:ring-white/[0.06] xl:h-full xl:overflow-hidden xl:max-h-[min(72vh,42rem)] ${
     darkMode
       ? 'border-slate-800 bg-slate-900 hover:border-slate-700'
       : 'border-slate-200/90 bg-white hover:border-indigo-200/60'
@@ -15,7 +15,7 @@ function insightCardShell(darkMode) {
 }
 
 const insightScrollBody =
-  'feedback-card-scroll custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain';
+  'flex flex-col xl:feedback-card-scroll xl:custom-scrollbar xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-y-contain';
 
 function insightHeaderShell(accent) {
   const gradients = {
@@ -62,7 +62,7 @@ export default function LinguisticInsightsPanel({
       </div>
 
       <div className="grid w-full min-w-0 grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2 xl:items-stretch xl:auto-rows-fr">
-        <section className={`${insightCardShell(darkMode)} xl:h-full`}>
+        <section className={insightCardShell(darkMode)}>
           <header className={`${insightHeaderShell('indigo')} shrink-0`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
@@ -118,7 +118,7 @@ export default function LinguisticInsightsPanel({
           setEssayT2={setEssayT2}
           essayT1={essayT1}
           essayT2={essayT2}
-          cardClassName={`${insightCardShell(darkMode)} xl:h-full`}
+          cardClassName={insightCardShell(darkMode)}
           headerClassName={`${insightHeaderShell('violet')} shrink-0`}
           bodyClassName={`${insightScrollBody} p-4 sm:p-6`}
         />

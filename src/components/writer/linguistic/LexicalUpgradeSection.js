@@ -18,7 +18,7 @@ export default function LexicalUpgradeSection({
 }) {
   const shell =
     cardClassName ||
-    `flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border shadow-sm sm:rounded-3xl ${
+    `flex min-w-0 flex-col overflow-visible rounded-2xl border shadow-sm sm:rounded-3xl xl:h-full xl:overflow-hidden xl:max-h-[min(72vh,42rem)] ${
       darkMode ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
     }`;
   const header =
@@ -26,7 +26,7 @@ export default function LexicalUpgradeSection({
     'shrink-0 border-b border-slate-100 px-4 py-4 dark:border-white/5 sm:px-6 sm:py-5';
   const body =
     bodyClassName ||
-    'feedback-card-scroll custom-scrollbar flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain p-4 sm:p-6';
+    'flex flex-col p-4 sm:p-6 xl:feedback-card-scroll xl:custom-scrollbar xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-y-contain';
 
   return (
     <section className={shell}>

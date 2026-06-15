@@ -169,7 +169,7 @@ export function formatIeltsForTelegram(result, { isT1 = false, isGtLetter = fals
     const excerpt = plain.length > 900 ? `${plain.slice(0, 900)}…` : plain;
     pushParts(
       parts,
-      `<b>✨ Band 9 rewrite</b> <i>(excerpt)</i>\n\n${esc(excerpt)}\n\n<i>Full highlighted rewrite on STRATUM.ai</i>`
+      `<b>✨ Band 9 rewrite</b> <i>(excerpt)</i>\n\n${esc(excerpt)}\n\n<i>Full highlighted rewrite on stratum</i>`
     );
   }
 
