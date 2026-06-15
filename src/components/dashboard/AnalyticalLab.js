@@ -68,7 +68,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   /** Краткая подсветка карточки после клика по подсветке в тексте (click-to-focus). */
   const [flashErrorCardId, setFlashErrorCardId] = useState(null);
   const [accordionOpen, setAccordionOpen] = useState(null);
-  const errorCardRefs = useRef({});
   const criteria = feedback.criteria || {};
   const taskKey = taskTypeNormalized === 'task1' ? 'Task_Achievement' : 'Task_Response';
   const ta = criteria[taskKey]?.score ?? 0;
@@ -314,8 +313,9 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
     setRightPanelTab(type === 'grammar' ? 'grammar' : 'vocabulary');
     setFocusedId(errorId);
     setFlashErrorCardId(errorId);
+    const selector = `[data-error-card-id="${CSS.escape(String(errorId))}"]`;
     const runScroll = () => {
-      const el = errorCardRefs.current[errorId];
+      const el = document.querySelector(selector);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
       }
@@ -683,7 +683,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                           return (
                             <div
                               key={err.id || idx}
-                              ref={(el) => { if (errorCardRefs.current) errorCardRefs.current[err.id] = el; }}
+                              data-error-card-id={err.id}
                               className={`group relative rounded-2xl border border-slate-100 dark:border-white/5 p-4 bg-slate-50/50 dark:bg-white/5 hover:border-emerald-200 dark:hover:border-emerald-500/30 ${errorCardShellClass(err.id)}`}
                             >
                               <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -778,7 +778,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                           return (
                             <div
                               key={err.id}
-                              ref={(el) => { if (errorCardRefs.current) errorCardRefs.current[err.id] = el; }}
+                              data-error-card-id={err.id}
                               className={`rounded-2xl border border-slate-100 dark:border-white/5 p-4 bg-slate-50/50 dark:bg-white/5 ${errorCardShellClass(err.id)}`}
                             >
                               <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 ${badgeCls}`}>
@@ -1206,7 +1206,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
       return (
       <div
         key={err.id || idx}
-        ref={(el) => { if (errorCardRefs.current) errorCardRefs.current[err.id] = el; }}
+        data-error-card-id={err.id}
         className={`group relative rounded-2xl border border-slate-100 dark:border-white/5 p-4 bg-slate-50/50 dark:bg-white/5 hover:border-emerald-200 dark:hover:border-emerald-500/30 ${errorCardShellClass(err.id)}`}
       >
         <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -1301,7 +1301,7 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
                         return (
                         <div
                           key={err.id}
-                          ref={(el) => { if (errorCardRefs.current) errorCardRefs.current[err.id] = el; }}
+                          data-error-card-id={err.id}
                           className={`rounded-2xl border border-slate-100 dark:border-white/5 p-4 bg-slate-50/50 dark:bg-white/5 ${errorCardShellClass(err.id)}`}
                         >
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 ${badgeCls}`}>

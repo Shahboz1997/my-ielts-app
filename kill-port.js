@@ -86,7 +86,6 @@ function main() {
     try {
       if (isWin) killPidWindows(pid);
       else killPidUnix(pid);
-      // eslint-disable-next-line no-console
       console.log(`Killed PID ${pid} on port ${port}`);
     } catch (e) {
       console.warn(`Failed to kill PID ${pid} on port ${port}: ${e?.message ?? e}`);
