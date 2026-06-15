@@ -21,6 +21,7 @@ const CHAT_ID =
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 const SITE = 'https://stratumielts.com/';
+const BOT_USERNAME = (process.env.TELEGRAM_BOT_USERNAME || 'Stratum_ielts_writing_bot').trim();
 const args = process.argv.slice(2);
 const STATIC = args.includes('--static');
 const SLOT = args.includes('evening') ? 'evening' : 'morning';
@@ -168,14 +169,7 @@ const campaign = `${SLOT}_${new Date().toISOString().slice(0, 10)}`;
 const payload = siteFooter(text);
 const parseMode = SLOT === 'morning' ? 'HTML' : 'Markdown';
 
-let botUsername;
-try {
-  const meRes = await fetch(`https://api.telegram.org/bot${TOKEN}/getMe`);
-  const meData = await meRes.json();
-  botUsername = meData.result?.username;
-} catch {
-  botUsername = null;
-}
+const botUsername = BOT_USERNAME;
 
 let messageId;
 try {

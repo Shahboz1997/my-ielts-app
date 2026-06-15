@@ -7,7 +7,7 @@ import {
   buildCtaInlineKeyboard,
   buildPostInlineKeyboard,
   escapeHtml,
-  getTelegramBotInfo,
+  getTelegramBotUsername,
   MORNING_QUIZ_DELAY_SEC,
   prepareTelegramHtml,
 } from '@/lib/telegram';
@@ -206,8 +206,7 @@ export async function buildDailyPostAsync(slot, date = new Date()) {
   const topic = pickTopicForSlot(date, slot);
   const ctaLabel = slot === 'evening' ? CTA_EVENING_LABEL : CTA_LABEL;
 
-  const botInfo = await getTelegramBotInfo();
-  const botUsername = botInfo.ok ? botInfo.bot?.username : null;
+  const botUsername = getTelegramBotUsername();
 
   const generated = await generateTelegramPost(slot, { topic, siteLink: ctaUrl });
   if (generated?.text) {
@@ -245,7 +244,7 @@ export async function buildDailyPostAsync(slot, date = new Date()) {
   }
 
   const staticPost = buildStaticPost(slot, date);
-  if (slot === 'evening' && botUsername) {
+  if (slot === 'evening') {
     staticPost.replyMarkup = buildPostInlineKeyboard({
       ctaUrl,
       ctaLabel: CTA_EVENING_LABEL,

@@ -29,6 +29,42 @@ export async function fetchTtsWithTimestamps({ text, filenameBase }) {
 
   const data = await response.json();
   const blob = data.audioBase64 ? base64ToBlob(data.audioBase64) : null;
+  if (!blob) throw new Error('No audio received from server.');
   const wordTimestamps = Array.isArray(data.wordTimestamps) ? data.wordTimestamps : [];
   return { blob, wordTimestamps };
+}
+
+/** Wait until the <audio> element can start playback (needed after blob URL updates). */
+export function waitForAudioCanPlay(audioEl, timeoutMs = 15000) {
+  if (!audioEl) return Promise.reject(new Error('Audio element missing'));
+  if (audioEl.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Audio took too long to load'));
+    }, timeoutMs);
+    const onCanPlay = () => {
+      cleanup();
+      resolve();
+    };
+    const onError = () => {
+      cleanup();
+      reject(new Error(audioEl.error?.message || 'Audio failed to load'));
+    };
+    const cleanup = () => {
+      window.clearTimeout(timer);
+      audioEl.removeEventListener('canplay', onCanPlay);
+      audioEl.removeEventListener('error', onError);
+    };
+    audioEl.addEventListener('canplay', onCanPlay);
+    audioEl.addEventListener('error', onError);
+    audioEl.load();
+  });
+}
+
+export async function playAudioElement(audioEl) {
+  await waitForAudioCanPlay(audioEl);
+  await audioEl.play();
 }

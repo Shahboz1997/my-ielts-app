@@ -388,9 +388,9 @@ export default function SuggestedRewriteKaraoke({
           <button
             type="button"
             onClick={onTogglePlay}
-            disabled={!audioUrl || isAudioLoading}
+            disabled={!suggestedRewrite || isAudioLoading}
             className="h-10 w-10 rounded-full bg-indigo-500 hover:bg-indigo-400 flex items-center justify-center text-white shrink-0 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-            aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
+            aria-label={isPlaying ? 'Pause audio' : audioUrl ? 'Play audio' : 'Generate and play audio'}
           >
             <AnimatePresence mode="wait" initial={false}>
               {isAudioLoading ? (

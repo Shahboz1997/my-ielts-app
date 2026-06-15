@@ -1,6 +1,7 @@
 /**
  * Telegram Bot API helpers (daily group posts + command webhook).
  */
+import { TELEGRAM_BOT_USERNAME } from '@/lib/support';
 
 function getBotToken() {
   return (process.env.TELEGRAM_BOT_TOKEN || '').trim();
@@ -41,6 +42,16 @@ export function appendStratumSiteLink(text) {
   return `${t}\n${STRATUM_SITE_LINK_HTML}`;
 }
 
+/** Canonical bot @handle — used in channel inline buttons (not getMe, so links stay correct after bot migration). */
+export function getTelegramBotUsername() {
+  const fromEnv = (process.env.TELEGRAM_BOT_USERNAME || '').trim();
+  return fromEnv || TELEGRAM_BOT_USERNAME;
+}
+
+export function getTelegramBotCheckUrl() {
+  return `https://t.me/${getTelegramBotUsername()}?start=check`;
+}
+
 /** Inline CTA button — clicks ~30–40% more than plain links. */
 export function buildCtaInlineKeyboard(url, label = '👉 stratumielts.com — Check your writing') {
   return {
@@ -51,11 +62,12 @@ export function buildCtaInlineKeyboard(url, label = '👉 stratumielts.com — C
 /** Morning: site CTA. Evening: site + DM essay check. */
 export function buildPostInlineKeyboard({ ctaUrl, ctaLabel, botUsername, includeCheckButton = false }) {
   const row1 = [{ text: ctaLabel, url: String(ctaUrl) }];
-  if (includeCheckButton && botUsername) {
+  const user = (botUsername || getTelegramBotUsername()).trim();
+  if (includeCheckButton && user) {
     return {
       inline_keyboard: [
         row1,
-        [{ text: '✅ Check my text', url: `https://t.me/${botUsername}?start=check` }],
+        [{ text: '✅ Check my text', url: `https://t.me/${user}?start=check` }],
       ],
     };
   }

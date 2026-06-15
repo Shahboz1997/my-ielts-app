@@ -3,7 +3,8 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link';
 import { Download, ArrowLeft, Zap, BookOpen, GitBranch, ChevronDown, Sparkles } from 'lucide-react';
 import { generateStratumWritingPdfFromCheck } from '@/lib/lazyStratumPdf';
-import SuggestedRewriteKaraoke, { getPlainTextForKaraoke } from './SuggestedRewriteKaraoke';
+import SuggestedRewriteKaraoke from './SuggestedRewriteKaraoke';
+import { useSuggestedRewriteAudio } from './useSuggestedRewriteAudio';
 import LexicalUpgradePanel from '@/components/LexicalUpgradePanel';
 import AddToWordListButton from '@/components/AddToWordListButton';
 import { mergeLexicalUpgrades, getWeakWordsSet } from '@/lib/lexicalUpgrade';
@@ -26,7 +27,7 @@ import {
   buildSegmentsFromErrors,
   normalizeCefrStats,
 } from './analytical-lab/textHighlight';
-import { getAudioFilenameBase, fetchTtsWithTimestamps } from './analytical-lab/ttsHelpers';
+import { getAudioFilenameBase } from './analytical-lab/ttsHelpers';
 
 /**
  * AnalyticalLab — feedback view for a single check.
@@ -68,14 +69,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   const [flashErrorCardId, setFlashErrorCardId] = useState(null);
   const [accordionOpen, setAccordionOpen] = useState(null);
   const errorCardRefs = useRef({});
-  const [isAudioLoading, setIsAudioLoading] = useState(false);
-  const [audioUrl, setAudioUrl] = useState(null);
-  const [audioBlob, setAudioBlob] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
-  const [audioTime, setAudioTime] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [audioError, setAudioError] = useState('');
   const criteria = feedback.criteria || {};
   const taskKey = taskTypeNormalized === 'task1' ? 'Task_Achievement' : 'Task_Response';
   const ta = criteria[taskKey]?.score ?? 0;
@@ -128,9 +121,9 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   const repetitionAlertsRaw = feedback?.analysis?.word_repetition ?? feedback?.word_repetition ?? [];
   const repetitionAlerts = Array.isArray(repetitionAlertsRaw) ? repetitionAlertsRaw : [];
   const suggestedRewrite = feedback.suggested_rewrite || '';
-  const audioRef = useRef(null);
   const audioFilenameBase = getAudioFilenameBase(taskTypeForAudio);
   const audioDownloadName = `${audioFilenameBase}.mp3`;
+  const karaokeAudio = useSuggestedRewriteAudio(suggestedRewrite, audioFilenameBase);
   /** Prefer error-based spans; if none match the saved text, fall back to highlights/corrections. */
   const feedbackEssaySegments = useMemo(() => {
     const fromErrors = buildSegmentsFromErrors(userText, errors);
@@ -180,14 +173,17 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
   const useWordLevelRendering =
     viewMode === 'feedback' && wordLevelsMap && wordLevelsMap.size > 0 && !useTypedErrorHighlight;
 
-  const formatTime = useCallback((seconds) => {
-    const s = Number.isFinite(Number(seconds)) ? Math.max(0, Math.floor(seconds)) : 0;
-    const mm = String(Math.floor(s / 60)).padStart(2, '0');
-    const ss = String(s % 60).padStart(2, '0');
-    return `${mm}:${ss}`;
-  }, []);
-
-  const [suggestedRewriteWordTimestamps, setSuggestedRewriteWordTimestamps] = useState([]);
+  const handleDownloadMp3 = useCallback(() => {
+    if (!karaokeAudio.audioBlob) return;
+    const url = window.URL.createObjectURL(karaokeAudio.audioBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = audioDownloadName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+  }, [karaokeAudio.audioBlob, audioDownloadName]);
 
   const feedItems = useMemo(() => {
     const fromErrors = errors.map((e) => ({
@@ -279,72 +275,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
     ];
   }, [feedItems, criteria, gra, lr, cc]);
 
-  const handleGenerateAudio = useCallback(async () => {
-    if (!suggestedRewrite || isAudioLoading) return;
-    const cleanText = getPlainTextForKaraoke(suggestedRewrite);
-    if (!cleanText) return;
-    setIsAudioLoading(true);
-    setAudioError('');
-    try {
-      const { blob, wordTimestamps } = await fetchTtsWithTimestamps({
-        text: cleanText,
-        filenameBase: audioFilenameBase,
-      });
-      const url = window.URL.createObjectURL(blob);
-
-      setAudioBlob(blob);
-      setAudioUrl((prev) => {
-        if (prev) window.URL.revokeObjectURL(prev);
-        return url;
-      });
-      setSuggestedRewriteWordTimestamps(Array.isArray(wordTimestamps) ? wordTimestamps : []);
-      setIsPlaying(false);
-      setAudioProgress(0);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-    } catch (e) {
-      setAudioError(e?.message || 'Unable to generate audio right now.');
-    } finally {
-      setIsAudioLoading(false);
-    }
-  }, [suggestedRewrite, audioFilenameBase, isAudioLoading]);
-
-  const handleTogglePlay = useCallback(async () => {
-    if (!audioRef.current || !audioUrl || isAudioLoading) return;
-    try {
-      if (audioRef.current.paused) {
-        await audioRef.current.play();
-        setIsPlaying(true);
-      } else {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      }
-    } catch {
-      // ignore (e.g. user gesture restriction)
-    }
-  }, [audioUrl, isAudioLoading]);
-
-  const handleSeek = useCallback((e) => {
-    if (!audioRef.current || !audioRef.current.duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    audioRef.current.currentTime = ratio * audioRef.current.duration;
-  }, []);
-
-  const handleDownloadMp3 = useCallback(() => {
-    if (!audioBlob) return;
-    const url = window.URL.createObjectURL(audioBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = audioDownloadName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
-  }, [audioBlob, audioDownloadName]);
-
   /** Click-to-Fix: replace first occurrence of error with suggestion. Only runs in Feedback mode when setUserText is passed. */
   const handleAutoFix = useCallback((original, replacement) => {
     if (viewMode !== 'feedback') return;
@@ -363,48 +293,6 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
     }
     handleAutoFix(original, fixed);
   }, [handleReplaceWord, handleAutoFix]);
-
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-
-    const onTimeUpdate = () => {
-      const duration = el.duration || 0;
-      const current = el.currentTime || 0;
-      setAudioProgress(duration > 0 ? current / duration : 0);
-      setAudioTime(current);
-      setAudioDuration(duration);
-    };
-    const onLoaded = () => {
-      const duration = el.duration || 0;
-      setAudioDuration(duration);
-    };
-    const onEnded = () => {
-      setIsPlaying(false);
-      setAudioProgress(1);
-    };
-    const onPause = () => setIsPlaying(false);
-    const onPlay = () => setIsPlaying(true);
-
-    el.addEventListener('timeupdate', onTimeUpdate);
-    el.addEventListener('loadedmetadata', onLoaded);
-    el.addEventListener('ended', onEnded);
-    el.addEventListener('pause', onPause);
-    el.addEventListener('play', onPlay);
-    return () => {
-      el.removeEventListener('timeupdate', onTimeUpdate);
-      el.removeEventListener('loadedmetadata', onLoaded);
-      el.removeEventListener('ended', onEnded);
-      el.removeEventListener('pause', onPause);
-      el.removeEventListener('play', onPlay);
-    };
-  }, [audioUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (audioUrl) window.URL.revokeObjectURL(audioUrl);
-    };
-  }, [audioUrl]);
 
   useEffect(() => {
     if (flashErrorCardId == null) return;
@@ -1116,8 +1004,8 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
               <button
                 type="button"
                 onClick={handleDownloadMp3}
-                disabled={!audioBlob || isAudioLoading}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase tracking-[0.2em] disabled:opacity-50 disabled:pointer-events-none transition-colors ${isPlaying ? 'ring-1 ring-indigo-400/40' : ''}`}
+                disabled={!karaokeAudio.audioBlob || karaokeAudio.isAudioLoading}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-300 hover:text-indigo-600 text-[10px] font-bold uppercase tracking-[0.2em] disabled:opacity-50 disabled:pointer-events-none transition-colors ${karaokeAudio.isPlaying ? 'ring-1 ring-indigo-400/40' : ''}`}
                 title="Download MP3"
               >
                 <Download className="w-4 h-4 shrink-0" />
@@ -1137,19 +1025,19 @@ export default function AnalyticalLab({ handleReplaceWord, ...props }) {
               <SuggestedRewriteKaraoke
                 fillWidth
                 suggestedRewrite={suggestedRewrite}
-                wordTimestamps={suggestedRewriteWordTimestamps}
-                audioRef={audioRef}
-                audioUrl={audioUrl}
-                audioDuration={audioDuration}
-                isAudioLoading={isAudioLoading}
-                isPlaying={isPlaying}
-                audioProgress={audioProgress}
-                audioTime={audioTime}
-                audioError={audioError}
-                onGenerateAudio={handleGenerateAudio}
-                onTogglePlay={handleTogglePlay}
-                onSeek={handleSeek}
-                formatTime={formatTime}
+                wordTimestamps={karaokeAudio.wordTimestamps}
+                audioRef={karaokeAudio.audioRef}
+                audioUrl={karaokeAudio.audioUrl}
+                audioDuration={karaokeAudio.audioDuration}
+                isAudioLoading={karaokeAudio.isAudioLoading}
+                isPlaying={karaokeAudio.isPlaying}
+                audioProgress={karaokeAudio.audioProgress}
+                audioTime={karaokeAudio.audioTime}
+                audioError={karaokeAudio.audioError}
+                onGenerateAudio={karaokeAudio.onGenerateAudio}
+                onTogglePlay={karaokeAudio.onTogglePlay}
+                onSeek={karaokeAudio.onSeek}
+                formatTime={karaokeAudio.formatTime}
               />
             )}
           </div>

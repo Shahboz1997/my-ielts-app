@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { safeAuth } from '@/lib/safeAuth';
-import { createOpenAIClient, validateOpenAIEnvForRoute } from '@/lib/openaiServer.js';
+import { createOpenAIClient, validateOpenAIEnvForRoute, openAIErrorToJsonResponse } from '@/lib/openaiServer.js';
 import { requireAuthenticatedAiAccess } from '@/lib/aiRouteGuard.js';
 import {
   alignTextTokensToWhisper,
@@ -67,6 +67,8 @@ export async function POST(req) {
       wordTimestamps,
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const mapped = openAIErrorToJsonResponse(error);
+    if (mapped) return mapped;
+    return NextResponse.json({ error: error.message || 'TTS failed' }, { status: 500 });
   }
 }

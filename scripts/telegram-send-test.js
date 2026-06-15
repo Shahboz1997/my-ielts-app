@@ -4,15 +4,16 @@ const token = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
 const chatId = (process.env.TELEGRAM_CHANNEL_ID || process.env.TELEGRAM_GROUP_ID || '').trim();
 
 const text = [
-  '🧪 <b>Bot check — STRATUM IELTS Writing</b>',
+  '✅ <b>New bot live — STRATUM IELTS Writing</b>',
   '',
-  'If you see this, the bot can post to the channel.',
+  'This channel is connected to the writing bot.',
   '',
-  'DM commands:',
-  '• /check — essay scores',
-  '• /tip — morning tip',
+  '☀️ <b>Morning tip:</b> In Task 2, put your thesis in the <i>last sentence</i> of the introduction.',
+  '',
+  'DM the bot:',
+  '• /check — essay scores (TA, CC, LR, GRA)',
+  '• /tip — IELTS tip',
   '• /topic — practice prompt',
-  '• /resource — study links',
   '',
   '<a href="https://stratumielts.com/">stratumielts.com</a>',
 ].join('\n');

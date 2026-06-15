@@ -76,6 +76,27 @@ async function main() {
   const commandsData = await commandsRes.json();
   if (commandsData.ok) console.log('Bot commands registered');
 
+  const description =
+    'IELTS Writing checker — paste your Task 1 or Task 2 essay for band scores (TA, CC, LR, GRA), vocabulary upgrades, and rewrite tips.';
+  const descRes = await fetch(`https://api.telegram.org/bot${token}/setMyDescription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description }),
+  });
+  const descData = await descRes.json();
+  if (descData.ok) console.log('Bot description set');
+
+  const shortRes = await fetch(`https://api.telegram.org/bot${token}/setMyShortDescription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ short_description: 'IELTS Writing AI checker — /check your essay' }),
+  });
+  const shortData = await shortRes.json();
+  if (shortData.ok) console.log('Bot short description set');
+
+  const meRes = await fetch(`https://api.telegram.org/bot${token}/getMe`).then((r) => r.json());
+  if (meRes.ok) console.log('Bot username:', `@${meRes.result.username}`);
+
   const info = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`).then((r) => r.json());
   console.log('Webhook info:', JSON.stringify(info.result, null, 2));
 }

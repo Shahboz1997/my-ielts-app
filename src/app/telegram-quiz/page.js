@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getQuizForCampaign } from '@/lib/telegramQuiz';
 import { STRATUM_SITE } from '@/lib/telegramDailyContent';
-import { TELEGRAM_CHANNEL_LABEL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
+import { TELEGRAM_BOT_LABEL, TELEGRAM_BOT_URL, TELEGRAM_CHANNEL_LABEL, TELEGRAM_CHANNEL_URL } from '@/lib/support';
 
 export const metadata = {
   title: 'Quiz breakdown | STRATUM IELTS Writing',
@@ -76,6 +76,10 @@ export default async function TelegramQuizPage({ searchParams }) {
       </Link>
 
       <p className="mt-6 text-center text-sm text-neutral-500">
+        <a href={TELEGRAM_BOT_URL} className="underline hover:text-indigo-600">
+          {TELEGRAM_BOT_LABEL}
+        </a>
+        {' · '}
         <a href={TELEGRAM_CHANNEL_URL} className="underline hover:text-indigo-600">
           {TELEGRAM_CHANNEL_LABEL}
         </a>

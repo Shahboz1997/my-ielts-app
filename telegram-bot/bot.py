@@ -78,6 +78,9 @@ MORNING_HOUR = int(os.getenv("MORNING_HOUR", "9"))
 EVENING_HOUR = int(os.getenv("EVENING_HOUR", "18"))
 MORNING_QUIZ_DELAY_MINUTES = int(os.getenv("MORNING_QUIZ_DELAY_MINUTES", "5"))
 SITE_URL = os.getenv("SITE_URL", "https://stratumielts.com/").strip().rstrip("/")
+TELEGRAM_BOT_USERNAME_CANONICAL = (
+    os.getenv("TELEGRAM_BOT_USERNAME", "Stratum_ielts_writing_bot").strip()
+)
 
 Slot = Literal["morning", "evening"]
 
@@ -256,15 +259,17 @@ def build_site_keyboard(campaign: str, include_check: bool = False) -> InlineKey
     rows: list[list[InlineKeyboardButton]] = [
         [InlineKeyboardButton(text="👉 stratumielts.com — Check your writing", url=url)]
     ]
-    if include_check and _bot_username:
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    text="✅ Check my text",
-                    url=f"https://t.me/{_bot_username}?start=check",
-                )
-            ]
-        )
+    if include_check:
+        username = TELEGRAM_BOT_USERNAME_CANONICAL or _bot_username
+        if username:
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        text="✅ Check my text",
+                        url=f"https://t.me/{username}?start=check",
+                    )
+                ]
+            )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 

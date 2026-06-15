@@ -1,0 +1,10 @@
+{
+  "commands": [
+    { "command": "start", "description": "Welcome & link to stratumielts.com" },
+    { "command": "check", "description": "Check your essay (AI feedback)" },
+    { "command": "tip", "description": "Task 1/2 template tip" },
+    { "command": "topic", "description": "Random essay prompt" },
+    { "command": "resource", "description": "Useful study link" },
+    { "command": "help", "description": "Command list" }
+  ]
+}

@@ -2,29 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { getPlainTextForKaraoke } from '@/components/dashboard/SuggestedRewriteKaraoke';
-
-function base64ToBlob(base64, mimeType) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mimeType || 'audio/mpeg' });
-}
-
-async function fetchTtsWithTimestamps({ text, filenameBase }) {
-  const response = await fetch('/api/tts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, filename: filenameBase }),
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data?.error || 'TTS failed');
-  }
-  const data = await response.json();
-  const blob = data.audioBase64 ? base64ToBlob(data.audioBase64) : null;
-  const wordTimestamps = Array.isArray(data.wordTimestamps) ? data.wordTimestamps : [];
-  return { blob, wordTimestamps };
-}
+import {
+  fetchTtsWithTimestamps,
+  playAudioElement,
+} from '@/components/dashboard/analytical-lab/ttsHelpers';
 
 /**
  * Audio player state for SuggestedRewriteKaraoke (Band / TTS / waveform).
@@ -32,6 +13,7 @@ async function fetchTtsWithTimestamps({ text, filenameBase }) {
 export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
   const [wordTimestamps, setWordTimestamps] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -39,24 +21,27 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioError, setAudioError] = useState('');
   const audioRef = useRef(null);
+  const pendingAutoPlayRef = useRef(false);
 
   const formatTime = useCallback((s) => {
     const n = Number.isFinite(Number(s)) ? Math.max(0, Math.floor(s)) : 0;
     return `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
   }, []);
 
-  const handleGenerateAudio = useCallback(async () => {
+  const handleGenerateAudio = useCallback(async ({ autoPlay = false } = {}) => {
     if (!suggestedRewrite || isAudioLoading) return;
     const cleanText = getPlainTextForKaraoke(suggestedRewrite);
     if (!cleanText) return;
     setIsAudioLoading(true);
     setAudioError('');
+    pendingAutoPlayRef.current = autoPlay;
     try {
       const { blob, wordTimestamps: ts } = await fetchTtsWithTimestamps({
         text: cleanText,
         filenameBase: filenameBase || 'Stratum_Rewrite',
       });
       const url = window.URL.createObjectURL(blob);
+      setAudioBlob(blob);
       setAudioUrl((prev) => {
         if (prev) window.URL.revokeObjectURL(prev);
         return url;
@@ -69,6 +54,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
         audioRef.current.currentTime = 0;
       }
     } catch (e) {
+      pendingAutoPlayRef.current = false;
       setAudioError(e?.message || 'Unable to generate audio.');
     } finally {
       setIsAudioLoading(false);
@@ -76,17 +62,25 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
   }, [suggestedRewrite, filenameBase, isAudioLoading]);
 
   const handleTogglePlay = useCallback(async () => {
-    if (!audioRef.current || !audioUrl || isAudioLoading) return;
+    if (isAudioLoading) return;
+    if (!audioUrl) {
+      await handleGenerateAudio({ autoPlay: true });
+      return;
+    }
+    if (!audioRef.current) return;
     try {
       if (audioRef.current.paused) {
-        await audioRef.current.play();
+        await playAudioElement(audioRef.current);
+        setIsPlaying(true);
       } else {
         audioRef.current.pause();
+        setIsPlaying(false);
       }
-    } catch {
-      // ignore (e.g. user gesture restriction)
+    } catch (e) {
+      setAudioError(e?.message || 'Unable to play audio.');
+      setIsPlaying(false);
     }
-  }, [audioUrl, isAudioLoading]);
+  }, [audioUrl, isAudioLoading, handleGenerateAudio]);
 
   const handleSeek = useCallback((e) => {
     if (!audioRef.current?.duration) return;
@@ -94,6 +88,19 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     audioRef.current.currentTime = ratio * audioRef.current.duration;
   }, []);
+
+  useEffect(() => {
+    if (!audioUrl || !pendingAutoPlayRef.current) return;
+    pendingAutoPlayRef.current = false;
+    const el = audioRef.current;
+    if (!el) return;
+    void playAudioElement(el)
+      .then(() => setIsPlaying(true))
+      .catch((e) => {
+        setAudioError(e?.message || 'Unable to play audio.');
+        setIsPlaying(false);
+      });
+  }, [audioUrl]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -132,6 +139,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
   return {
     audioRef,
     audioUrl,
+    audioBlob,
     audioDuration,
     wordTimestamps,
     isAudioLoading,
@@ -139,7 +147,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
     audioProgress,
     audioTime,
     audioError,
-    onGenerateAudio: handleGenerateAudio,
+    onGenerateAudio: () => handleGenerateAudio({ autoPlay: true }),
     onTogglePlay: handleTogglePlay,
     onSeek: handleSeek,
     formatTime,
