@@ -8,7 +8,14 @@ import {
   sendQuizPollToGroup,
   sendToGroup,
 } from '@/lib/telegram';
+import { adaptTelegramTextForFacebook, postImageToFacebookPage } from '@/lib/facebook';
+import { generatePostBanner } from '@/lib/facebookImageGen';
 import { buildDailyPostAsync } from '@/lib/telegramDailyContent';
+
+const FB_BANNER_TOPICS = {
+  morning: 'IELTS grammar tip',
+  evening: 'IELTS writing task 2 prompt',
+};
 
 /**
  * Daily Telegram group posts — morning & evening.
@@ -83,6 +90,30 @@ export async function GET(request) {
     messageId: result.data?.result?.message_id,
     pollMessageId: pollMessageId ?? null,
   };
+
+  if (process.env.FACEBOOK_USE_AI === '1') {
+    try {
+      console.log('[cron/telegram-daily] Facebook cross-post starting…');
+      const bannerTopic = FB_BANNER_TOPICS[slot];
+      const image = await generatePostBanner(bannerTopic);
+      const fbText = adaptTelegramTextForFacebook(post.text);
+      const fbResult = await postImageToFacebookPage(image, fbText);
+      if (fbResult.success) {
+        summary.facebookPostId = fbResult.id;
+        console.log('[cron/telegram-daily] Facebook post id:', fbResult.id);
+      } else {
+        summary.facebookError = fbResult.error;
+        console.warn('[cron/telegram-daily] Facebook post failed (non-blocking)', fbResult.error);
+      }
+    } catch (fbErr) {
+      console.warn(
+        '[cron/telegram-daily] Facebook cross-post error (non-blocking):',
+        fbErr?.message || fbErr
+      );
+      summary.facebookError = fbErr?.message || String(fbErr);
+    }
+  }
+
   console.log('[cron/telegram-daily]', summary);
   return NextResponse.json(summary);
 }

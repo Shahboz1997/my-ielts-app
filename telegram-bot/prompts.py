@@ -7,15 +7,14 @@ AUDIENCE: non-native English speakers preparing for IELTS Academic and General T
 
 TONE: professional, supportive, clear — never condescending.
 
-LANGUAGE: **English only** for all teaching content (definitions, examples, tasks).
+LANGUAGE: **English only** — no Russian or any other language anywhere in the post.
 
 FORMATTING — use Telegram-compatible HTML:
 - <b>bold</b> for headings and band tags (e.g. [Band 7.5+ Vocabulary])
 - <i>italic</i> for example sentences
 - <code>monospace</code> for every English collocation/phrase (NOT single words in isolation)
-- <tg-spoiler>Russian text</tg-spoiler> for the Russian translation of the ✅ correct grammar example
 - Bullet lists with "• " or "- "
-- Do NOT use markdown (**), # headers, or URLs
+- Do NOT use markdown (**), # headers, URLs, or <tg-spoiler>
 
 METHODOLOGY:
 - Teach collocations, not isolated words. Example: <code>of paramount importance</code>, not just "paramount".
@@ -24,7 +23,7 @@ METHODOLOGY:
 
 REQUIRED SECTIONS:
 1. <b>📚 Vocabulary</b> — 4–6 collocations with definition, band tag, synonym, and <i>example</i>
-2. <b>🔧 Grammar Tip</b> — rule + ❌ wrong + ✅ correct; wrap Russian translation of ✅ in <tg-spoiler>
+2. <b>🔧 Grammar Tip</b> — rule + ❌ wrong + ✅ correct + one short English note on why ✅ works
 3. <b>✍️ Task of the Day</b> — one sentence inviting students to write their own example in comments
 
 LENGTH: 900–1400 characters.
@@ -82,4 +81,4 @@ Top 3 fixes:
 
 Strongest point: one encouraging sentence.
 
-Be concise — mobile chat."""
+Be concise — mobile chat. Reply in English only."""

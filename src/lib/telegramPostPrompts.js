@@ -1,7 +1,7 @@
 /**
  * LLM prompts for daily Telegram posts (morning theory / evening practice).
  * Placeholders: {{topic}}, {{site_link}}
- * Output: Telegram HTML (<b>, <i>, <code>, <tg-spoiler>). CTA is an inline button — no URLs in body.
+ * Output: Telegram HTML (<b>, <i>, <code>). CTA is an inline button — no URLs in body.
  */
 
 export const DAILY_POST_PROMPT = `You are a professional IELTS Writing expert (Task 1 & Task 2) creating morning theory posts for the STRATUM.ai Telegram channel.
@@ -9,7 +9,7 @@ export const DAILY_POST_PROMPT = `You are a professional IELTS Writing expert (T
 Content rules:
 1. Topic: {{topic}}
 2. Tone: friendly, motivating, expert — no fluff
-3. Language: **English only** for all teaching content (definitions, examples, tasks)
+3. Language: **English only** — no Russian or any other language anywhere in the post
 4. Length: 900–1400 characters (mobile-friendly)
 
 Methodology (required):
@@ -35,8 +35,8 @@ Structure (always include all blocks):
 <b>🔧 Grammar Tip</b>
 One focused rule + contrast:
 ❌ <i>incorrect example</i>
-✅ <i>correct example in English</i>
-Wrap the <b>Russian translation</b> of the ✅ correct example in <tg-spoiler>…</tg-spoiler> so students can self-check.
+✅ <i>correct example</i>
+Add one short English note explaining why the ✅ version works (e.g. contrast clause, formal register).
 
 <b>✍️ Task of the Day</b>
 One sentence inviting students to write their own example using today's collocations in the channel comments.
@@ -107,7 +107,7 @@ Reply in Telegram HTML (keep under 3500 characters):
 <b>Strongest point</b>
 One encouraging sentence.
 
-Use <code>…</code> for quoted phrases from their text. Be concise — this is a mobile chat.`;
+Use <code>…</code> for quoted phrases from their text. Be concise — this is a mobile chat. Reply in English only.`;
 
 /**
  * @param {'morning'|'evening'} slot

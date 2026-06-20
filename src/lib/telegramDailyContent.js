@@ -121,7 +121,7 @@ function buildMorningPostStatic(date, campaign, ctaUrl) {
     '🔧 <b>Grammar Tip</b>',
     '❌ <i>Education is important. Technology is also important.</i>',
     '✅ <i>Education remains paramount, whereas technology serves mainly as a tool.</i>',
-    `<tg-spoiler>Образование остаётся первостепенным, тогда как технологии служат в основном инструментом.</tg-spoiler>`,
+    '<i>Why it works: <code>whereas</code> links two contrasting ideas in one formal sentence.</i>',
     '',
     '✍️ <b>Task of the Day:</b> Write one sentence using <code>of paramount importance</code> in the comments.',
     '',

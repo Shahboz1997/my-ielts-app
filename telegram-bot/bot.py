@@ -118,7 +118,7 @@ def build_system_prompt(plan: SlotPlan) -> str:
     if plan.requires_vocab_block:
         extra.append("Expand Vocabulary with Band 7.5–9 collocations and band tags.")
     if plan.requires_grammar_block:
-        extra.append("Expand Grammar Tip; use <tg-spoiler> for Russian translation of ✅ example.")
+        extra.append("Expand Grammar Tip with ❌/✅ contrast and a short English explanation — English only.")
 
     focus = " ".join(extra)
     return (
@@ -157,6 +157,14 @@ def create_openai_client() -> OpenAI | None:
     return OpenAI(api_key=OPENAI_API_KEY)
 
 
+def enforce_english_only(text: str) -> str:
+    """Drop legacy spoiler blocks and lines with Cyrillic — channel is English-only."""
+    t = re.sub(r"<tg-spoiler>[\s\S]*?</tg-spoiler>", "", text, flags=re.IGNORECASE)
+    lines = [ln for ln in t.splitlines() if not re.search(r"[\u0400-\u04FF]", ln)]
+    t = "\n".join(lines)
+    return re.sub(r"\n{3,}", "\n\n", t).strip()
+
+
 async def generate_post_text(
     client: OpenAI,
     plan: SlotPlan,
@@ -182,7 +190,7 @@ async def generate_post_text(
         if not text:
             logger.error("OpenAI returned empty content for slot=%s", plan.slot)
             return None
-        return text
+        return enforce_english_only(text)
     except RateLimitError as exc:
         logger.error("OpenAI rate limit: %s", exc)
     except APIConnectionError as exc:

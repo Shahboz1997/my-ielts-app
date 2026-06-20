@@ -54,14 +54,13 @@ const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 
 const SYSTEM_MORNING = `You are an expert IELTS Writing tutor for the STRATUM.ai Telegram channel.
 Audience: non-native English speakers. Tone: professional, supportive, clear.
-Language: **English only** for teaching content.
+Language: **English only** — no Russian or any other language anywhere in the post.
 
-Use Telegram HTML: <b>bold</b>, <i>italic</i>, <code>collocations</code>, <tg-spoiler>Russian translation</tg-spoiler>.
-No markdown, no URLs.
+Use Telegram HTML: <b>bold</b>, <i>italic</i>, <code>collocations</code>. No markdown, no URLs, no <tg-spoiler>.
 
 REQUIRED sections:
 <b>📚 Vocabulary</b> — 4–6 collocations with [Band 7.5+] tags, synonym, <i>example</i>
-<b>🔧 Grammar Tip</b> — ❌ wrong + ✅ correct; Russian translation of ✅ in <tg-spoiler>
+<b>🔧 Grammar Tip</b> — ❌ wrong + ✅ correct + one short English note on why ✅ works
 <b>✍️ Task of the Day</b> — one sentence inviting a comment example
 
 Length: 900–1400 characters. Output ONLY the post.`;
@@ -154,7 +153,7 @@ if (STATIC) {
     'Use <code>whereas</code> to contrast two ideas in one sentence.',
     '❌ <i>Education is important. Technology is also important.</i>',
     '✅ <i>Education remains paramount, whereas technology serves mainly as a tool.</i>',
-    '<tg-spoiler>Образование остаётся первостепенным, тогда как технологии служат в основном инструментом.</tg-spoiler>',
+    '<i>Why it works: <code>whereas</code> links two contrasting ideas in one formal sentence.</i>',
     '',
     '<b>✍️ Task of the Day:</b> Write one sentence using <code>of paramount importance</code> in the comments.',
     '',

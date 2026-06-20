@@ -77,16 +77,21 @@ export function buildPostInlineKeyboard({ ctaUrl, ctaLabel, botUsername, include
 /** Seconds from now for scheduled poll (Telegram schedule_date). */
 export const MORNING_QUIZ_DELAY_SEC = Number(process.env.TELEGRAM_MORNING_QUIZ_DELAY_SEC || 300);
 
-/** Strip raw URLs and unsafe tags from AI output; keep b/i/code. */
+/** Strip raw URLs and unsafe tags from AI output; keep b/i/code. Enforce English-only copy. */
 export function prepareTelegramHtml(text) {
   let t = String(text ?? '').trim();
   t = t.replace(/https?:\/\/\S+/gi, '').trim();
   t = t.replace(/\n*(?:👉|🔗|✍️|→)\s*[^\n]*$/u, '').trim();
-  t = t.replace(/<(?!\/?(?:b|i|code|strong|em|tg-spoiler|span)\b)[^>]+>/gi, '');
+  t = t.replace(/<tg-spoiler>[\s\S]*?<\/tg-spoiler>/gi, '');
+  t = t
+    .split('\n')
+    .filter((line) => !/[\u0400-\u04FF]/.test(line))
+    .join('\n');
+  t = t.replace(/<(?!\/?(?:b|i|code|strong|em|span)\b)[^>]+>/gi, '');
   t = t.replace(/<\/?(strong|em)>/gi, (m) =>
     m.includes('strong') ? (m.startsWith('</') ? '</b>' : '<b>') : m.startsWith('</') ? '</i>' : '<i>'
   );
-  return t;
+  return t.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 async function callTelegramApi(method, body) {

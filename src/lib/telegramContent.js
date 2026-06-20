@@ -88,7 +88,7 @@ export function buildResourceMessage() {
   const r = randomItem(pool);
   if (!r) return { text: 'No resources available yet.' };
   const text = [
-    `📖 <b>${escapeHtml(r.titleRu || r.title)}</b>`,
+    `📖 <b>${escapeHtml(r.title)}</b>`,
     r.durationMin ? `⏱ ~${r.durationMin} min` : '',
     r.source ? `📌 ${escapeHtml(r.source)}` : '',
     '',
