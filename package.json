@@ -2,9 +2,10 @@
   "name": "stratum-writing-ai",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "node ./scripts/run-dev.js 3000",
-    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node ./scripts/run-dev.js 3000",
+    "dev": "node ./scripts/run-dev.cjs 3000",
+    "dev:clean": "node --input-type=commonjs -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && node ./scripts/run-dev.cjs 3000",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",

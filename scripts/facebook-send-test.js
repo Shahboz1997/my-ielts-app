@@ -60,13 +60,17 @@ async function main() {
   console.log('[facebook-send-test] Loading modules…');
 
   const { generatePostBanner } = await import('../src/lib/facebookImageGen.js');
-  const { postImageToFacebookPage, validateFacebookPageCredentials, FACEBOOK_TOKEN_SETUP_HINT } =
+  const { postImageToFacebookPage, validateFacebookPageCredentials, cleanBrokenTlsEnv } =
     await import('../src/lib/facebook.js');
+
+  cleanBrokenTlsEnv();
 
   const validation = await validateFacebookPageCredentials();
   if (!validation.ok) {
     console.error('[facebook-send-test] Token cannot publish:', validation.error);
-    console.log('\n--- How to fix ---\n   ' + (validation.hint || FACEBOOK_TOKEN_SETUP_HINT));
+    if (validation.hint) {
+      console.log('\n--- How to fix ---\n   ' + validation.hint);
+    }
     process.exit(1);
   }
 
@@ -88,6 +92,8 @@ async function main() {
 }
 
 main().catch((err) => {
+  const cause = err?.cause?.code || err?.cause?.message;
   console.error('[facebook-send-test]', err?.message || err);
+  if (cause) console.error('[facebook-send-test] cause:', cause);
   process.exit(1);
 });

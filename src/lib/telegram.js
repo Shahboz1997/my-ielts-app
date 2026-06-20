@@ -23,6 +23,44 @@ export function getTelegramChannelId() {
   return getTelegramGroupId();
 }
 
+/** Private chat id for ops alerts (your Telegram user id after /start with the bot). */
+export function getTelegramAlertChatId() {
+  return (process.env.TELEGRAM_ALERT_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || '').trim();
+}
+
+/**
+ * DM admin when Facebook cross-post fails (non-blocking for cron).
+ * Set TELEGRAM_ALERT_CHAT_ID in Vercel + .env.local.
+ */
+export async function notifyFacebookCrossPostFailure({ slot, error, hint }) {
+  const chatId = getTelegramAlertChatId();
+  if (!chatId) {
+    console.warn('[telegram] Facebook alert skipped — set TELEGRAM_ALERT_CHAT_ID');
+    return { ok: false, skipped: true };
+  }
+
+  const errText = escapeHtml(String(error ?? 'unknown error').slice(0, 600));
+  const hintText = hint ? escapeHtml(String(hint).slice(0, 400)) : '';
+
+  const lines = [
+    '⚠️ <b>Facebook cross-post failed</b>',
+    '',
+    `Slot: <code>${escapeHtml(slot || 'unknown')}</code>`,
+    `Time: <code>${escapeHtml(new Date().toISOString())}</code>`,
+    '',
+    `<b>Error</b>\n${errText}`,
+  ];
+  if (hintText) {
+    lines.push('', `<b>Fix</b>\n${hintText}`);
+  }
+
+  const result = await sendTelegramMessage(chatId, lines.join('\n'), { disable_notification: false });
+  if (!result.ok) {
+    console.warn('[telegram] Facebook alert send failed', result.error);
+  }
+  return result;
+}
+
 function escapeHtml(text) {
   return String(text ?? '')
     .replace(/&/g, '&amp;')

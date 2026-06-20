@@ -40,37 +40,50 @@ async function main() {
   loadEnvLocal();
 
   const {
-    resolveFacebookPageCredentials,
-    probeFacebookPhotoPost,
+    validateFacebookPageCredentials,
     FACEBOOK_TOKEN_SETUP_HINT,
+    cleanBrokenTlsEnv,
   } = await import('../src/lib/facebook.js');
 
+  cleanBrokenTlsEnv();
+
   console.log('=== Facebook token check ===\n');
+
+  if (!process.env.FACEBOOK_APP_SECRET?.trim()) {
+    console.log('⚠️  FACEBOOK_APP_SECRET missing — tokens may expire in ~1 hour instead of ~60 days.\n');
+  }
 
   if (!process.env.FACEBOOK_USER_ACCESS_TOKEN?.trim()) {
     console.log('ℹ️  FACEBOOK_USER_ACCESS_TOKEN not set — using FACEBOOK_ACCESS_TOKEN only.\n');
   }
 
-  const creds = await resolveFacebookPageCredentials();
-  if ('error' in creds) {
-    console.error('❌', creds.error);
-    console.log('\n--- How to fix ---\n   ' + FACEBOOK_TOKEN_SETUP_HINT);
+  const validation = await validateFacebookPageCredentials();
+  if (!validation.ok) {
+    console.error('❌', validation.error);
+    if (/Network timeout|Cannot reach|SSL\/TLS error/i.test(validation.error || '')) {
+      console.log(
+        '\n--- Network ---\n' +
+          '   graph.facebook.com is unreachable from this PC (VPN/firewall/antivirus).\n' +
+          '   Enable VPN and retry, or trigger production on Vercel:\n' +
+          '   curl -H "Authorization: Bearer $CRON_SECRET" "https://stratumielts.com/api/cron/facebook-post?variant=1"'
+      );
+    } else if (validation.hint) {
+      console.log('\n--- How to fix ---\n   ' + validation.hint);
+    } else {
+      console.log('\n--- How to fix ---\n   ' + FACEBOOK_TOKEN_SETUP_HINT);
+    }
     process.exit(1);
   }
 
-  console.log('✅ Page:', creds.pageName);
-  console.log('✅ Page ID:', creds.pageId);
-  console.log('✅ Token prefix:', creds.accessToken.slice(0, 12) + '…');
-
-  const probe = await probeFacebookPhotoPost(creds.pageId, creds.accessToken);
-  if (!probe.ok) {
-    console.error('\n❌ Cannot post:', probe.error);
-    console.log('\n--- How to fix ---\n   ' + FACEBOOK_TOKEN_SETUP_HINT);
-    process.exit(1);
-  }
-
-  console.log('✅ Photo post works! probe id:', probe.postId);
-  console.log('\nRun full test: node --env-file=.env.local scripts/facebook-send-test.js');
+  console.log('✅ Page:', validation.creds.pageName);
+  console.log('✅ Page ID:', validation.creds.pageId);
+  console.log('✅ Token prefix:', validation.creds.accessToken.slice(0, 12) + '…');
+  console.log('\nPublish IELTS Writing post (local):');
+  console.log('   node --env-file=.env.local scripts/facebook-post-ielts-writing.js');
+  console.log('\nPublish via Vercel (after deploy):');
+  console.log(
+    '   curl -H "Authorization: Bearer $CRON_SECRET" "https://stratumielts.com/api/cron/facebook-post?variant=1"'
+  );
 }
 
 main().catch((err) => {

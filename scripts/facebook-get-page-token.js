@@ -1,22 +1,29 @@
 #!/usr/bin/env node
 /**
- * Exchange a User Access Token for a Page Access Token via GET me/accounts.
+ * Exchange User token → long-lived User token (~60 days) → non-expiring Page token.
+ * Writes .env.local and prints Vercel sync commands.
  *
- * 1. Graph API Explorer → User token + pages_show_list, pages_manage_posts, pages_read_engagement
- * 2. Add to .env.local: FACEBOOK_USER_ACCESS_TOKEN=...
- * 3. node --env-file=.env.local scripts/facebook-get-page-token.js
+ * Prerequisites:
+ *   FACEBOOK_APP_ID + FACEBOOK_APP_SECRET (Meta App → Settings → Basic)
+ *   Fresh USER token in Graph API Explorer with pages_manage_posts
+ *
+ * Usage:
+ *   node --env-file=.env.local scripts/facebook-get-page-token.js
+ *   node --env-file=.env.local scripts/facebook-get-page-token.js <USER_TOKEN>
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { debugAccessToken, refreshFacebookTokens } from '../src/lib/facebookToken.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ENV_PATH = join(root, '.env.local');
+const REQUIRED = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts'];
 
 function loadEnvLocal() {
-  const path = join(root, '.env.local');
-  if (!existsSync(path)) return;
-  for (const line of readFileSync(path, 'utf8').split('\n')) {
+  if (!existsSync(ENV_PATH)) return;
+  for (const line of readFileSync(ENV_PATH, 'utf8').split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
     const eq = trimmed.indexOf('=');
@@ -25,47 +32,88 @@ function loadEnvLocal() {
   }
 }
 
+function updateEnvLocal(updates) {
+  let content = readFileSync(ENV_PATH, 'utf8');
+  for (const [key, value] of Object.entries(updates)) {
+    const re = new RegExp(`^${key}=.*$`, 'm');
+    if (re.test(content)) {
+      content = content.replace(re, `${key}=${value}`);
+    } else {
+      content = `${content.trimEnd()}\n${key}=${value}\n`;
+    }
+  }
+  writeFileSync(ENV_PATH, content, 'utf8');
+}
+
+function formatExpiry(ms) {
+  if (!ms) return 'never (Page token from long-lived User token)';
+  return new Date(ms).toISOString();
+}
+
+async function getGrantedPermissions(token) {
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/me/permissions?access_token=${encodeURIComponent(token)}`
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!Array.isArray(data?.data)) return [];
+  return data.data.filter((p) => p.status === 'granted').map((p) => p.permission);
+}
+
 async function main() {
   loadEnvLocal();
-  const userToken = (process.env.FACEBOOK_USER_ACCESS_TOKEN || process.argv[2] || '').trim();
-  if (!userToken) {
+
+  const userTokenArg = (process.argv[2] || process.env.FACEBOOK_USER_ACCESS_TOKEN || '').trim();
+  if (!userTokenArg) {
     console.error('Set FACEBOOK_USER_ACCESS_TOKEN in .env.local or pass as argument.');
     process.exit(1);
   }
 
-  const res = await fetch(
-    `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,tasks&access_token=${encodeURIComponent(userToken)}`
-  );
-  const data = await res.json();
+  const appSecret = (process.env.FACEBOOK_APP_SECRET || '').trim();
+  if (!appSecret) {
+    console.warn('⚠️  FACEBOOK_APP_SECRET is missing — Page token may expire quickly.');
+    console.warn('   Add it from Meta App → Settings → Basic for ~60-day User tokens.\n');
+  }
 
-  if (!res.ok || !data.data?.length) {
-    console.error('❌ me/accounts returned no pages:', JSON.stringify(data, null, 2));
-    console.log('\nGenerate a USER token (not Page) with permissions:');
-    console.log('  pages_show_list, pages_read_engagement, pages_manage_posts, business_management');
-    console.log('\nIn Graph API Explorer: do NOT select Page in dropdown — use User token, then run this script.');
+  const granted = await getGrantedPermissions(userTokenArg);
+  const missing = REQUIRED.filter((p) => !granted.includes(p));
+  if (missing.length) {
+    console.error(`❌ Token missing permissions: ${missing.join(', ')}`);
+    console.log('\nGraph API Explorer → User token → add pages_manage_posts → regenerate');
     process.exit(1);
   }
 
-  console.log('=== Pages available ===\n');
-  for (const page of data.data) {
-    console.log(`📄 ${page.name}`);
-    console.log(`   FACEBOOK_PAGE_ID=${page.id}`);
-    console.log(`   FACEBOOK_ACCESS_TOKEN=${page.access_token?.slice(0, 20)}…`);
-    console.log('');
+  console.log('=== Refreshing Facebook tokens ===\n');
+
+  const refreshed = await refreshFacebookTokens(userTokenArg);
+  const userDebug = await debugAccessToken(refreshed.userAccessToken);
+
+  console.log(`✅ Page: ${refreshed.pageName} (${refreshed.pageId})`);
+  console.log(`   User token expires: ${formatExpiry(userDebug.expiresAt)}`);
+  console.log(`   Page token: non-expiring (when issued from long-lived User token)\n`);
+
+  if (existsSync(ENV_PATH)) {
+    updateEnvLocal({
+      FACEBOOK_PAGE_ID: refreshed.pageId,
+      FACEBOOK_ACCESS_TOKEN: refreshed.pageAccessToken,
+      FACEBOOK_USER_ACCESS_TOKEN: refreshed.userAccessToken,
+      FACEBOOK_USE_AI: '1',
+    });
+    console.log('✅ .env.local updated\n');
   }
 
-  const preferred =
-    data.data.find((p) => /startum/i.test(p.name || '')) ||
-    data.data.find((p) => p.id === process.env.FACEBOOK_PAGE_ID) ||
-    data.data[0];
-
-  console.log('=== Copy into .env.local ===\n');
-  console.log(`FACEBOOK_PAGE_ID=${preferred.id}`);
-  console.log(`FACEBOOK_ACCESS_TOKEN=${preferred.access_token}`);
+  console.log('=== Copy to Vercel → Settings → Environment Variables (Production) ===\n');
+  console.log(`FACEBOOK_PAGE_ID=${refreshed.pageId}`);
+  console.log(`FACEBOOK_ACCESS_TOKEN=${refreshed.pageAccessToken}`);
+  console.log(`FACEBOOK_USER_ACCESS_TOKEN=${refreshed.userAccessToken}`);
+  if (appSecret) console.log(`FACEBOOK_APP_SECRET=${appSecret}`);
   console.log('FACEBOOK_USE_AI=1');
+  console.log('\n=== Test Facebook post (Vercel, after deploy + env update) ===\n');
+  console.log(
+    'curl -H "Authorization: Bearer $CRON_SECRET" "https://stratumielts.com/api/cron/facebook-post?variant=1"'
+  );
 }
 
 main().catch((err) => {
-  console.error(err?.message || err);
+  console.error('❌', err?.message || err);
   process.exit(1);
 });

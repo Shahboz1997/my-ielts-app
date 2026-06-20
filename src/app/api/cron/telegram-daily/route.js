@@ -5,10 +5,11 @@ import { NextResponse } from 'next/server';
 import { verifyCronRequest } from '@/lib/cronAuth';
 import {
   isTelegramConfigured,
+  notifyFacebookCrossPostFailure,
   sendQuizPollToGroup,
   sendToGroup,
 } from '@/lib/telegram';
-import { adaptTelegramTextForFacebook, postImageToFacebookPage } from '@/lib/facebook';
+import { adaptTelegramTextForFacebook, getFacebookErrorAlertHint, postImageToFacebookPage } from '@/lib/facebook';
 import { generatePostBanner } from '@/lib/facebookImageGen';
 import { buildDailyPostAsync } from '@/lib/telegramDailyContent';
 
@@ -16,6 +17,15 @@ const FB_BANNER_TOPICS = {
   morning: 'IELTS grammar tip',
   evening: 'IELTS writing task 2 prompt',
 };
+
+async function reportFacebookCrossPostFailure(slot, error) {
+  const message = typeof error === 'string' ? error : error?.message || String(error);
+  await notifyFacebookCrossPostFailure({
+    slot,
+    error: message,
+    hint: getFacebookErrorAlertHint(message),
+  });
+}
 
 /**
  * Daily Telegram group posts — morning & evening.
@@ -104,6 +114,7 @@ export async function GET(request) {
       } else {
         summary.facebookError = fbResult.error;
         console.warn('[cron/telegram-daily] Facebook post failed (non-blocking)', fbResult.error);
+        await reportFacebookCrossPostFailure(slot, fbResult.error);
       }
     } catch (fbErr) {
       console.warn(
@@ -111,6 +122,7 @@ export async function GET(request) {
         fbErr?.message || fbErr
       );
       summary.facebookError = fbErr?.message || String(fbErr);
+      await reportFacebookCrossPostFailure(slot, summary.facebookError);
     }
   }
 

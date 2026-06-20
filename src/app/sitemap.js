@@ -5,6 +5,7 @@ const PATHS = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
   { path: '/landing', changeFrequency: 'monthly', priority: 0.7 },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.4 },
+  { path: '/data-deletion', changeFrequency: 'yearly', priority: 0.4 },
   { path: '/terms', changeFrequency: 'yearly', priority: 0.4 },
   { path: '/refund', changeFrequency: 'yearly', priority: 0.4 },
 ];

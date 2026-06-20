@@ -99,7 +99,7 @@ function cleanedEnv() {
 }
 
 // Stop any running dev server first so Windows releases .next file locks before cache cleanup.
-const killPort = path.join(root, "kill-port.js");
+const killPort = path.join(root, "kill-port.cjs");
 const killResult = spawnSync(process.execPath, [killPort, port], {
   cwd: root,
   stdio: "inherit",

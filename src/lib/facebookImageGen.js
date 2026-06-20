@@ -68,18 +68,11 @@ function buildBannerPrompt(topicDescription) {
  * @typedef {{ url?: string, buffer?: Buffer }} PostBannerImage
  */
 
-/**
- * Generate a 1024×1024 branded banner for a daily post slot.
- * gpt-image-1 returns base64; dall-e-3 returns a temporary URL.
- * @param {string} topicDescription
- * @returns {Promise<PostBannerImage>}
- */
-export async function generatePostBanner(topicDescription) {
+async function generateImageFromPrompt(prompt, logLabel) {
   const openai = createBannerOpenAI();
   const model = getImageModel();
-  const prompt = buildBannerPrompt(topicDescription);
 
-  console.log('[facebookImageGen] Generating banner for:', topicDescription, `(model: ${model})`);
+  console.log('[facebookImageGen]', logLabel, `(model: ${model})`);
 
   const response = await openai.images.generate({
     model,
@@ -101,4 +94,24 @@ export async function generatePostBanner(topicDescription) {
   }
 
   throw new Error(`${model} returned no image data`);
+}
+
+/**
+ * Generate a 1024×1024 branded banner for a daily post slot.
+ * gpt-image-1 returns base64; dall-e-3 returns a temporary URL.
+ * @param {string} topicDescription
+ * @returns {Promise<PostBannerImage>}
+ */
+export async function generatePostBanner(topicDescription) {
+  const prompt = buildBannerPrompt(topicDescription);
+  return generateImageFromPrompt(prompt, `Generating banner for: ${topicDescription}`);
+}
+
+/**
+ * Generate a banner from a full custom prompt (e.g. IELTS Writing campaign variants).
+ * @param {string} prompt
+ * @returns {Promise<PostBannerImage>}
+ */
+export async function generatePostBannerFromPrompt(prompt) {
+  return generateImageFromPrompt(String(prompt ?? '').trim(), 'Generating custom banner');
 }

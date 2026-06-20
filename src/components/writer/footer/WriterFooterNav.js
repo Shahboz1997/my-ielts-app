@@ -89,6 +89,14 @@ export function WriterFooterLegal() {
         </li>
         <li>
           <Link
+            href="/data-deletion"
+            className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          >
+            Data Deletion
+          </Link>
+        </li>
+        <li>
+          <Link
             href="/terms"
             className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
           >

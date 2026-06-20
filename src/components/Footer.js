@@ -50,6 +50,7 @@ export default function Footer() {
             <h4 className="font-black tracking-tighter uppercase text-slate-900 dark:text-white mb-4 text-sm">Legal</h4>
             <ul className="space-y-2">
               <li><Link href="/privacy" className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/data-deletion" className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Data Deletion</Link></li>
               <li><Link href="/terms" className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Terms of Service</Link></li>
               <li><Link href="/refund" className="text-sm font-medium tracking-wide text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Refund Policy</Link></li>
             </ul>
