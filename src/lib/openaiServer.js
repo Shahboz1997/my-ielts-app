@@ -17,6 +17,12 @@ export function getTrimmedOpenAIProjectId() {
   return (process.env.OPENAI_PROJECT_ID || '').trim();
 }
 
+function openAIEnvHint() {
+  return process.env.VERCEL === '1'
+    ? 'Update OPENAI_API_KEY in Vercel → Project Settings → Environment Variables, then redeploy.'
+    : 'Add a valid OPENAI_API_KEY to .env.local and restart the dev server (npm run dev).';
+}
+
 /** Default naming: OPENAI_MODEL for text, OPENAI_VISION_MODEL for chart/image OCR */
 export function getOpenAIModel() {
   return (process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
@@ -54,8 +60,7 @@ export function validateOpenAIEnvForRoute() {
   if (!apiKey) {
     return NextResponse.json(
       {
-        error:
-          'OPENAI_API_KEY is not loaded. Add it to .env.local and restart the dev server (npm run dev).',
+        error: `OPENAI_API_KEY is not loaded. ${openAIEnvHint()}`,
         code: 'MISSING_API_KEY',
       },
       { status: 401 }
@@ -64,8 +69,7 @@ export function validateOpenAIEnvForRoute() {
   if (isPlaceholderOpenAiKey(apiKey)) {
     return NextResponse.json(
       {
-        error:
-          'OPENAI_API_KEY in .env.local looks like a placeholder. Paste a real key from https://platform.openai.com/api-keys, then restart npm run dev.',
+        error: `OPENAI_API_KEY looks like a placeholder. ${openAIEnvHint()}`,
         code: 'INVALID_API_KEY',
       },
       { status: 401 }
@@ -135,7 +139,9 @@ export function openAIErrorToJsonResponse(err) {
     return NextResponse.json(
       {
         error:
-          'OPENAI_PROJECT_ID does not match OPENAI_API_KEY. Remove OPENAI_PROJECT_ID from .env.local or set the project ID from the same OpenAI project as the key, then restart npm run dev.',
+          process.env.VERCEL === '1'
+            ? 'OPENAI_PROJECT_ID does not match OPENAI_API_KEY on Vercel. Remove OPENAI_PROJECT_ID or set the project ID from the same OpenAI project as the key, then redeploy.'
+            : 'OPENAI_PROJECT_ID does not match OPENAI_API_KEY. Remove OPENAI_PROJECT_ID from .env.local or set the project ID from the same OpenAI project as the key, then restart npm run dev.',
         code: 'MISMATCHED_PROJECT',
       },
       { status: 401 }
@@ -155,8 +161,7 @@ export function openAIErrorToJsonResponse(err) {
   if (isOpenAIAuthError(err)) {
     return NextResponse.json(
       {
-        error:
-          'OpenAI rejected the API key. Check OPENAI_API_KEY in .env.local and restart the dev server.',
+        error: `OpenAI rejected the API key. ${openAIEnvHint()}`,
         code: 'INVALID_API_KEY',
       },
       { status: 401 }
