@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import VerifyEmailClient from './VerifyEmailClient';
 
 export const metadata = {
-  title: 'Email verification — stratum',
+  title: 'Email verification — STRATUM',
 };
 
 function VerifyEmailFallback() {

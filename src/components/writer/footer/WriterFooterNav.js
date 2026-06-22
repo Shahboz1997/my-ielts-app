@@ -17,7 +17,7 @@ export function WriterFooterBrand() {
           <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400 sm:h-5 sm:w-5" strokeWidth={2} />
         </span>
         <span className="font-black normal-case text-base tracking-[0.12em] text-slate-900 dark:text-white sm:text-xl sm:tracking-[0.15em]">
-          stratum
+          STRATUM
         </span>
       </div>
       <p className="text-sm font-medium text-slate-700 dark:text-slate-400">AI IELTS Examiner</p>

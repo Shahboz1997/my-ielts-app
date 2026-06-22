@@ -2,7 +2,7 @@ import LegalPageLayout from '@/components/LegalPageLayout';
 import { SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export const metadata = {
-  title: 'Data Deletion | stratum',
+  title: 'Data Deletion | STRATUM',
   description:
     'How to request deletion of your stratum account and personal data, including instructions for Meta app users.',
 };

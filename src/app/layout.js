@@ -26,8 +26,8 @@ const baseUrl = getMetadataBaseUrl();
 export const metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'stratum — Premium IELTS Intelligence',
-    template: '%s | stratum',
+    default: 'STRATUM — Premium IELTS Intelligence',
+    template: '%s | STRATUM',
   },
   description:
     'Elevate your IELTS score with Stratum. Precision AI-driven evaluation for Task 1 and Task 2. Master the exam, stratum by stratum.',
@@ -49,20 +49,20 @@ export const metadata = {
     type: 'website',
     locale: 'en_US',
     url: baseUrl,
-    siteName: 'stratum',
-    title: 'stratum | Next-Gen IELTS Preparation',
+    siteName: 'STRATUM',
+    title: 'STRATUM | Next-Gen IELTS Preparation',
     description: 'Get instant Band 9.0 feedback and AI-powered essay analysis.',
     images: ['/og-image.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'stratum | Next-Gen IELTS Preparation',
+    title: 'STRATUM | Next-Gen IELTS Preparation',
     description: 'Get instant Band 9.0 feedback and AI-powered essay analysis.',
     images: ['/og-image.png'],
   },
   appleWebApp: {
     capable: true,
-    title: 'stratum',
+    title: 'STRATUM',
     statusBarStyle: 'black-translucent',
   },
   icons: {

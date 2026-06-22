@@ -2,8 +2,8 @@ import LegalPageLayout from '@/components/LegalPageLayout';
 import { BUSINESS_ADDRESS, LEGAL_COMPANY_NAME, REGISTERED_AGENT_ADDRESS, REGISTERED_AGENT_NAME, SUPPORT_EMAIL, SUPPORT_PHONE_TEL, CONTACT_SUPPORT_LABEL } from '@/lib/support';
 
 export const metadata = {
-  title: 'Terms of Service | stratum',
-  description: 'stratum terms of service: service description, credits, and user conduct.',
+  title: 'Terms of Service | STRATUM',
+  description: 'STRATUM terms of service: service description, credits, and user conduct.',
 };
 
 const LAST_UPDATED = 'February 19, 2026';

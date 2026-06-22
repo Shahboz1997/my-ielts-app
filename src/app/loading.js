@@ -11,7 +11,7 @@ export default function RootLoading() {
         role="status"
         aria-label="Loading"
       />
-      <p className="text-sm font-medium tracking-tight normal-case">stratum</p>
+      <p className="text-sm font-medium tracking-tight normal-case">STRATUM</p>
     </div>
   );
 }

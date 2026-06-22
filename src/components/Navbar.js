@@ -61,7 +61,7 @@ const Navbar = ({
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110" strokeWidth={2} />
               </span>
               <span className={`inline truncate normal-case text-[10px] min-[400px]:text-base sm:text-xl md:text-2xl tracking-[0.1em] min-[400px]:tracking-[0.12em] sm:tracking-[0.15em] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                stratum
+                STRATUM
               </span>
             </button>
           </div>

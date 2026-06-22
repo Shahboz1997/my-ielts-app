@@ -1,8 +1,8 @@
 /** @type {import('next').MetadataRoute.Manifest} */
 export default function manifest() {
   return {
-    name: 'stratum — Stratum Technologies LLC',
-    short_name: 'stratum',
+    name: 'STRATUM — Stratum Technologies LLC',
+    short_name: 'STRATUM',
     description:
       'Elevate your IELTS score with Stratum. Precision AI-driven evaluation for Task 1 and Task 2.',
     start_url: '/',
