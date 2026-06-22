@@ -11,18 +11,25 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+_root = Path(__file__).resolve().parent.parent
+load_dotenv(_root / ".env.local")
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from bot import create_openai_client, generate_post_text  # noqa: E402
 from content_plan import get_rotation, get_slot_plan  # noqa: E402
 
 
 async def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     slot = sys.argv[1] if len(sys.argv) > 1 else "morning"
     if slot not in ("morning", "evening"):
         print("Slot must be 'morning' or 'evening'")
@@ -47,8 +54,11 @@ async def main() -> None:
         sys.exit(1)
 
     print(f"=== {slot.upper()} | weekday={weekday} | {plan.rubric} ===\n")
-    text = await generate_post_text(client, plan, rotation, datetime.now())
+    text, quiz = await generate_post_text(client, plan, rotation, datetime.now())
     print(text or "(generation failed — check logs)")
+    if slot == "morning" and quiz:
+        print("\n--- Quiz ---")
+        print(json.dumps(quiz, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

@@ -234,7 +234,7 @@ export async function buildDailyPostAsync(slot, date = new Date()) {
       }
     }
     if (slot === 'morning') {
-      const morningQuiz = await generateMorningQuiz(generated.text);
+      const morningQuiz = generated.quiz || (await generateMorningQuiz(generated.text));
       if (morningQuiz) {
         post.poll = morningQuiz;
         post.pollScheduleDate = new Date(Date.now() + MORNING_QUIZ_DELAY_SEC * 1000);

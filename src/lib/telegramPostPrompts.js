@@ -1,47 +1,42 @@
 /**
  * LLM prompts for daily Telegram posts (morning theory / evening practice).
  * Placeholders: {{topic}}, {{site_link}}
- * Output: Telegram HTML (<b>, <i>, <code>). CTA is an inline button — no URLs in body.
+ * Morning: JSON with post_text + quiz. Evening: Telegram HTML body only.
  */
 
-export const DAILY_POST_PROMPT = `You are a professional IELTS Writing expert (Task 1 & Task 2) creating morning theory posts for the STRATUM.ai Telegram channel.
+/** Master prompt — morning theory posts (Hook → Problem → Solution → CTA + embedded quiz). */
+export const MORNING_MASTER_PROMPT = `You are a certified IELTS preparation expert (IELTS Examiner) with 10 years of experience and a professional copywriter. Your task is to write an engaging, expert, and concise post for the Telegram channel "Stratum IELTS".
 
-Content rules:
-1. Topic: {{topic}}
-2. Tone: friendly, motivating, expert — no fluff
-3. Language: **English only** — no Russian or any other language anywhere in the post
-4. Length: 900–1400 characters (mobile-friendly)
+TODAY'S TOPIC: {{topic}}
 
-Methodology (required):
-- Teach **collocations**, not isolated words. Example: not just "paramount" but \`of paramount importance\` (meaning: of the greatest importance).
-- Tag each vocabulary item with a target band, e.g. [Band 7.5+ Vocabulary] or [Band 8+ LR].
-- Add **1 high-level synonym** per collocation to build Lexical Resource (avoid repetition in essays).
+POST FORMATTING RULES:
+1. Language: The post text must be entirely in English (Upper-Intermediate level, clear for students). You may use emojis as visual markers, but no more than 5 for the entire post.
+2. Style: Focus on practical value. No filler. A student should read the post in 40 seconds and immediately learn something that can raise their score from 6.0 to 7.5+.
+3. Structure (use Telegram HTML — <b>bold</b>, <i>italic</i>, <code>code</code> for key phrases; NO markdown):
+   - 🎯 Hook: A catchy headline (e.g. "Stop using the word 'Important' in Task 2").
+   - 💡 The Problem: Why students lose marks here (reference official IELTS criteria: TA, CC, LR, or GRA).
+   - 🚀 The Solution: 3 strong academic synonyms OR structures with example sentences.
+   - 🔗 Call to Action: Short invite to check their essay on the site: {{site_link}}
 
-Formatting (Telegram HTML — required):
-- Wrap every English collocation/phrase in <code>…</code> (monospace)
-- Use <b>bold</b> for section headings and band tags
-- Use <i>italic</i> for example sentences
-- Do NOT use markdown (** or __)
-- Do NOT insert URLs — a button to stratumielts.com appears below the post
+OUTPUT FORMAT (generate STRICTLY as valid JSON — no markdown fences, no commentary):
+{
+  "post_text": "Full post text with HTML formatting and the site link...",
+  "quiz": {
+    "question": "Quiz time! Fill in the blank: 'Protecting the environment is of _______ importance for future generations.'",
+    "options": ["paramount", "big", "important", "huge"],
+    "correct_option_index": 0,
+    "explanation": "'Paramount' means more important than anything else. It is a high-level academic word that boosts your Lexical Resource score to Band 7.5+."
+  }
+}
 
-Structure (always include all blocks):
+Quiz rules:
+- Test ONE word/phrase from The Solution section
+- Exactly 4 options; only one correct
+- Distractors must be plausible but clearly wrong for IELTS Writing
+- English only`;
 
-<b>📚 Vocabulary</b>
-4–6 items. Each item on its own line:
-• <code>collocation</code> — brief English definition [Band 7.5+ Vocabulary]
-  Synonym: <code>alternative phrase</code>
-  Example: <i>sentence using the collocation</i>
-
-<b>🔧 Grammar Tip</b>
-One focused rule + contrast:
-❌ <i>incorrect example</i>
-✅ <i>correct example</i>
-Add one short English note explaining why the ✅ version works (e.g. contrast clause, formal register).
-
-<b>✍️ Task of the Day</b>
-One sentence inviting students to write their own example using today's collocations in the channel comments.
-
-Output only the post text, no commentary.`;
+/** @deprecated Use MORNING_MASTER_PROMPT */
+export const DAILY_POST_PROMPT = MORNING_MASTER_PROMPT;
 
 export const EVENING_POST_PROMPT = `You are an experienced IELTS Writing mentor.
 Write an evening practice post for the STRATUM.ai Telegram channel.
@@ -114,7 +109,7 @@ Use <code>…</code> for quoted phrases from their text. Be concise — this is 
  * @param {{ topic: string, siteLink: string }} vars
  */
 export function buildTelegramPrompt(slot, { topic, siteLink }) {
-  const template = slot === 'evening' ? EVENING_POST_PROMPT : DAILY_POST_PROMPT;
+  const template = slot === 'evening' ? EVENING_POST_PROMPT : MORNING_MASTER_PROMPT;
   return template
     .replace(/\{\{topic\}\}/g, topic)
     .replace(/\{\{site_link\}\}/g, siteLink);
@@ -123,4 +118,45 @@ export function buildTelegramPrompt(slot, { topic, siteLink }) {
 /** @param {string} postText */
 export function buildMorningQuizPrompt(postText) {
   return MORNING_QUIZ_PROMPT.replace(/\{\{post_text\}\}/g, postText.slice(0, 2000));
+}
+
+/**
+ * Normalize quiz object from morning JSON (supports snake_case and camelCase keys).
+ * @param {unknown} raw
+ * @returns {{ question: string, options: string[], correctOptionId: number, explanation?: string } | null}
+ */
+export function normalizeMorningQuiz(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const quiz = /** @type {Record<string, unknown>} */ (raw);
+  const options = Array.isArray(quiz.options) ? quiz.options.map(String).slice(0, 4) : [];
+  if (options.length < 2 || !quiz.question) return null;
+
+  const idxRaw = quiz.correct_option_index ?? quiz.correctOptionId ?? quiz.correctOptionIndex;
+  const correctOptionId = Number(idxRaw);
+  return {
+    question: String(quiz.question).slice(0, 300),
+    options,
+    correctOptionId:
+      Number.isInteger(correctOptionId) && correctOptionId >= 0 && correctOptionId < options.length
+        ? correctOptionId
+        : 0,
+    explanation: quiz.explanation ? String(quiz.explanation).slice(0, 200) : undefined,
+  };
+}
+
+/**
+ * @param {string} raw
+ * @returns {{ postText: string, quiz: ReturnType<typeof normalizeMorningQuiz> } | null}
+ */
+export function parseMorningPostJson(raw) {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const postText = String(parsed.post_text ?? parsed.postText ?? '').trim();
+    if (!postText) return null;
+    return { postText, quiz: normalizeMorningQuiz(parsed.quiz) };
+  } catch {
+    return null;
+  }
 }

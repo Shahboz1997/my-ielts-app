@@ -45,6 +45,7 @@ from prompts import (
     BASE_SYSTEM_PROMPT_EVENING,
     BASE_SYSTEM_PROMPT_MORNING,
     ESSAY_CHECK_SYSTEM,
+    MORNING_MASTER_PROMPT,
     MORNING_QUIZ_PROMPT,
 )
 
@@ -108,11 +109,9 @@ CHECK_START_TEXT = (
 
 def build_system_prompt(plan: SlotPlan) -> str:
     """Combine base instructions with slot-specific rubric context."""
-    base = (
-        BASE_SYSTEM_PROMPT_MORNING
-        if plan.slot == "morning"
-        else BASE_SYSTEM_PROMPT_EVENING
-    )
+    if plan.slot == "morning":
+        return BASE_SYSTEM_PROMPT_MORNING
+    base = BASE_SYSTEM_PROMPT_EVENING
     criteria = ", ".join(plan.criteria)
     extra = []
     if plan.requires_vocab_block:
@@ -131,11 +130,56 @@ def build_system_prompt(plan: SlotPlan) -> str:
     ).strip()
 
 
+def build_morning_topic(plan: SlotPlan, rotation: dict[str, str]) -> str:
+    """Human-readable topic line for the morning master prompt."""
+    brief = plan.user_prompt_template.format(**rotation)
+    return f"{plan.rubric} / {plan.module} — {brief}"
+
+
+def normalize_morning_quiz(raw: dict | None) -> dict | None:
+    """Normalize quiz JSON from morning master prompt."""
+    if not raw or not isinstance(raw, dict):
+        return None
+    options = [str(o) for o in raw.get("options", [])][:4]
+    if len(options) < 2 or not raw.get("question"):
+        return None
+    correct = raw.get("correct_option_index", raw.get("correctOptionId", 0))
+    try:
+        correct = int(correct)
+    except (TypeError, ValueError):
+        correct = 0
+    if correct < 0 or correct >= len(options):
+        correct = 0
+    return {
+        "question": str(raw["question"])[:300],
+        "options": options,
+        "correct_option_id": correct,
+        "explanation": str(raw.get("explanation", ""))[:200] or None,
+    }
+
+
+def parse_morning_json(raw: str) -> tuple[str | None, dict | None]:
+    """Parse morning master JSON into post text and quiz."""
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None, None
+    text = str(data.get("post_text") or data.get("postText") or "").strip()
+    if not text:
+        return None, None
+    return text, normalize_morning_quiz(data.get("quiz"))
+
+
 def build_user_prompt(plan: SlotPlan, rotation: dict[str, str], now: datetime) -> str:
     """Fill the slot template with week-rotation variables."""
     weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     day_name = weekday_names[now.weekday()]
     slot_label = "Morning (theory)" if plan.slot == "morning" else "Evening (practice)"
+
+    if plan.slot == "morning":
+        topic = build_morning_topic(plan, rotation)
+        site_link = f"{SITE_URL}/?utm_source=telegram&utm_medium=channel&utm_campaign=morning"
+        return MORNING_MASTER_PROMPT.format(topic=topic, site_link=site_link)
 
     body = plan.user_prompt_template.format(**rotation)
     return (
@@ -150,11 +194,27 @@ def build_user_prompt(plan: SlotPlan, rotation: dict[str, str], now: datetime) -
 # ---------------------------------------------------------------------------
 
 
+def _make_openai_http_client():
+    """httpx client for OpenAI — supports SOCKS (Clash/V2Ray) or bypasses broken proxy env."""
+    import httpx
+
+    try:
+        return httpx.Client(trust_env=True)
+    except ValueError as exc:
+        if "proxy" in str(exc).lower():
+            logger.warning(
+                "System proxy not supported (%s) — retrying without proxy env.",
+                exc,
+            )
+            return httpx.Client(trust_env=False)
+        raise
+
+
 def create_openai_client() -> OpenAI | None:
     if not OPENAI_API_KEY:
         logger.error("OPENAI_API_KEY is not set — cannot generate posts.")
         return None
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return OpenAI(api_key=OPENAI_API_KEY, http_client=_make_openai_http_client())
 
 
 def enforce_english_only(text: str) -> str:
@@ -170,27 +230,42 @@ async def generate_post_text(
     plan: SlotPlan,
     rotation: dict[str, str],
     now: datetime,
-) -> str | None:
-    """Call OpenAI and return generated post text, or None on failure."""
-    system = build_system_prompt(plan)
+) -> tuple[str | None, dict | None]:
+    """Call OpenAI and return (post text, optional embedded quiz), or (None, None) on failure."""
     user = build_user_prompt(plan, rotation, now)
+    system = build_system_prompt(plan) if plan.slot == "evening" else None
+    messages: list[dict[str, str]] = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": user})
+
+    kwargs: dict = {
+        "model": OPENAI_MODEL,
+        "messages": messages,
+        "temperature": 0.75,
+        "max_tokens": 1500 if plan.slot == "morning" else 1500,
+    }
+    if plan.slot == "morning":
+        kwargs["response_format"] = {"type": "json_object"}
 
     try:
         response = await asyncio.to_thread(
             client.chat.completions.create,
-            model=OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            temperature=0.75,
-            max_tokens=1500,
+            **kwargs,
         )
-        text = (response.choices[0].message.content or "").strip()
-        if not text:
+        raw = (response.choices[0].message.content or "").strip()
+        if not raw:
             logger.error("OpenAI returned empty content for slot=%s", plan.slot)
-            return None
-        return enforce_english_only(text)
+            return None, None
+
+        if plan.slot == "morning":
+            text, quiz = parse_morning_json(raw)
+            if not text:
+                logger.error("Morning JSON parse failed for slot=%s", plan.slot)
+                return None, None
+            return enforce_english_only(text), quiz
+
+        return enforce_english_only(raw), None
     except RateLimitError as exc:
         logger.error("OpenAI rate limit: %s", exc)
     except APIConnectionError as exc:
@@ -199,7 +274,7 @@ async def generate_post_text(
         logger.error("OpenAI API error %s: %s", exc.status_code, exc.message)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Unexpected OpenAI error: %s", exc)
-    return None
+    return None, None
 
 
 async def generate_morning_quiz(client: OpenAI, post_text: str) -> dict | None:
@@ -384,7 +459,7 @@ async def publish_slot(
         logger.error("Skipping publish — OpenAI client unavailable.")
         return
 
-    text = await generate_post_text(client, plan, rotation, now)
+    text, embedded_quiz = await generate_post_text(client, plan, rotation, now)
     if not text:
         logger.error("Skipping publish — generation failed for slot=%s", slot)
         return
@@ -397,7 +472,7 @@ async def publish_slot(
     await send_post(bot, text, parse_mode, reply_markup=keyboard)
 
     if slot == "morning":
-        quiz = await generate_morning_quiz(client, text)
+        quiz = embedded_quiz or await generate_morning_quiz(client, text)
         if quiz and scheduler:
             run_at = now + timedelta(minutes=MORNING_QUIZ_DELAY_MINUTES)
             scheduler.add_job(

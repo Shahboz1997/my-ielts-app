@@ -7,6 +7,8 @@ import {
   buildMorningQuizPrompt,
   buildTelegramPrompt,
   ESSAY_CHECK_PROMPT,
+  normalizeMorningQuiz,
+  parseMorningPostJson,
 } from '@/lib/telegramPostPrompts';
 
 const MODEL = (process.env.TELEGRAM_OPENAI_MODEL || 'gpt-4o-mini').trim();
@@ -20,7 +22,7 @@ function aiEnabled() {
 /**
  * @param {'morning'|'evening'} slot
  * @param {{ topic: string, siteLink: string }} ctx
- * @returns {Promise<{ text: string, source: 'ai'|'static', error?: string } | null>}
+ * @returns {Promise<{ text: string, source: 'ai'|'static', quiz?: object, error?: string } | null>}
  */
 export async function generateTelegramPost(slot, { topic, siteLink }) {
   if (!aiEnabled()) return null;
@@ -35,15 +37,24 @@ export async function generateTelegramPost(slot, { topic, siteLink }) {
       model: MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.75,
-      max_tokens: slot === 'morning' ? 1200 : 800,
+      max_tokens: slot === 'morning' ? 1500 : 800,
+      ...(slot === 'morning' ? { response_format: { type: 'json_object' } } : {}),
     });
 
-    const text = completion.choices?.[0]?.message?.content?.trim();
-    if (!text) {
+    const raw = completion.choices?.[0]?.message?.content?.trim();
+    if (!raw) {
       return { text: '', source: 'ai', error: 'empty response' };
     }
 
-    return { text, source: 'ai' };
+    if (slot === 'morning') {
+      const parsed = parseMorningPostJson(raw);
+      if (parsed?.postText) {
+        return { text: parsed.postText, quiz: parsed.quiz ?? undefined, source: 'ai' };
+      }
+      return { text: '', source: 'ai', error: 'invalid morning JSON' };
+    }
+
+    return { text: raw, source: 'ai' };
   } catch (err) {
     console.warn('[telegram/generate]', slot, err?.message || err);
     return { text: '', source: 'ai', error: String(err?.message || err) };
@@ -74,19 +85,7 @@ export async function generateMorningQuiz(postText) {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw);
-    const options = Array.isArray(parsed.options) ? parsed.options.map(String).slice(0, 4) : [];
-    if (options.length < 2 || !parsed.question) return null;
-
-    const correctOptionId = Number(parsed.correctOptionId);
-    return {
-      question: String(parsed.question).slice(0, 300),
-      options,
-      correctOptionId:
-        Number.isInteger(correctOptionId) && correctOptionId >= 0 && correctOptionId < options.length
-          ? correctOptionId
-          : 0,
-      explanation: parsed.explanation ? String(parsed.explanation).slice(0, 200) : undefined,
-    };
+    return normalizeMorningQuiz(parsed);
   } catch (err) {
     console.warn('[telegram/morning-quiz]', err?.message || err);
     return null;
