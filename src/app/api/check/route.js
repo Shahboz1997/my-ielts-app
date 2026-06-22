@@ -12,6 +12,7 @@ import { CREDITS_EXHAUSTED_CODE, userHasCheckCredits } from '@/lib/credits';
 import { SUPPORT_EMAIL } from '@/lib/support';
 import {
   getOpenAIBaseURL,
+  getOpenAIVisionModel,
   getTrimmedOpenAIKey,
   getTrimmedOpenAIProjectId,
   openAIErrorToJsonResponse,
@@ -109,6 +110,7 @@ export async function POST(req) {
       const clientResult = getOpenAIClient();
       if (clientResult.error) return clientResult.error;
       const openai = clientResult.openai;
+      const visionModel = getOpenAIVisionModel();
       const describeMessages = (imageUrlForApi) => [
         {
           role: 'system',
@@ -134,7 +136,7 @@ export async function POST(req) {
           try {
             response = await openai.chat.completions.create(
               {
-                model: "gpt-4o",
+                model: visionModel,
                 messages: describeMessages(rawImage),
                 max_tokens: 220,
               },
@@ -148,7 +150,7 @@ export async function POST(req) {
             const finalImage = await imageUrlToBase64(rawImage);
             response = await openai.chat.completions.create(
               {
-                model: "gpt-4o",
+                model: visionModel,
                 messages: describeMessages(finalImage),
                 max_tokens: 220,
               },
@@ -158,7 +160,7 @@ export async function POST(req) {
         } else {
           response = await openai.chat.completions.create(
             {
-              model: "gpt-4o",
+              model: visionModel,
               messages: describeMessages(body.image),
               max_tokens: 220,
             },

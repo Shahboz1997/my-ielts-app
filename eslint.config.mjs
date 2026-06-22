@@ -1,4 +1,5 @@
 import next from "eslint-config-next";
+import reactHooks from "eslint-plugin-react-hooks";
 
 /** @type {import("eslint").Linter.Config[]} */
 const config = [
@@ -7,6 +8,9 @@ const config = [
     ignores: ["src/generated/**", "generated/**"],
   },
   {
+    plugins: {
+      "react-hooks": reactHooks,
+    },
     rules: {
       // React Compiler extras are useful but noisy for existing patterns (hydration flags, theme, localStorage).
       "react-hooks/set-state-in-effect": "warn",

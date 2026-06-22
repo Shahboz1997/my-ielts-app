@@ -17,6 +17,15 @@ export function getTrimmedOpenAIProjectId() {
   return (process.env.OPENAI_PROJECT_ID || '').trim();
 }
 
+/** Default naming: OPENAI_MODEL for text, OPENAI_VISION_MODEL for chart/image OCR */
+export function getOpenAIModel() {
+  return (process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
+}
+
+export function getOpenAIVisionModel() {
+  return (process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
+}
+
 /** Placeholder or obviously invalid keys from .env.example / local setup. */
 export function isPlaceholderOpenAiKey(apiKey) {
   const key = String(apiKey || '').trim();
@@ -58,16 +67,6 @@ export function validateOpenAIEnvForRoute() {
         error:
           'OPENAI_API_KEY in .env.local looks like a placeholder. Paste a real key from https://platform.openai.com/api-keys, then restart npm run dev.',
         code: 'INVALID_API_KEY',
-      },
-      { status: 401 }
-    );
-  }
-  if (apiKey.startsWith('sk-proj-') && !getTrimmedOpenAIProjectId()) {
-    return NextResponse.json(
-      {
-        error:
-          'This key is project-scoped (sk-proj-…). Set OPENAI_PROJECT_ID in .env.local (from https://platform.openai.com/settings/organization/projects) and restart npm run dev.',
-        code: 'MISSING_PROJECT_ID',
       },
       { status: 401 }
     );
@@ -129,22 +128,40 @@ function openAIErrorCode(err) {
  * @returns {NextResponse|null}
  */
 export function openAIErrorToJsonResponse(err) {
-  if (isOpenAIAuthError(err)) {
-    const needsProject =
-      getTrimmedOpenAIKey().startsWith('sk-proj-') && !getTrimmedOpenAIProjectId();
+  const code = openAIErrorCode(err);
+  const msg = openAIErrorMessage(err);
+
+  if (code === 'mismatched_project') {
     return NextResponse.json(
       {
-        error: needsProject
-          ? 'OpenAI auth failed: set OPENAI_PROJECT_ID in .env.local for sk-proj- keys, then restart npm run dev.'
-          : 'OpenAI rejected the API key. Check OPENAI_API_KEY and OPENAI_PROJECT_ID in .env.local, then restart the dev server.',
-        code: 'INVALID_API_KEY',
+        error:
+          'OPENAI_PROJECT_ID does not match OPENAI_API_KEY. Remove OPENAI_PROJECT_ID from .env.local or set the project ID from the same OpenAI project as the key, then restart npm run dev.',
+        code: 'MISMATCHED_PROJECT',
       },
       { status: 401 }
     );
   }
 
-  const code = openAIErrorCode(err);
-  const msg = openAIErrorMessage(err);
+  if (code === 'model_not_found' || /does not have access to model/i.test(msg)) {
+    return NextResponse.json(
+      {
+        error: `OpenAI project has no access to the requested model. Set OPENAI_MODEL=gpt-4o-mini in .env.local (or enable the model in your OpenAI project), then restart npm run dev.`,
+        code: 'MODEL_NOT_FOUND',
+      },
+      { status: 403 }
+    );
+  }
+
+  if (isOpenAIAuthError(err)) {
+    return NextResponse.json(
+      {
+        error:
+          'OpenAI rejected the API key. Check OPENAI_API_KEY in .env.local and restart the dev server.',
+        code: 'INVALID_API_KEY',
+      },
+      { status: 401 }
+    );
+  }
 
   if (
     code === 'unsupported_country_region_territory' ||

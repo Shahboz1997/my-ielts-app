@@ -5,7 +5,9 @@ import {
 import { parseExaminerJson } from '@/lib/ielts/parseResponse.js';
 import { normalizeCheckResult } from '@/lib/ielts/normalizeCheckResult.js';
 
-const FULL_MODEL = 'gpt-4o';
+import { getOpenAIModel } from '@/lib/openaiServer.js';
+
+const FULL_MODEL = getOpenAIModel();
 const ANALYSIS_MAX_TOKENS = 6144;
 const REWRITE_MAX_TOKENS = 3500;
 
