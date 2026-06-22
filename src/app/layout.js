@@ -60,7 +60,6 @@ export const metadata = {
     description: 'Get instant Band 9.0 feedback and AI-powered essay analysis.',
     images: ['/og-image.png'],
   },
-  manifest: '/site.webmanifest',
   appleWebApp: {
     capable: true,
     title: 'stratum',
