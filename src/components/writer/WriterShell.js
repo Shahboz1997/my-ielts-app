@@ -6,7 +6,6 @@ import Navbar from '@/components/Navbar';
 import LandingPage from '@/components/LandingPage';
 import TaskEditorToolbar from '@/components/writer/TaskEditorToolbar';
 import Task1Editor from '@/components/writer/Task1Editor';
-import Task2Editor from '@/components/writer/Task2Editor';
 import EssayEditor from '@/components/writer/EssayEditor';
 import TutorCommentSection from '@/components/writer/TutorCommentSection';
 import TaskEditorActions from '@/components/writer/TaskEditorActions';
@@ -70,7 +69,6 @@ export default function WriterShell() {
     isDescribing,
     imageUploadError,
     handleImageUpload,
-    currentTopic,
     isPromptOpen,
     setIsPromptOpen,
     promptT1Active,
@@ -300,7 +298,6 @@ export default function WriterShell() {
                             onImageUpload={handleImageUpload}
                           />
                         )}
-                        {activeTab === 'Task 2' && <Task2Editor currentTopic={currentTopic} />}
                         <EssayEditor
                           activeTab={activeTab}
                           darkMode={darkMode}
