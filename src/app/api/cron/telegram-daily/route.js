@@ -39,6 +39,11 @@ export async function GET(request) {
   const auth = verifyCronRequest(request);
   if (!auth.ok) return auth.response;
 
+  if (process.env.TELEGRAM_DAILY_POSTS === '0') {
+    console.warn('[cron/telegram-daily] disabled via TELEGRAM_DAILY_POSTS=0');
+    return NextResponse.json({ ok: false, error: 'Telegram daily posts disabled' }, { status: 503 });
+  }
+
   if (!isTelegramConfigured()) {
     console.warn('[cron/telegram-daily] TELEGRAM_BOT_TOKEN missing; skip');
     return NextResponse.json(
