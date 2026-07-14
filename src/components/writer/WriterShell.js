@@ -17,6 +17,7 @@ import WriterComparisonSection from '@/components/writer/WriterComparisonSection
 import WriterFeedbackBanner from '@/components/writer/WriterFeedbackBanner';
 import WriterFooter from '@/components/writer/WriterFooter';
 import CreditsExhaustedCallout from '@/components/CreditsExhaustedCallout';
+import CreditsTopUpModal from '@/components/CreditsTopUpModal';
 import { useWriterWorkspace } from '@/hooks/useWriterWorkspace';
 import 'react-medium-image-zoom/dist/styles.css';
 
@@ -120,6 +121,9 @@ export default function WriterShell() {
     mergedLexicalUpgrade,
     handleApplyAllUpgrades,
     showCreditsExhausted,
+    showCreditsTopUpModal,
+    openCreditsTopUpModal,
+    closeCreditsTopUpModal,
     setShowSupportModal,
     karaokeAudio,
     archive,
@@ -232,6 +236,7 @@ export default function WriterShell() {
           isLoggedIn={isLoggedIn}
           credits={credits}
           onLoginClick={openLogin}
+          onCreditsClick={openCreditsTopUpModal}
         />
         {isAuthOpen ? (
           <AuthModal
@@ -357,6 +362,7 @@ export default function WriterShell() {
                       </div>
                       {showCreditsExhausted && !activeResult && (
                         <CreditsExhaustedCallout
+                          onOpenPackages={openCreditsTopUpModal}
                           onContactSupport={() => {
                             setShowSupportModal(false);
                             scrollToFeedbackForm();
@@ -448,6 +454,12 @@ export default function WriterShell() {
           showScrollTop={showScrollTop}
           scrollProgress={scrollProgress}
           onScrollToTop={handleScrollToTop}
+        />
+
+        <CreditsTopUpModal
+          isOpen={showCreditsTopUpModal}
+          onClose={closeCreditsTopUpModal}
+          accountEmail={session?.user?.email || ''}
         />
 
       </div>

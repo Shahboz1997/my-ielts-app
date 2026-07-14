@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { safeAuth } from '@/lib/safeAuth';
 import { createOpenAIClient, validateOpenAIEnvForRoute, openAIErrorToJsonResponse } from '@/lib/openaiServer.js';
 import { requireAuthenticatedAiAccess } from '@/lib/aiRouteGuard.js';
-import {
-  alignTextTokensToWhisper,
-  tokenizePlainText,
-} from '@/lib/karaokeWordAlign.js';
+import { alignWordTimingsForAudio } from '@/lib/alignWordTimingsServer.js';
+
+/** WhisperX + long essays need more than the default serverless window. */
+export const maxDuration = 60;
 
 export async function POST(req) {
   try {
@@ -28,45 +28,77 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing "filename"' }, { status: 400 });
     }
 
-    const mp3 = await openai.audio.speech.create({
-      model: "tts-1",
-      voice: "alloy",
-      input: text,
-    });
-
-    const buffer = Buffer.from(await mp3.arrayBuffer());
-    const audioFile = new File([buffer], 'tts.mp3', { type: 'audio/mpeg' });
-
-    let wordTimestamps = [];
-    try {
-      const transcription = await openai.audio.transcriptions.create({
-        file: audioFile,
-        model: 'whisper-1',
-        response_format: 'verbose_json',
-        timestamp_granularities: ['word'],
-        // Guide Whisper with the source script so word boundaries match the TTS input.
-        prompt: text.slice(0, 800),
-      });
-      if (transcription?.words?.length) {
-        const whisperWords = transcription.words.map((w) => ({
-          word: w.word,
-          start: Number(w.start),
-          end: Number(w.end),
-        }));
-        const inputTokens = tokenizePlainText(text);
-        const aligned = alignTextTokensToWhisper(inputTokens, whisperWords);
-        wordTimestamps = aligned.length > 0 ? aligned : whisperWords;
-      }
-    } catch (whisperErr) {
-      console.warn('Whisper word timestamps failed, continuing without:', whisperErr?.message);
+    const cleanText = text.replace(/\s+/g, ' ').trim();
+    if (!cleanText) {
+      return NextResponse.json({ error: 'Text is empty' }, { status: 400 });
     }
 
-    const audioBase64 = buffer.toString('base64');
+    // gpt-4o-mini-tts hard limit is ~2000 input chars; keep headroom.
+    const TTS_MAX_CHARS = 2000;
+    const ttsInput =
+      cleanText.length > TTS_MAX_CHARS
+        ? `${cleanText.slice(0, TTS_MAX_CHARS - 1).trim()}…`
+        : cleanText;
+
+    const ttsModel = (process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts').trim();
+
+    let buffer;
+    try {
+      const mp3 = await openai.audio.speech.create({
+        model: ttsModel,
+        voice: 'alloy',
+        input: ttsInput,
+      });
+      buffer = Buffer.from(await mp3.arrayBuffer());
+    } catch (ttsErr) {
+      console.error('[api/tts] speech.create failed:', {
+        status: ttsErr?.status ?? ttsErr?.statusCode,
+        code: ttsErr?.code ?? ttsErr?.error?.code,
+        message: ttsErr?.message ?? ttsErr?.error?.message,
+        ttsModel,
+        chars: ttsInput.length,
+      });
+      const mapped = openAIErrorToJsonResponse(ttsErr);
+      if (mapped) return mapped;
+      return NextResponse.json(
+        { error: ttsErr?.message || 'TTS speech generation failed' },
+        { status: 502 }
+      );
+    }
+
+    let wordTimestamps = [];
+    let alignment = null;
+    let duration = null;
+    try {
+      const aligned = await alignWordTimingsForAudio({
+        text: ttsInput,
+        audioBuffer: buffer,
+        openai,
+        fileName: 'tts.mp3',
+      });
+      wordTimestamps = Array.isArray(aligned.words) ? aligned.words : [];
+      alignment = aligned.alignment || null;
+      duration = aligned.duration || null;
+      if (!alignment) {
+        console.warn('TTS karaoke align failed; client may use proportional timings:', aligned.error);
+      }
+    } catch (alignErr) {
+      // Never fail the whole TTS response because karaoke alignment failed.
+      console.warn('[api/tts] align threw (audio still returned):', alignErr?.message || alignErr);
+    }
+
     return NextResponse.json({
-      audioBase64,
+      audioBase64: buffer.toString('base64'),
       wordTimestamps,
+      alignment,
+      duration,
     });
   } catch (error) {
+    console.error('[api/tts] unexpected:', {
+      status: error?.status ?? error?.statusCode,
+      code: error?.code ?? error?.error?.code,
+      message: error?.message ?? error?.error?.message,
+    });
     const mapped = openAIErrorToJsonResponse(error);
     if (mapped) return mapped;
     return NextResponse.json({ error: error.message || 'TTS failed' }, { status: 500 });

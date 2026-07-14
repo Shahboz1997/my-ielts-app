@@ -47,6 +47,7 @@ export function useAnalyze({
   setCredits,
   scrollToScoreAfterAnalyzeRef,
   playSuccessSound,
+  onCreditsExhausted,
 }) {
   const analyzeInFlightRef = useRef(false);
 
@@ -58,10 +59,13 @@ export function useAnalyze({
         return;
       }
       if (credits <= 0) {
-        toast.error(
-          'You have no credits left. Contact support via the site footer to request more.',
-          { duration: 5000 }
-        );
+        if (typeof onCreditsExhausted === 'function') onCreditsExhausted();
+        else {
+          toast.error(
+            'You have no credits left. Contact support via the site footer to request more.',
+            { duration: 5000 }
+          );
+        }
         return;
       }
 
@@ -156,12 +160,14 @@ export function useAnalyze({
           msg =
             typeof dataError === 'string' && dataError
               ? dataError
-              : 'You have no credits left. For top-ups and billing, use the support email in the site footer.';
+              : 'You have no credits left. Choose a pack to top up — YooKassa and Stripe are not connected yet; email support after payment.';
           if (apiCode === CREDITS_EXHAUSTED_CODE) {
             setCredits(0);
-          } else {
-            await pullCreditsBalance(setCredits);
+            if (typeof onCreditsExhausted === 'function') onCreditsExhausted();
+            setError(null);
+            return;
           }
+          await pullCreditsBalance(setCredits);
         } else if (status === 503 || status === 502 || status === 500) {
           msg =
             typeof dataError === 'string' && dataError
@@ -204,6 +210,7 @@ export function useAnalyze({
       setCredits,
       scrollToScoreAfterAnalyzeRef,
       playSuccessSound,
+      onCreditsExhausted,
     ]
   );
 

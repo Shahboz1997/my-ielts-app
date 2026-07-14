@@ -1,0 +1,304 @@
+{
+  "ref": "stratum-demo",
+  "source": {
+    "exportedAt": "2026-07-13T20:08:46.625Z",
+    "t1Id": null,
+    "t2Id": "cmpu2dbvf0000lgilbaxyqd1w"
+  },
+  "tasks": [
+    {
+      "id": "demo-t2-baxyqd1w",
+      "type": "TASK_2",
+      "createdAt": "2026-05-31T17:38:54.939Z",
+      "band": 7.5,
+      "ideaDevelopment": {
+        "overall": {
+          "score_0_5": 4,
+          "summary": "The essay presents a clear argument but lacks depth in supporting examples and mechanisms."
+        },
+        "paragraphs": [
+          {
+            "label": "Introduction",
+            "missing": [
+              "specificity"
+            ],
+            "upgrades": [
+              "Include a brief mention of why each view is significant."
+            ],
+            "main_idea": "Present both views and personal opinion."
+          },
+          {
+            "label": "Body 1",
+            "missing": [
+              "mechanism",
+              "example"
+            ],
+            "upgrades": [
+              "Explain how schools instill societal values beyond cognitive development.",
+              "Provide a specific example of a school program that teaches citizenship."
+            ],
+            "main_idea": "Schools are suitable for teaching children to be good citizens."
+          },
+          {
+            "label": "Body 2",
+            "missing": [
+              "mechanism"
+            ],
+            "upgrades": [
+              "Discuss how parental influence shapes children's values and behaviors.",
+              "Include a specific example of parental teaching methods."
+            ],
+            "main_idea": "Parents play a crucial role in teaching children to be good citizens."
+          },
+          {
+            "label": "Conclusion",
+            "missing": [
+              "specificity"
+            ],
+            "upgrades": [
+              "Summarize the key reasons why parental influence is more impactful."
+            ],
+            "main_idea": "Domestic upbringing has a more significant impact."
+          }
+        ]
+      },
+      "criteria": {
+        "task": 8,
+        "cc": 8,
+        "lr": 7.5,
+        "gra": 6.5,
+        "taskComment": "The essay addresses all parts of the task, presenting a clear position and discussing both views. However, the argument could be strengthened with more specific examples and deeper analysis.",
+        "ccComment": "The essay is well-organized with clear progression of ideas. Cohesive devices are used effectively, but some transitions could be smoother.",
+        "lrComment": "The essay uses a range of vocabulary with some less common items. However, there are instances of repetition and some word choices could be more precise.",
+        "graComment": "A solid range of complex sentences is present, but occasional awkward phrasing and article/determiners issues hold GRA below the strongest criterion scores."
+      },
+      "improvementStrategy": "The essay presents a clear position and discusses both views effectively. However, it could benefit from more specific examples and a deeper exploration of the mechanisms by which parents and schools influence children's development. Additionally, some grammatical errors and lexical choices could be refined for a higher score.",
+      "task1Strategy": null,
+      "letterStrategy": null,
+      "task1Kind": "academic",
+      "originalEssay": "Some people consider that children should be taught by their parents about how to function as productive members of society, while others regard sending children to educational institutions as the best way for them to learn this. Although the latter opinion can be advantageous in some cases, I deem that family upbringing plays a more pivotal role in educating children to be valuable members of the community.\n\nSchools can be considered suitable places for children to learn to be good citizens. With standardized educational methods, schools can foster children’s cognitive development so that they are able to contribute to society in the future. For example, Trung Vuong school and Vinschool are well known for having nurtured successful alumni such as Professor Ngo Bao Chau and Professor Nguyen Hung, who have devoted their talents to the development of the country. However, these people only represent a small fraction of the total number of students attending schools, and thus sending children to schools cannot be the best method of educating them to be good members of society.\n\nI perceive that parents play a more crucial role in teaching them how to be good citizens. In Vietnam, the average class size is 20 students, which makes it difficult for educators to provide proper schooling for each student. One-to-one lessons at home, on the other hand, allow children to progress faster. Furthermore, parents form stronger bonds with their offspring, and thus, it is easier for them to shape children’s personalities at an early age. For example, by telling stories such as Robin Hood and Cinderella before bedtime, parents can instill a sense of compassion and integrity in their children. These children are likely to become good members of society when they grow up.\n\nIn conclusion, although sending children to schools can be seen as a way of teaching them how to be good citizens, I believe that domestic upbringing has a more significant impact on determining who they are in the future.",
+      "tutorComment": "",
+      "suggestedRewrite": "Some people consider that children should be taught by their parents about how to function as productive members of society, while others regard sending children to educational institutions as the best way for them to learn this. Although the latter opinion can be advantageous in some cases, I <mark>believe</mark> that family upbringing plays a more pivotal role in educating children to be valuable members of the community.\n\nSchools can be considered suitable places for children to learn to be good citizens. With standardized educational methods, schools can foster children’s cognitive development so that they are able to contribute to society in the future. For example, Trung Vuong school and Vinschool are well known for having nurtured successful alumni such as Professor Ngo Bao Chau and Professor Nguyen Hung, who have devoted their talents to the development of the country. However, these people only represent a small fraction of the total number of students attending schools, and thus sending children to schools cannot be the best method of educating them to be good members of society.\n\nI <mark>believe</mark> that parents play a more crucial role in teaching children how to be good citizens. In Vietnam, the average class size is 20 students, which makes it difficult for educators to provide proper schooling for each student. One-to-one lessons at home, on the other hand, allow children to progress faster. Furthermore, parents form stronger bonds with their offspring, and thus, it is easier for them to shape children’s personalities at an early age. For example, by telling stories such as Robin Hood and Cinderella before bedtime, parents can instill a sense of compassion and integrity in their children. These children are likely to become good members of society when they grow up.\n\nIn conclusion, although sending children to schools can be seen as a way of teaching them how to be good citizens, I believe that domestic upbringing has a more significant impact on determining who they are in the future.",
+      "errors": [
+        {
+          "id": "err-0",
+          "type": "lexical",
+          "fixed": "I believe that family upbringing plays a more pivotal role",
+          "original": "I deem that family upbringing plays a more pivotal role",
+          "subtopic": "word_choice",
+          "suggestion": "I believe that family upbringing plays a more pivotal role",
+          "explanation": "Lexical Error: 'Deem' is less commonly used in this context. 'Believe' is more appropriate for expressing personal opinion."
+        },
+        {
+          "id": "err-1",
+          "type": "logic",
+          "fixed": "",
+          "original": "With standardized educational methods, schools can foster children’s cognitive development so that they are able to contribute to society in the future.",
+          "subtopic": "task_alignment",
+          "suggestion": "",
+          "explanation": "Logic Error: The sentence does not clearly link cognitive development with being a good member of society. The connection between education and societal contribution needs to be more explicit."
+        },
+        {
+          "id": "err-2",
+          "type": "logic",
+          "fixed": "",
+          "original": "However, these people only represent a small fraction of the total number of students attending schools, and thus sending children to schools cannot be the best method of educating them to be good members of society.",
+          "subtopic": "task_alignment",
+          "suggestion": "",
+          "explanation": "Logic Error: The conclusion that sending children to schools cannot be the best method is too strong based on the evidence provided. It needs more support or a more nuanced argument."
+        },
+        {
+          "id": "err-3",
+          "type": "lexical",
+          "fixed": "I believe that parents play a more crucial role in teaching children how to be good citizens.",
+          "original": "I perceive that parents play a more crucial role in teaching them how to be good citizens.",
+          "subtopic": "word_choice",
+          "suggestion": "I believe that parents play a more crucial role in teaching children how to be good citizens.",
+          "explanation": "Lexical Error: 'Perceive' is less commonly used in this context. 'Believe' is more appropriate for expressing personal opinion."
+        },
+        {
+          "id": "err-4",
+          "type": "logic",
+          "fixed": "",
+          "original": "In Vietnam, the average class size is 20 students, which makes it difficult for educators to provide proper schooling for each student.",
+          "subtopic": "task_alignment",
+          "suggestion": "",
+          "explanation": "Logic Error: The statement about class size does not directly support the argument that parents are better at teaching children to be good citizens. The link needs to be clearer."
+        }
+      ],
+      "highlights": [],
+      "corrections": [
+        {
+          "original": "I deem that family upbringing plays a more pivotal role",
+          "fixed": "I believe that family upbringing plays a more pivotal role",
+          "suggestion": "",
+          "category": "Vocabulary",
+          "rule": "Vocabulary",
+          "explanation": "Lexical Error: 'Deem' is less commonly used in this context. 'Believe' is more appropriate for expressing personal opinion."
+        },
+        {
+          "original": "With standardized educational methods, schools can foster children’s cognitive development so that they are able to contribute to society in the future.",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The sentence does not clearly link cognitive development with being a good member of society. The connection between education and societal contribution needs to be more explicit."
+        },
+        {
+          "original": "However, these people only represent a small fraction of the total number of students attending schools, and thus sending children to schools cannot be the best method of educating them to be good members of society.",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The conclusion that sending children to schools cannot be the best method is too strong based on the evidence provided. It needs more support or a more nuanced argument."
+        },
+        {
+          "original": "I perceive that parents play a more crucial role in teaching them how to be good citizens.",
+          "fixed": "I believe that parents play a more crucial role in teaching children how to be good citizens.",
+          "suggestion": "",
+          "category": "Vocabulary",
+          "rule": "Vocabulary",
+          "explanation": "Lexical Error: 'Perceive' is less commonly used in this context. 'Believe' is more appropriate for expressing personal opinion."
+        },
+        {
+          "original": "In Vietnam, the average class size is 20 students, which makes it difficult for educators to provide proper schooling for each student.",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The statement about class size does not directly support the argument that parents are better at teaching children to be good citizens. The link needs to be clearer."
+        }
+      ],
+      "insights": {
+        "linking": {
+          "score": 4,
+          "found": [
+            "although",
+            "however",
+            "for example",
+            "furthermore",
+            "in conclusion"
+          ],
+          "suggestions": [
+            "moreover",
+            "consequently",
+            "therefore"
+          ]
+        },
+        "repetitions": [
+          {
+            "word": "children",
+            "count": 7,
+            "alternatives": [
+              "youngsters",
+              "youth",
+              "offspring"
+            ]
+          },
+          {
+            "word": "parents",
+            "count": 4,
+            "alternatives": [
+              "guardians",
+              "caregivers"
+            ]
+          }
+        ],
+        "lexical": [
+          {
+            "band_56_word": "consider",
+            "c1_synonyms": [
+              "regard",
+              "view"
+            ],
+            "c2_synonyms": [
+              "deem",
+              "perceive"
+            ],
+            "band_89_synonyms": [
+              "regard",
+              "view",
+              "deem",
+              "perceive"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "best",
+            "c1_synonyms": [
+              "optimal",
+              "most effective"
+            ],
+            "c2_synonyms": [
+              "supreme",
+              "paramount"
+            ],
+            "band_89_synonyms": [
+              "optimal",
+              "most effective",
+              "supreme",
+              "paramount"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "advantageous",
+            "c1_synonyms": [
+              "beneficial",
+              "favorable"
+            ],
+            "c2_synonyms": [
+              "advantageous",
+              "propitious"
+            ],
+            "band_89_synonyms": [
+              "beneficial",
+              "favorable",
+              "advantageous",
+              "propitious"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "crucial",
+            "c1_synonyms": [
+              "essential",
+              "vital"
+            ],
+            "c2_synonyms": [
+              "pivotal",
+              "indispensable"
+            ],
+            "band_89_synonyms": [
+              "essential",
+              "vital",
+              "pivotal",
+              "indispensable"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "impact",
+            "c1_synonyms": [
+              "effect",
+              "influence"
+            ],
+            "c2_synonyms": [
+              "repercussion",
+              "ramification"
+            ],
+            "band_89_synonyms": [
+              "effect",
+              "influence",
+              "repercussion",
+              "ramification"
+            ],
+            "source": "api"
+          }
+        ],
+        "plagiarism": null,
+        "cefr": null
+      }
+    }
+  ]
+}

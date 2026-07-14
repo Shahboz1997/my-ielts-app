@@ -129,7 +129,9 @@ export function resolveWordTimings({ plainText, wordTimestamps, audioDuration })
         end: Number(t.end),
       }));
     } else {
-      timings = alignTextTokensToWhisper(inputTokens, ts);
+      timings = alignTextTokensToWhisper(inputTokens, ts, {
+        totalDuration: Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : undefined,
+      });
     }
     fromWhisper = timings.length > 0;
   }

@@ -13,7 +13,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "postinstall": "prisma generate",
-    "dns:setup": "node scripts/setup-vercel-dns.mjs"
+    "dns:setup": "node scripts/setup-vercel-dns.mjs",
+    "demo:export": "node scripts/export-demo-report.mjs",
+    "demo:neural-sync-audio": "node scripts/generate-neural-sync-audio.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.23",

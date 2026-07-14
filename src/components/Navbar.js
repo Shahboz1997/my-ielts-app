@@ -12,6 +12,7 @@ const Navbar = ({
   isMenuOpen, setIsMenuOpen, onLoginClick,
   credits: creditsProp,
   guestQuotaRemaining = null,
+  onCreditsClick,
 }) => {
   const { data: session, status } = useSession();
   const { resolvedTheme, setTheme } = useTheme();
@@ -184,9 +185,15 @@ const Navbar = ({
               </div> */}
             {isLoggedIn ? (
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 font-semibold text-xs text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight" title="Account credits">
+          <button
+            type="button"
+            onClick={() => onCreditsClick?.()}
+            className="flex items-center gap-1 font-semibold text-xs text-indigo-600 bg-indigo-600/10 px-2 py-1 rounded-lg tracking-tight hover:bg-indigo-600/15 transition-colors"
+            title={onCreditsClick ? 'View credit packages' : 'Account credits'}
+            aria-label={onCreditsClick ? 'View credit packages' : 'Account credits'}
+          >
             {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={1.5} />
-          </div>
+          </button>
           
           {/* User dropdown: Profile, Billing, Logout */}
           <div className="relative">
@@ -219,6 +226,18 @@ const Navbar = ({
                     >
                       Profile
                     </Link>
+                    {typeof onCreditsClick === 'function' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          onCreditsClick();
+                        }}
+                        className="w-full text-left flex items-center min-h-[44px] px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
+                      >
+                        Top up credits
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => { signOut({ callbackUrl: '/' }); setIsUserMenuOpen(false); }}
@@ -265,9 +284,15 @@ const Navbar = ({
             {/* Mobile: credits + burger */}
             <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
             {isLoggedIn ? (
-              <div className="flex items-center gap-1 font-semibold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full ring-1 ring-indigo-500/15 tracking-tight whitespace-nowrap">
+              <button
+                type="button"
+                onClick={() => onCreditsClick?.()}
+                className="flex items-center gap-1 font-semibold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full ring-1 ring-indigo-500/15 tracking-tight whitespace-nowrap hover:bg-indigo-500/15 transition-colors"
+                title={onCreditsClick ? 'View credit packages' : 'Account credits'}
+                aria-label={onCreditsClick ? 'View credit packages' : 'Account credits'}
+              >
                 {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={2} />
-              </div>
+              </button>
             ) : (
               typeof guestQuotaRemaining === 'number' && guestQuotaRemaining > 0 && (
                 <button

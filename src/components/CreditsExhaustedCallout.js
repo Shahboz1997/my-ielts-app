@@ -2,20 +2,27 @@
 
 import React from 'react';
 import { Sparkles } from 'lucide-react';
+import { CREDIT_PACKS, formatPackPrice } from '@/lib/creditPacks';
 
-export default function CreditsExhaustedCallout({ className = '', onContactSupport }) {
+export default function CreditsExhaustedCallout({
+  className = '',
+  onOpenPackages,
+  onContactSupport,
+}) {
+  const popular = CREDIT_PACKS.find((p) => p.popular) || CREDIT_PACKS[1];
+
   return (
     <div
-      className={`relative overflow-hidden rounded-3xl border border-indigo-200/80 dark:border-indigo-500/35 bg-gradient-to-br from-indigo-50/95 via-white to-violet-50/90 dark:from-indigo-950/50 dark:via-slate-900/80 dark:to-violet-950/40 px-5 py-6 sm:px-8 sm:py-8 shadow-[0_20px_50px_-20px_rgba(79,70,229,0.35)] dark:shadow-[0_24px_60px_-24px_rgba(99,102,241,0.25)] ${className}`}
+      className={`relative overflow-hidden rounded-3xl border border-amber-200/90 dark:border-amber-500/35 bg-gradient-to-br from-amber-50/95 via-white to-slate-50 dark:from-amber-950/40 dark:via-slate-900/80 dark:to-slate-950 px-5 py-6 sm:px-8 sm:py-8 shadow-[0_20px_50px_-20px_rgba(245,158,11,0.35)] dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.45)] ${className}`}
       role="status"
       aria-live="polite"
     >
       <div
-        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-indigo-400/20 blur-3xl dark:bg-indigo-500/15"
+        className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-amber-400/25 blur-3xl dark:bg-amber-500/15"
         aria-hidden
       />
       <div className="relative flex flex-col sm:flex-row sm:items-start gap-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 dark:bg-indigo-500 dark:shadow-indigo-500/25">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/25 dark:bg-amber-500 dark:shadow-amber-500/25">
           <Sparkles className="h-6 w-6" strokeWidth={1.5} aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-3">
@@ -23,9 +30,26 @@ export default function CreditsExhaustedCallout({ className = '', onContactSuppo
             No credits left
           </h3>
           <p className="text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">
-            You have used your included Task&nbsp;1 and Task&nbsp;2 checks. Contact support to request more credits.
+            You’ve used your included Task&nbsp;1 and Task&nbsp;2 checks. Top up with a credit pack —
+            payments are manual via email until YooKassa / Stripe go live.
+            {popular ? (
+              <>
+                {' '}
+                Popular: <span className="font-bold text-slate-900 dark:text-white">{popular.credits} credits</span> for{' '}
+                <span className="font-bold text-slate-900 dark:text-white">{formatPackPrice(popular.priceUsd)}</span>.
+              </>
+            ) : null}
           </p>
           <div className="flex flex-wrap gap-2">
+            {typeof onOpenPackages === 'function' && (
+              <button
+                type="button"
+                onClick={onOpenPackages}
+                className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold tracking-tight text-white hover:bg-slate-800 dark:bg-amber-500 dark:text-slate-950 dark:hover:bg-amber-400"
+              >
+                View credit packages
+              </button>
+            )}
             {typeof onContactSupport === 'function' && (
               <button
                 type="button"

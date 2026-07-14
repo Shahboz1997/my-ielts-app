@@ -1,0 +1,434 @@
+{
+  "ref": "stratum-demo",
+  "source": {
+    "exportedAt": "2026-07-13T20:06:34.869Z",
+    "t1Id": null,
+    "t2Id": "cmpeo80w10001o8ilxe23agvk"
+  },
+  "tasks": [
+    {
+      "id": "demo-t2-xe23agvk",
+      "type": "TASK_2",
+      "createdAt": "2026-05-20T23:06:20.161Z",
+      "band": 5.5,
+      "ideaDevelopment": {
+        "overall": {
+          "score_0_5": 2,
+          "summary": "The essay presents basic ideas but lacks depth and specific examples to support arguments."
+        },
+        "paragraphs": [
+          {
+            "label": "Introduction",
+            "missing": [
+              "specificity"
+            ],
+            "upgrades": [
+              "Provide a brief overview of the benefits and drawbacks of each approach."
+            ],
+            "main_idea": "Debate on job stability vs. frequent job changes."
+          },
+          {
+            "label": "Body 1",
+            "missing": [
+              "example",
+              "impact"
+            ],
+            "upgrades": [
+              "Include a specific example of a person who benefited from staying in one company.",
+              "Discuss the potential impact on career development and personal satisfaction."
+            ],
+            "main_idea": "Stability in one organization offers high salary and position."
+          },
+          {
+            "label": "Body 2",
+            "missing": [
+              "example",
+              "impact"
+            ],
+            "upgrades": [
+              "Provide an example of someone who gained diverse skills through job changes.",
+              "Explain how this experience can lead to better job opportunities."
+            ],
+            "main_idea": "Changing jobs frequently provides more experience."
+          },
+          {
+            "label": "Conclusion",
+            "missing": [
+              "specificity"
+            ],
+            "upgrades": [
+              "Summarize the main points with a focus on long-term career benefits."
+            ],
+            "main_idea": "Changing jobs is more effective despite risks."
+          }
+        ]
+      },
+      "criteria": {
+        "task": 5.5,
+        "cc": 5.5,
+        "lr": 5.5,
+        "gra": 5,
+        "taskComment": "The essay addresses both views but lacks depth in supporting arguments. The opinion is stated but not well-developed.",
+        "ccComment": "The essay has basic structure but lacks clear progression and linkage between ideas.",
+        "lrComment": "Vocabulary is limited and repetitive, with some informal expressions.",
+        "graComment": "Frequent grammatical errors, especially in verb forms and agreement, reduce clarity."
+      },
+      "improvementStrategy": "The essay needs better coherence and cohesion, with clearer support for main ideas. Improve grammatical accuracy and use more varied vocabulary.",
+      "task1Strategy": null,
+      "letterStrategy": null,
+      "task1Kind": "academic",
+      "originalEssay": "In the modern world, the question of whether staying in one company for a long time or changing jobs often is better, which is becoming very popular. While some people believe that stability is more important, others think that changing jobs brings more benefits. In my opinion, I think that changing workplaces is much better for career.\nOn the one hand, many people prefers to stay in the same organization because of stability. If a person work in one place for many years, they might get a high salary and a good position. However, it can be argued that if you are staying in the same place, you will not see how the world is changing. For example, if I would have stayed in my first job, I will never learn new technologies. This shows that staying in one place can be a little bit boring and not good for modern skills.\nOn the other hand, many experts says that changing jobs frequently helps to get more experience. By working in different companies, you are meeting different people and learn new things which is very useful. Although it might be difficult to adapt to a new team, but it is helping to become more flexible. If someone change their job every two or three years, they probably have more chances to find a job with a better salary.\nIn conclusion, despite some people like stability, I believe that changing jobs is more effective. Even though it is risky, but it provides many opportunities for personal growing. If people wants to be successful, they should not be afraid of changes.",
+      "tutorComment": "",
+      "suggestedRewrite": "In the modern world, the debate over whether it is preferable to remain with one company for an extended period or to frequently change jobs is gaining traction. While some individuals argue that stability is paramount, others contend that changing jobs offers greater advantages. In my opinion, I believe that changing workplaces is more beneficial for one's career.\n\nOn the one hand, many people prefer to stay in the same organization due to the stability it offers. If a person works in one place for many years, they might secure a high salary and a prestigious position. However, it can be argued that remaining in the same place may prevent individuals from witnessing how the world is evolving. For instance, if I had stayed in my first job, I would never have learned new technologies. This illustrates that staying in one place can be somewhat monotonous and may hinder the acquisition of modern skills.\n\nOn the other hand, many experts say that changing jobs frequently helps individuals gain more experience. By working in different companies, one meets diverse people and learns new things, which is very useful. Although adapting to a new team might be challenging, it helps individuals become more flexible. If someone changes their job every two or three years, they likely have more opportunities to find a position with a better salary.\n\nIn conclusion, despite some people's preference for stability, I believe that changing jobs is more effective. Even though it carries risks, it provides numerous opportunities for personal growth. If people want to be successful, they should not be afraid of changes.",
+      "errors": [
+        {
+          "id": "err-0",
+          "type": "grammar",
+          "fixed": "many people prefer",
+          "original": "many people prefers",
+          "subtopic": "agreement",
+          "suggestion": "many people prefer",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'People' is plural, so the verb should be 'prefer'."
+        },
+        {
+          "id": "err-1",
+          "type": "grammar",
+          "fixed": "If a person works",
+          "original": "If a person work",
+          "subtopic": "agreement",
+          "suggestion": "If a person works",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'A person' is singular, so the verb should be 'works'."
+        },
+        {
+          "id": "err-2",
+          "type": "grammar",
+          "fixed": "if I had stayed",
+          "original": "if I would have stayed",
+          "subtopic": "tense_aspect",
+          "suggestion": "if I had stayed",
+          "explanation": "Grammar Error: Incorrect conditional form. Use 'if I had stayed' for past hypothetical situations."
+        },
+        {
+          "id": "err-3",
+          "type": "grammar",
+          "fixed": "I would never have learned",
+          "original": "I will never learn",
+          "subtopic": "tense_aspect",
+          "suggestion": "I would never have learned",
+          "explanation": "Grammar Error: Incorrect tense for past hypothetical situations. Use 'would never have learned'."
+        },
+        {
+          "id": "err-4",
+          "type": "grammar",
+          "fixed": "many experts say",
+          "original": "many experts says",
+          "subtopic": "agreement",
+          "suggestion": "many experts say",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'Experts' is plural, so the verb should be 'say'."
+        },
+        {
+          "id": "err-5",
+          "type": "grammar",
+          "fixed": "you meet different people and learn",
+          "original": "you are meeting different people and learn",
+          "subtopic": "tense_aspect",
+          "suggestion": "you meet different people and learn",
+          "explanation": "Grammar Error: Incorrect tense usage. Use simple present for habitual actions."
+        },
+        {
+          "id": "err-6",
+          "type": "grammar",
+          "fixed": "but it helps",
+          "original": "but it is helping",
+          "subtopic": "tense_aspect",
+          "suggestion": "but it helps",
+          "explanation": "Grammar Error: Incorrect tense usage. Use simple present for general truths."
+        },
+        {
+          "id": "err-7",
+          "type": "grammar",
+          "fixed": "If someone changes",
+          "original": "If someone change",
+          "subtopic": "agreement",
+          "suggestion": "If someone changes",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'Someone' is singular, so the verb should be 'changes'."
+        },
+        {
+          "id": "err-8",
+          "type": "lexical",
+          "fixed": "some people prefer stability",
+          "original": "some people like stability",
+          "subtopic": "word_choice",
+          "suggestion": "some people prefer stability",
+          "explanation": "Lexical Error: 'Prefer' is more precise than 'like' in this context."
+        },
+        {
+          "id": "err-9",
+          "type": "lexical",
+          "fixed": "personal growth",
+          "original": "personal growing",
+          "subtopic": "word_choice",
+          "suggestion": "personal growth",
+          "explanation": "Lexical Error: 'Growth' is the correct noun form in this context."
+        },
+        {
+          "id": "err-10",
+          "type": "grammar",
+          "fixed": "If people want",
+          "original": "If people wants",
+          "subtopic": "agreement",
+          "suggestion": "If people want",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'People' is plural, so the verb should be 'want'."
+        }
+      ],
+      "highlights": [],
+      "corrections": [
+        {
+          "original": "many people prefers",
+          "fixed": "many people prefer",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'People' is plural, so the verb should be 'prefer'."
+        },
+        {
+          "original": "If a person work",
+          "fixed": "If a person works",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'A person' is singular, so the verb should be 'works'."
+        },
+        {
+          "original": "if I would have stayed",
+          "fixed": "if I had stayed",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Incorrect conditional form. Use 'if I had stayed' for past hypothetical situations."
+        },
+        {
+          "original": "I will never learn",
+          "fixed": "I would never have learned",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Incorrect tense for past hypothetical situations. Use 'would never have learned'."
+        },
+        {
+          "original": "many experts says",
+          "fixed": "many experts say",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'Experts' is plural, so the verb should be 'say'."
+        },
+        {
+          "original": "you are meeting different people and learn",
+          "fixed": "you meet different people and learn",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Incorrect tense usage. Use simple present for habitual actions."
+        },
+        {
+          "original": "but it is helping",
+          "fixed": "but it helps",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Incorrect tense usage. Use simple present for general truths."
+        },
+        {
+          "original": "If someone change",
+          "fixed": "If someone changes",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'Someone' is singular, so the verb should be 'changes'."
+        },
+        {
+          "original": "some people like stability",
+          "fixed": "some people prefer stability",
+          "suggestion": "",
+          "category": "Vocabulary",
+          "rule": "Vocabulary",
+          "explanation": "Lexical Error: 'Prefer' is more precise than 'like' in this context."
+        },
+        {
+          "original": "personal growing",
+          "fixed": "personal growth",
+          "suggestion": "",
+          "category": "Vocabulary",
+          "rule": "Vocabulary",
+          "explanation": "Lexical Error: 'Growth' is the correct noun form in this context."
+        },
+        {
+          "original": "If people wants",
+          "fixed": "If people want",
+          "suggestion": "",
+          "category": "Grammar",
+          "rule": "Grammar",
+          "explanation": "Grammar Error: Subject-verb agreement error. 'People' is plural, so the verb should be 'want'."
+        }
+      ],
+      "insights": {
+        "linking": {
+          "score": 2,
+          "found": [
+            "while",
+            "however",
+            "for example",
+            "although",
+            "in conclusion"
+          ],
+          "suggestions": [
+            "furthermore",
+            "moreover",
+            "consequently"
+          ]
+        },
+        "repetitions": [
+          {
+            "word": "better",
+            "count": 4,
+            "alternatives": [
+              "more advantageous",
+              "superior"
+            ]
+          }
+        ],
+        "lexical": [
+          {
+            "band_56_word": "better",
+            "c1_synonyms": [
+              "more advantageous",
+              "preferable"
+            ],
+            "c2_synonyms": [
+              "superior",
+              "more beneficial"
+            ],
+            "band_89_synonyms": [
+              "more advantageous",
+              "preferable",
+              "superior",
+              "more beneficial"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "important",
+            "c1_synonyms": [
+              "significant",
+              "crucial"
+            ],
+            "c2_synonyms": [
+              "paramount",
+              "vital"
+            ],
+            "band_89_synonyms": [
+              "significant",
+              "crucial",
+              "paramount",
+              "vital"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "think",
+            "c1_synonyms": [
+              "believe",
+              "consider"
+            ],
+            "c2_synonyms": [
+              "deem",
+              "regard"
+            ],
+            "band_89_synonyms": [
+              "believe",
+              "consider",
+              "deem",
+              "regard"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "get",
+            "c1_synonyms": [
+              "obtain",
+              "acquire"
+            ],
+            "c2_synonyms": [
+              "attain",
+              "secure"
+            ],
+            "band_89_synonyms": [
+              "obtain",
+              "acquire",
+              "attain",
+              "secure"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "good",
+            "c1_synonyms": [
+              "favorable",
+              "advantageous"
+            ],
+            "c2_synonyms": [
+              "beneficial",
+              "commendable"
+            ],
+            "band_89_synonyms": [
+              "favorable",
+              "advantageous",
+              "beneficial",
+              "commendable"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "useful",
+            "c1_synonyms": [
+              "beneficial",
+              "advantageous"
+            ],
+            "c2_synonyms": [
+              "practical",
+              "valuable"
+            ],
+            "band_89_synonyms": [
+              "beneficial",
+              "advantageous",
+              "practical",
+              "valuable"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "successful",
+            "c1_synonyms": [
+              "prosperous",
+              "thriving"
+            ],
+            "c2_synonyms": [
+              "accomplished",
+              "flourishing"
+            ],
+            "band_89_synonyms": [
+              "prosperous",
+              "thriving",
+              "accomplished",
+              "flourishing"
+            ],
+            "source": "api"
+          }
+        ],
+        "plagiarism": null,
+        "cefr": null
+      }
+    }
+  ]
+}

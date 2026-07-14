@@ -1,0 +1,274 @@
+{
+  "ref": "stratum-demo",
+  "source": {
+    "exportedAt": "2026-07-13T20:08:54.121Z",
+    "t1Id": "cmpws91kw000105jup34or8b7",
+    "t2Id": null
+  },
+  "tasks": [
+    {
+      "id": "demo-t1-p34or8b7",
+      "type": "TASK_1",
+      "createdAt": "2026-06-02T15:18:57.344Z",
+      "band": 5,
+      "ideaDevelopment": null,
+      "criteria": {
+        "task": 4,
+        "cc": 5,
+        "lr": 6,
+        "gra": 6,
+        "taskComment": "The essay contains significant inaccuracies regarding the data categories. The overview is incorrect, and the main features are not accurately reported.",
+        "ccComment": "The essay is logically structured, but the inaccuracies in data description affect coherence. More accurate comparisons are needed.",
+        "lrComment": "Vocabulary is adequate but lacks precision due to incorrect data references. Some repetition is present.",
+        "graComment": "Grammar is generally correct, but errors in data description impact the overall accuracy."
+      },
+      "improvementStrategy": "Focus on accurately describing the data presented in the chart. Ensure that the categories mentioned match those in the chart and provide a clear overview of the main trends.",
+      "task1Strategy": {
+        "what_to_fix": [
+          "Ensure categories match the chart.",
+          "Provide an accurate overview.",
+          "Avoid incorrect data references."
+        ],
+        "grouping_plan": [
+          {
+            "focus": "Higher expenditures",
+            "label": "Body 1",
+            "comparisons_to_make": [
+              "UK vs France in cars",
+              "UK vs France in books"
+            ]
+          },
+          {
+            "focus": "Lower expenditures",
+            "label": "Body 2",
+            "comparisons_to_make": [
+              "France vs UK in cameras",
+              "France vs UK in perfume"
+            ]
+          }
+        ],
+        "paragraph_plan": [
+          "Intro",
+          "Overview",
+          "Body 1",
+          "Body 2"
+        ],
+        "recommended_body_count": 2
+      },
+      "letterStrategy": null,
+      "task1Kind": "academic",
+      "originalEssay": "The bar chart illustrates the spending patterns on consumer goods in France and the UK in 2010, expressed in pounds sterling. \n\nOverall, it is evident that the UK had a higher expenditure across all categories compared to France. The most significant difference was observed in the category of leisure goods, where UK consumers spent approximately £170, while their French counterparts spent around £90. \n\nIn terms of food and drink, the UK expenditure was about £150, surpassing France's spending of approximately £110. Similarly, the UK also led in the category of clothing and footwear, with an expenditure of roughly £100, compared to France's £70. \n\nNotably, the least amount was spent on tobacco, where the UK recorded about £50 and France slightly less at £40. These figures indicate a clear trend of higher consumer spending in the UK across various categories, highlighting differences in consumer behavior between the two countries.",
+      "tutorComment": "",
+      "suggestedRewrite": "The bar chart illustrates the spending patterns on consumer goods in France and the UK in 2010, expressed in pounds sterling.\n\nOverall, the UK had higher expenditures in most categories, except for cars and cameras, where France spent more.\n\nIn terms of cars, France spent slightly more than the UK, with expenditures of around £400,000 compared to the UK's £450,000. Similarly, in the category of cameras, France's spending was higher, reaching approximately £350,000, while the UK spent about £300,000.\n\nConversely, the UK led in the categories of books and computers. UK consumers spent approximately £400,000 on books, surpassing France's expenditure of around £300,000. In the category of computers, the UK also outspent France, with figures close to £350,000 compared to France's £250,000. These figures highlight the differences in consumer spending patterns between the two countries.",
+      "errors": [
+        {
+          "id": "err-0",
+          "type": "logic",
+          "fixed": "",
+          "original": "the UK had a higher expenditure across all categories compared to France",
+          "subtopic": "data_contradiction",
+          "suggestion": "",
+          "explanation": "Logic Error: The chart shows that France spent more on cars and cameras, contradicting the statement that the UK had higher expenditure across all categories."
+        },
+        {
+          "id": "err-1",
+          "type": "logic",
+          "fixed": "",
+          "original": "The most significant difference was observed in the category of leisure goods",
+          "subtopic": "data_contradiction",
+          "suggestion": "",
+          "explanation": "Logic Error: The chart does not have a category labeled 'leisure goods.'"
+        },
+        {
+          "id": "err-2",
+          "type": "logic",
+          "fixed": "",
+          "original": "UK consumers spent approximately £170, while their French counterparts spent around £90",
+          "subtopic": "data_contradiction",
+          "suggestion": "",
+          "explanation": "Logic Error: These figures do not match any category in the chart."
+        },
+        {
+          "id": "err-3",
+          "type": "logic",
+          "fixed": "",
+          "original": "In terms of food and drink, the UK expenditure was about £150",
+          "subtopic": "data_contradiction",
+          "suggestion": "",
+          "explanation": "Logic Error: The chart does not include a 'food and drink' category."
+        },
+        {
+          "id": "err-4",
+          "type": "logic",
+          "fixed": "",
+          "original": "the UK also led in the category of clothing and footwear",
+          "subtopic": "data_contradiction",
+          "suggestion": "",
+          "explanation": "Logic Error: The chart does not include a 'clothing and footwear' category."
+        },
+        {
+          "id": "err-5",
+          "type": "logic",
+          "fixed": "",
+          "original": "the least amount was spent on tobacco",
+          "subtopic": "data_contradiction",
+          "suggestion": "",
+          "explanation": "Logic Error: The chart does not include a 'tobacco' category."
+        }
+      ],
+      "highlights": [],
+      "corrections": [
+        {
+          "original": "the UK had a higher expenditure across all categories compared to France",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The chart shows that France spent more on cars and cameras, contradicting the statement that the UK had higher expenditure across all categories."
+        },
+        {
+          "original": "The most significant difference was observed in the category of leisure goods",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The chart does not have a category labeled 'leisure goods.'"
+        },
+        {
+          "original": "UK consumers spent approximately £170, while their French counterparts spent around £90",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: These figures do not match any category in the chart."
+        },
+        {
+          "original": "In terms of food and drink, the UK expenditure was about £150",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The chart does not include a 'food and drink' category."
+        },
+        {
+          "original": "the UK also led in the category of clothing and footwear",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The chart does not include a 'clothing and footwear' category."
+        },
+        {
+          "original": "the least amount was spent on tobacco",
+          "fixed": "",
+          "suggestion": "",
+          "category": "Logic",
+          "rule": "Logic",
+          "explanation": "Logic Error: The chart does not include a 'tobacco' category."
+        }
+      ],
+      "insights": {
+        "linking": {
+          "score": 2,
+          "found": [
+            "Overall",
+            "In terms of",
+            "Similarly",
+            "Notably"
+          ],
+          "suggestions": [
+            "Furthermore",
+            "Additionally",
+            "Moreover"
+          ]
+        },
+        "repetitions": [
+          {
+            "word": "expenditure",
+            "count": 3,
+            "alternatives": [
+              "spending",
+              "outlay"
+            ]
+          }
+        ],
+        "lexical": [
+          {
+            "band_56_word": "spending",
+            "c1_synonyms": [
+              "expenditure",
+              "outlay"
+            ],
+            "c2_synonyms": [
+              "disbursement",
+              "expenditures"
+            ],
+            "band_89_synonyms": [
+              "expenditure",
+              "outlay",
+              "disbursement",
+              "expenditures"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "category",
+            "c1_synonyms": [
+              "classification",
+              "group"
+            ],
+            "c2_synonyms": [
+              "segment",
+              "division"
+            ],
+            "band_89_synonyms": [
+              "classification",
+              "group",
+              "segment",
+              "division"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "compared to",
+            "c1_synonyms": [
+              "in comparison with",
+              "relative to"
+            ],
+            "c2_synonyms": [
+              "vis-à-vis",
+              "in relation to"
+            ],
+            "band_89_synonyms": [
+              "in comparison with",
+              "relative to",
+              "vis-à-vis",
+              "in relation to"
+            ],
+            "source": "api"
+          },
+          {
+            "band_56_word": "notably",
+            "c1_synonyms": [
+              "significantly",
+              "remarkably"
+            ],
+            "c2_synonyms": [
+              "conspicuously",
+              "prominently"
+            ],
+            "band_89_synonyms": [
+              "significantly",
+              "remarkably",
+              "conspicuously",
+              "prominently"
+            ],
+            "source": "api"
+          }
+        ],
+        "plagiarism": null,
+        "cefr": null
+      }
+    }
+  ]
+}

@@ -37,8 +37,9 @@ export function isPlaceholderOpenAiKey(apiKey) {
   const key = String(apiKey || '').trim();
   if (!key) return true;
   if (key.length < 20) return true;
-  if (key.endsWith('nTkA')) return true;
-  if (/your-key|placeholder|example|changeme|xxx|\.\.\./i.test(key)) return true;
+  // Only reject explicit example/placeholder patterns — never match by random suffix.
+  if (/your-key|placeholder|example|changeme|xxx|sk-your-|\.\.\./i.test(key)) return true;
+  if (!/^sk-(?:proj-|svcacct-)?[A-Za-z0-9_-]+$/.test(key)) return true;
   return false;
 }
 
@@ -108,14 +109,19 @@ export function isOpenAIAuthError(err) {
   const status = err.status ?? err.statusCode ?? err.response?.status;
   const code = err.code ?? err.error?.code;
   const msg = (err.message || err.error?.message || '').toLowerCase();
+
+  // Model/project access issues are NOT auth failures (handled separately).
+  if (code === 'model_not_found' || /does not have access to model/i.test(msg)) {
+    return false;
+  }
+
   return (
     status === 401 ||
     code === 'invalid_api_key' ||
     code === 'authentication_error' ||
-    msg.includes('api key') ||
-    msg.includes('incorrect api key') ||
-    msg.includes('openai-project') ||
-    msg.includes('project')
+    /incorrect api key|invalid api key|api key.*(invalid|incorrect|revoked)/i.test(msg) ||
+    code === 'mismatched_project' ||
+    /openai-project|mismatched.?project/i.test(msg)
   );
 }
 
@@ -151,7 +157,8 @@ export function openAIErrorToJsonResponse(err) {
   if (code === 'model_not_found' || /does not have access to model/i.test(msg)) {
     return NextResponse.json(
       {
-        error: `OpenAI project has no access to the requested model. Set OPENAI_MODEL=gpt-4o-mini in .env.local (or enable the model in your OpenAI project), then restart npm run dev.`,
+        error:
+          'OpenAI project has no access to the requested model. For voice, set OPENAI_TTS_MODEL=gpt-4o-mini-tts in .env.local (or enable tts-1 in the OpenAI project), then restart npm run dev.',
         code: 'MODEL_NOT_FOUND',
       },
       { status: 403 }

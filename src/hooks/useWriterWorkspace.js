@@ -83,6 +83,19 @@ export function useWriterWorkspace() {
 
   const { data: session, status: sessionStatus, update } = useSession();
   const creditsFetchedForAuthRef = useRef(false);
+  const creditsTopUpDismissedRef = useRef(false);
+  const [creditsSynced, setCreditsSynced] = useState(false);
+  const [showCreditsTopUpModal, setShowCreditsTopUpModal] = useState(false);
+
+  const openCreditsTopUpModal = () => {
+    creditsTopUpDismissedRef.current = false;
+    setShowCreditsTopUpModal(true);
+  };
+
+  const closeCreditsTopUpModal = () => {
+    creditsTopUpDismissedRef.current = true;
+    setShowCreditsTopUpModal(false);
+  };
   const router = useRouter();
   const { workspaceStorageKey, draftStorageKey, archiveStorageKey } = useWriterStorageKeys(session);
 
@@ -229,6 +242,9 @@ export function useWriterWorkspace() {
     } else if (sessionStatus === 'unauthenticated') {
       setIsLoggedIn(false);
       setCredits(0);
+      setCreditsSynced(false);
+      setShowCreditsTopUpModal(false);
+      creditsTopUpDismissedRef.current = false;
     }
   }, [sessionStatus, session?.user?.credits]);
 
@@ -247,13 +263,33 @@ export function useWriterWorkspace() {
       .then((data) => {
         if (typeof data?.credits === 'number') setCredits(data.credits);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setCreditsSynced(true);
+      });
 
     return () => controller.abort();
   }, [sessionStatus]);
 
   const showCreditsExhausted =
     credits <= 0 && (activeTab === 'Task 1' || activeTab === 'Task 2');
+
+  // Auto-open top-up packs once when credits hit zero on Task tabs (reopens after balance reloads > 0).
+  useEffect(() => {
+    if (credits > 0) {
+      creditsTopUpDismissedRef.current = false;
+      setShowCreditsTopUpModal(false);
+      return;
+    }
+    if (
+      sessionStatus === 'authenticated' &&
+      creditsSynced &&
+      showCreditsExhausted &&
+      !creditsTopUpDismissedRef.current
+    ) {
+      setShowCreditsTopUpModal(true);
+    }
+  }, [credits, creditsSynced, sessionStatus, showCreditsExhausted]);
 
   useEffect(() => {
     preloadSpeechVoices();
@@ -312,6 +348,7 @@ export function useWriterWorkspace() {
     setAuthModalMessage,
     setCredits,
     scrollToScoreAfterAnalyzeRef,
+    onCreditsExhausted: openCreditsTopUpModal,
   });
 
   const resetTask1 = () => {
@@ -483,6 +520,9 @@ export function useWriterWorkspace() {
     mergedLexicalUpgrade,
     handleApplyAllUpgrades: editorTools.handleApplyAllUpgrades,
     showCreditsExhausted,
+    showCreditsTopUpModal,
+    openCreditsTopUpModal,
+    closeCreditsTopUpModal,
     setShowSupportModal: feedbackApi.setShowSupportModal,
     karaokeAudio,
     archive: archiveApi.archive,

@@ -15,6 +15,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
   const [wordTimestamps, setWordTimestamps] = useState([]);
+  const [timingAlignment, setTimingAlignment] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioTime, setAudioTime] = useState(0);
@@ -36,7 +37,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
     setAudioError('');
     pendingAutoPlayRef.current = autoPlay;
     try {
-      const { blob, wordTimestamps: ts } = await fetchTtsWithTimestamps({
+      const { blob, wordTimestamps: ts, alignment } = await fetchTtsWithTimestamps({
         text: cleanText,
         filenameBase: filenameBase || 'Stratum_Rewrite',
       });
@@ -47,6 +48,10 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
         return url;
       });
       setWordTimestamps(Array.isArray(ts) ? ts : []);
+      setTimingAlignment(alignment || null);
+      if (!alignment || !Array.isArray(ts) || ts.length === 0) {
+        console.warn('Karaoke word sync unavailable; highlighting may drift.');
+      }
       setIsPlaying(false);
       setAudioProgress(0);
       if (audioRef.current) {
@@ -60,6 +65,32 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
       setIsAudioLoading(false);
     }
   }, [suggestedRewrite, filenameBase, isAudioLoading]);
+
+  /** Drop stale audio when the rewrite text changes (force fresh Whisper sync). */
+  const rewriteTextKeyRef = useRef(null);
+  useEffect(() => {
+    const nextKey = getPlainTextForKaraoke(suggestedRewrite || '');
+    if (rewriteTextKeyRef.current === null) {
+      rewriteTextKeyRef.current = nextKey;
+      return;
+    }
+    if (rewriteTextKeyRef.current === nextKey) return;
+    rewriteTextKeyRef.current = nextKey;
+
+    setAudioUrl((prev) => {
+      if (prev) window.URL.revokeObjectURL(prev);
+      return null;
+    });
+    setAudioBlob(null);
+    setWordTimestamps([]);
+    setTimingAlignment(null);
+    setIsPlaying(false);
+    setAudioProgress(0);
+    setAudioTime(0);
+    setAudioDuration(0);
+    setAudioError('');
+    pendingAutoPlayRef.current = false;
+  }, [suggestedRewrite]);
 
   const handleTogglePlay = useCallback(async () => {
     if (isAudioLoading) return;
@@ -142,6 +173,7 @@ export function useSuggestedRewriteAudio(suggestedRewrite, filenameBase) {
     audioBlob,
     audioDuration,
     wordTimestamps,
+    timingAlignment,
     isAudioLoading,
     isPlaying,
     audioProgress,

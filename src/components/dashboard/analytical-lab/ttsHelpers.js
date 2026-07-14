@@ -31,7 +31,8 @@ export async function fetchTtsWithTimestamps({ text, filenameBase }) {
   const blob = data.audioBase64 ? base64ToBlob(data.audioBase64) : null;
   if (!blob) throw new Error('No audio received from server.');
   const wordTimestamps = Array.isArray(data.wordTimestamps) ? data.wordTimestamps : [];
-  return { blob, wordTimestamps };
+  const alignment = typeof data.alignment === 'string' ? data.alignment : null;
+  return { blob, wordTimestamps, alignment };
 }
 
 /** Wait until the <audio> element can start playback (needed after blob URL updates). */

@@ -3,11 +3,17 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Volume2, Play, Pause } from 'lucide-react';
-import { getWordTimings } from '@/components/dashboard/SuggestedRewriteKaraoke';
-
-const DEMO_DURATION = 30;
-const BAND_9_SAMPLE =
-  'The graph illustrates significant shifts in cinema attendance between 1990 and 2010. Overall, attendance rose substantially over the period, with a particularly sharp increase in the final decade. These trends suggest a growing preference for theatrical viewing despite the rise of streaming platforms.';
+import {
+  getWordTimings,
+  resolveWordTimings,
+} from '@/components/dashboard/SuggestedRewriteKaraoke';
+import { findActiveWordIndexFromTimings } from '@/lib/karaokeWordAlign';
+import {
+  NEURAL_SYNC_SAMPLE_TEXT,
+  NEURAL_SYNC_AUDIO_SRC,
+  NEURAL_SYNC_AUDIO_FALLBACK_SRC,
+  NEURAL_SYNC_TIMINGS_SRC,
+} from '@/lib/neuralSyncSample';
 
 const VISUALIZER_BARS = 24;
 
@@ -15,77 +21,143 @@ const VISUALIZER_BARS = 24;
 export default function NeuralSyncShowcase({ onCtaClick }) {
   const [runState, setRunState] = useState('idle');
   const [currentTime, setCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const [activeWordIndex, setActiveWordIndex] = useState(-1);
+  const [bakedTimings, setBakedTimings] = useState(null);
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioError, setAudioError] = useState('');
   const activeWordRef = useRef(null);
-  const rafRef = useRef(null);
-  const lastFrameRef = useRef(null);
+  const audioRef = useRef(null);
   const didScrollAfterEndRef = useRef(false);
+  const rafRef = useRef(null);
 
-  const wordTimings = useMemo(() => getWordTimings(BAND_9_SAMPLE, DEMO_DURATION), []);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(NEURAL_SYNC_TIMINGS_SRC)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const words = Array.isArray(data.words) ? data.words : [];
+        setBakedTimings(words);
+        if (Number.isFinite(Number(data.duration)) && Number(data.duration) > 0) {
+          setAudioDuration(Number(data.duration));
+        }
+      })
+      .catch(() => {
+        /* fallback: proportional timings from audio.duration */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const wordTimings = useMemo(() => {
+    const resolved = resolveWordTimings({
+      plainText: NEURAL_SYNC_SAMPLE_TEXT,
+      wordTimestamps: bakedTimings || [],
+      audioDuration: audioDuration > 0 ? audioDuration : undefined,
+    });
+    if (resolved.length > 0) return resolved;
+    if (audioDuration > 0) return getWordTimings(NEURAL_SYNC_SAMPLE_TEXT, audioDuration);
+    return getWordTimings(NEURAL_SYNC_SAMPLE_TEXT, 20);
+  }, [bakedTimings, audioDuration]);
 
   const isPlaying = runState === 'playing';
 
-  const togglePlayPause = useCallback(() => {
+  const stopRaf = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  const syncFromAudio = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    const t = el.currentTime || 0;
+    setCurrentTime(t);
+    setActiveWordIndex(findActiveWordIndexFromTimings(wordTimings, t));
+  }, [wordTimings]);
+
+  useEffect(() => {
+    if (runState !== 'playing') {
+      stopRaf();
+      return;
+    }
+    const tick = () => {
+      syncFromAudio();
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return stopRaf;
+  }, [runState, syncFromAudio, stopRaf]);
+
+  const togglePlayPause = useCallback(async () => {
+    const el = audioRef.current;
+    if (!el) return;
+
     if (runState === 'playing') {
+      el.pause();
       setRunState('paused');
       return;
     }
-    if (runState === 'paused') {
-      lastFrameRef.current = null;
-      setRunState('playing');
-      return;
-    }
-    if (runState === 'idle' || runState === 'ended') {
-      setCurrentTime(0);
-      setActiveWordIndex(-1);
-      lastFrameRef.current = null;
-      setRunState('playing');
-    }
-  }, [runState]);
 
-  useEffect(() => {
-    if (runState !== 'playing') return;
-
-    const tick = (t) => {
-      const last = lastFrameRef.current ?? t;
-      lastFrameRef.current = t;
-      const dt = Math.min(0.12, Math.max(0, (t - last) / 1000));
-
-      setCurrentTime((ct) => {
-        const next = Math.min(DEMO_DURATION, ct + dt);
-        return next;
-      });
-
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
-  }, [runState]);
-
-  useEffect(() => {
-    if (runState !== 'playing') return;
-    if (currentTime >= DEMO_DURATION) {
-      setRunState('ended');
-      setActiveWordIndex(wordTimings.length - 1);
-      setCurrentTime(DEMO_DURATION);
-    }
-  }, [currentTime, runState, wordTimings.length]);
-
-  useEffect(() => {
-    let idx = -1;
-    for (let i = 0; i < wordTimings.length; i++) {
-      const w = wordTimings[i];
-      if (currentTime >= w.start && currentTime < w.end + 0.05) {
-        idx = i;
-        break;
+    setAudioError('');
+    try {
+      if (runState === 'ended' || runState === 'idle') {
+        el.currentTime = 0;
+        setCurrentTime(0);
+        setActiveWordIndex(-1);
       }
+      await el.play();
+      setRunState('playing');
+    } catch (e) {
+      setAudioError(e?.message || 'Unable to play audio.');
+      setRunState('idle');
     }
-    setActiveWordIndex(idx);
-  }, [currentTime, wordTimings]);
+  }, [runState]);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+
+    const onLoaded = () => {
+      setAudioReady(true);
+      if (Number.isFinite(el.duration) && el.duration > 0) {
+        setAudioDuration(el.duration);
+      }
+    };
+    const onPlay = () => setRunState('playing');
+    const onPause = () => {
+      if (!el.ended) setRunState((s) => (s === 'playing' ? 'paused' : s));
+    };
+    const onEnded = () => {
+      setRunState('ended');
+      setActiveWordIndex((idx) => (idx >= 0 ? idx : wordTimings.length - 1));
+      setCurrentTime(el.duration || 0);
+    };
+    const onError = () => {
+      setAudioError('Demo audio failed to load. Run npm run demo:neural-sync-audio.');
+      setAudioReady(false);
+    };
+
+    el.addEventListener('loadedmetadata', onLoaded);
+    el.addEventListener('canplay', onLoaded);
+    el.addEventListener('play', onPlay);
+    el.addEventListener('pause', onPause);
+    el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onError);
+    if (el.readyState >= 1) onLoaded();
+
+    return () => {
+      el.removeEventListener('loadedmetadata', onLoaded);
+      el.removeEventListener('canplay', onLoaded);
+      el.removeEventListener('play', onPlay);
+      el.removeEventListener('pause', onPause);
+      el.removeEventListener('ended', onEnded);
+      el.removeEventListener('error', onError);
+    };
+  }, [wordTimings.length]);
 
   /** No per-word scroll while audio runs; one gentle scroll after the demo ends. */
   useEffect(() => {
@@ -102,13 +174,17 @@ export default function NeuralSyncShowcase({ onCtaClick }) {
   }, [runState]);
 
   const statusLabel =
-    runState === 'playing'
-      ? 'Neural Voice Active'
-      : runState === 'paused'
-        ? 'Paused — tap play to resume'
-        : runState === 'ended'
-          ? 'Demo finished — tap to replay'
-          : 'Preview Intelligence';
+    audioError
+      ? 'Audio unavailable'
+      : runState === 'playing'
+        ? 'Neural Voice Active'
+        : runState === 'paused'
+          ? 'Paused — tap play to resume'
+          : runState === 'ended'
+            ? 'Demo finished — tap to replay'
+            : audioReady
+              ? 'Preview Intelligence'
+              : 'Loading audio…';
 
   return (
     <section
@@ -116,6 +192,10 @@ export default function NeuralSyncShowcase({ onCtaClick }) {
       aria-labelledby="neural-sync-heading"
       className="py-14 sm:py-20 bg-[#F9FAFB] dark:bg-[#050505] border-b border-white/5 overflow-hidden"
     >
+      <audio ref={audioRef} preload="metadata" playsInline>
+        <source src={NEURAL_SYNC_AUDIO_SRC} type="audio/mpeg" />
+        <source src={NEURAL_SYNC_AUDIO_FALLBACK_SRC} type="audio/wav" />
+      </audio>
       <div className="max-w-6xl mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -151,12 +231,13 @@ export default function NeuralSyncShowcase({ onCtaClick }) {
               <button
                 type="button"
                 onClick={togglePlayPause}
-                className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-[0_0_40px_rgba(79,70,229,0.5)] hover:shadow-[0_0_50px_rgba(79,70,229,0.6)] hover:scale-105 active:scale-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:focus:ring-offset-slate-950"
+                disabled={Boolean(audioError)}
+                className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-indigo-600 flex items-center justify-center text-white shadow-[0_0_40px_rgba(79,70,229,0.5)] hover:shadow-[0_0_50px_rgba(79,70,229,0.6)] hover:scale-105 active:scale-100 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:focus:ring-offset-slate-950 disabled:opacity-50 disabled:pointer-events-none"
                 aria-label={
                   isPlaying ? 'Pause Neural Sync demo' : runState === 'paused' ? 'Resume Neural Sync demo' : 'Play Neural Sync demo'
                 }
               >
-                {!isPlaying && (
+                {!isPlaying && !audioError && (
                   <span className="absolute inset-0 rounded-full bg-indigo-500/30 animate-ping opacity-30" aria-hidden />
                 )}
                 {isPlaying ? (
@@ -175,9 +256,12 @@ export default function NeuralSyncShowcase({ onCtaClick }) {
                   statusLabel
                 )}
               </p>
+              {audioError ? (
+                <p className="text-[11px] text-rose-500 dark:text-rose-400 text-center max-w-[16rem]">{audioError}</p>
+              ) : null}
 
               {/* Visualizer: moving bars */}
-              <div className="flex items-end justify-center gap-1 h-12">
+              <div className="flex items-end justify-center gap-1 h-12" aria-hidden>
                 {Array.from({ length: VISUALIZER_BARS }).map((_, i) => (
                   <motion.span
                     key={i}
@@ -212,7 +296,7 @@ export default function NeuralSyncShowcase({ onCtaClick }) {
                   {wordTimings.map((w, i) => {
                     const active = i === activeWordIndex;
                     return (
-                      <span key={i}>
+                      <span key={`${w.word}-${i}`}>
                         <span
                           ref={active ? activeWordRef : undefined}
                           className={

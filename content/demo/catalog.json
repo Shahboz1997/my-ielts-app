@@ -1,0 +1,41 @@
+{
+  "updatedAt": "2026-07-13T20:10:00.000Z",
+  "demos": [
+    {
+      "slug": "flagship-writing",
+      "title": "Full sample report",
+      "blurb": "Academic Task 1 + Task 2 — the same report UI students get after Analyze.",
+      "types": ["TASK_1", "TASK_2"],
+      "bands": [5, 7.5],
+      "flagship": true,
+      "href": "/demo/flagship-writing"
+    },
+    {
+      "slug": "task2-band-55",
+      "title": "Task 2 · Band 5.5",
+      "blurb": "Weak essay with rich corrections — typical mid-band lexical and cohesion gaps.",
+      "types": ["TASK_2"],
+      "bands": [5.5],
+      "flagship": false,
+      "href": "/demo/task2-band-55"
+    },
+    {
+      "slug": "task2-band-75",
+      "title": "Task 2 · Band 7.5",
+      "blurb": "Stronger argument with Band 9-style rewrite and criterion notes.",
+      "types": ["TASK_2"],
+      "bands": [7.5],
+      "flagship": false,
+      "href": "/demo/task2-band-75"
+    },
+    {
+      "slug": "task1-academic",
+      "title": "Task 1 · Academic chart",
+      "blurb": "Real chart description scored on Task Achievement, overview, and data grouping.",
+      "types": ["TASK_1"],
+      "bands": [5],
+      "flagship": false,
+      "href": "/demo/task1-academic"
+    }
+  ]
+}

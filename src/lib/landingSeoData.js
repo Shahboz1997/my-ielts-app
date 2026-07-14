@@ -52,8 +52,12 @@ export const LANDING_WORKFLOW_STEPS = [
 ];
 
 export const LANDING_FAQ_ITEMS = [
-  {
-    q: 'How accurate is Stratum AI for IELTS scoring?',
+    {
+      q: 'Can I see a sample IELTS Writing report before signing up?',
+      a: 'Yes. Open the sample reports on the landing page (Task 2 Band 5.5, Task 2 Band 7.5, Academic Task 1, or the flagship Task 1+2 report). They use the same examiner pipeline as a real Analyze. You also get one free demo check per network before creating an account.',
+    },
+    {
+      q: 'How accurate is Stratum AI for IELTS scoring?',
     a: 'Our neural network is trained on thousands of official IELTS samples. Stratum AI achieves 98% correlation with human examiner scoring across all four criteria.',
   },
   {

@@ -16,12 +16,16 @@ export function tokenizePlainText(text) {
 /**
  * Greedy sequential align: each display word → next matching Whisper token.
  * Uses real start/end from Whisper (actual voicing), interpolates only unmatched gaps.
+ * @param {string[]} inputTokens
+ * @param {{word:string,start:number,end:number}[]} whisperWords
+ * @param {{ totalDuration?: number }} [options]
  */
-export function alignTextTokensToWhisper(inputTokens, whisperWords) {
+export function alignTextTokensToWhisper(inputTokens, whisperWords, options = {}) {
   const n = inputTokens.length;
   const m = whisperWords.length;
   if (n === 0 || m === 0) return [];
 
+  const totalDuration = Number(options.totalDuration);
   const whisperIdxForToken = new Array(n).fill(null);
   let wi = 0;
   const SEARCH_WINDOW = 10;
@@ -37,9 +41,27 @@ export function alignTextTokensToWhisper(inputTokens, whisperWords) {
         break;
       }
     }
+    // Year soft-match: display "1990" vs Whisper split "1000," + "990,"
+    if (found < 0 && /^\d+$/.test(target)) {
+      for (let w = wi; w < Math.min(wi + SEARCH_WINDOW, m - 1); w++) {
+        const a = normalizeWordToken(whisperWords[w]?.word);
+        const b = normalizeWordToken(whisperWords[w + 1]?.word);
+        if (/^\d+$/.test(a) && /^\d+$/.test(b) && a + b === target) {
+          found = w;
+          break;
+        }
+      }
+    }
     if (found >= 0) {
       whisperIdxForToken[ti] = found;
-      wi = found + 1;
+      const targetNorm = normalizeWordToken(inputTokens[ti]);
+      const a = normalizeWordToken(whisperWords[found]?.word);
+      const b = normalizeWordToken(whisperWords[found + 1]?.word);
+      if (/^\d+$/.test(targetNorm) && /^\d+$/.test(a) && /^\d+$/.test(b) && a + b === targetNorm) {
+        wi = found + 2;
+      } else {
+        wi = found + 1;
+      }
     }
   }
 
@@ -53,7 +75,15 @@ export function alignTextTokensToWhisper(inputTokens, whisperWords) {
     const wj = whisperIdxForToken[ti];
     if (wj === null) continue;
     const start = Number(whisperWords[wj]?.start);
-    const end = Number(whisperWords[wj]?.end);
+    let end = Number(whisperWords[wj]?.end);
+    const target = normalizeWordToken(inputTokens[ti]);
+    if (/^\d+$/.test(target)) {
+      const a = normalizeWordToken(whisperWords[wj]?.word);
+      const b = normalizeWordToken(whisperWords[wj + 1]?.word);
+      if (/^\d+$/.test(a) && /^\d+$/.test(b) && a + b === target) {
+        end = Number(whisperWords[wj + 1]?.end);
+      }
+    }
     if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
     aligned[ti] = { word: inputTokens[ti], start, end };
   }
@@ -98,8 +128,12 @@ export function alignTextTokensToWhisper(inputTokens, whisperWords) {
   const last = matchedIdx[matchedIdx.length - 1];
   if (last < n - 1) {
     const left = aligned[last];
-    const span = Math.max(0.06, left.end - left.start || 0.15);
-    const step = span / (n - last);
+    const remaining = n - last;
+    const endBound =
+      Number.isFinite(totalDuration) && totalDuration > left.end + 0.05
+        ? totalDuration
+        : left.end + Math.max(0.06, left.end - left.start || 0.15) * remaining;
+    const step = (endBound - left.end) / remaining;
     let cur = left.end;
     for (let i = last + 1; i < n; i++) {
       aligned[i] = { word: inputTokens[i], start: cur, end: cur + step };

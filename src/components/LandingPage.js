@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { TASK1_TIPS, TASK2_TIPS, LETTER_TIPS } from '@/lib/ieltsGuidelines';
 import NeuralSyncShowcase from '@/components/NeuralSyncShowcase';
+import LandingSampleReports from '@/components/landing/LandingSampleReports';
 import TelegramIcon from '@/components/icons/TelegramIcon';
 import {
   TELEGRAM_BOT_URL,
@@ -112,10 +113,9 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
               type="button"
               onClick={onLoginClick}
               data-testid="open-auth-login"
-              className="btn-stratum px-7 py-3.5 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]"
+              className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-7 py-3.5 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
-              <div className="shimmer-layer animate-shimmer" aria-hidden />
-              <span className="btn-stratum-text">Sign in</span>
+              Sign in
             </button>
           </motion.div>
           <motion.div
@@ -220,6 +220,8 @@ export default function LandingPage({ onLoginClick, onFullAnalysisClick }) {
       </LandingSection>
 
       <NeuralSyncShowcase onCtaClick={onFullAnalysisClick} />
+
+      <LandingSampleReports onTryDemoClick={() => router.push('/?app=1')} />
 
       {/* Progress & study plan (merged analytics + dashboard) */}
       <LandingSection id="study-plan" ariaLabelledby="section-study-plan">

@@ -31,8 +31,14 @@ export default function LandingSeoMainContent() {
           <LandingAbOfferLine className="mx-auto mt-4 max-w-xl text-sm font-medium text-slate-500 dark:text-slate-400" />
           <nav className="mt-8 flex flex-wrap items-center justify-center gap-3" aria-label="Primary actions">
             <a
-              href="/?app=1"
+              href="/demo/flagship-writing"
               className="inline-flex rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-500"
+            >
+              View sample report
+            </a>
+            <a
+              href="/?app=1"
+              className="inline-flex rounded-xl border border-slate-300 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               Try demo check
             </a>
@@ -66,6 +72,24 @@ export default function LandingSeoMainContent() {
           <p className="mx-auto mt-4 max-w-3xl text-center text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             Tutors: leave notes below the student essay, adjust bands manually, then Save to Archive, Share a link, or
             export an Official PDF — notes included in every format.
+          </p>
+          <p className="mx-auto mt-6 max-w-3xl text-center text-sm font-semibold text-slate-700 dark:text-slate-200">
+            Sample reports:{' '}
+            <a className="text-indigo-600 underline underline-offset-2 dark:text-indigo-400" href="/demo/flagship-writing">
+              Flagship (Task 1 + Task 2)
+            </a>
+            {' · '}
+            <a className="text-indigo-600 underline underline-offset-2 dark:text-indigo-400" href="/demo/task2-band-55">
+              Task 2 Band 5.5
+            </a>
+            {' · '}
+            <a className="text-indigo-600 underline underline-offset-2 dark:text-indigo-400" href="/demo/task2-band-75">
+              Task 2 Band 7.5
+            </a>
+            {' · '}
+            <a className="text-indigo-600 underline underline-offset-2 dark:text-indigo-400" href="/demo/task1-academic">
+              Task 1 Academic
+            </a>
           </p>
         </div>
       </section>
