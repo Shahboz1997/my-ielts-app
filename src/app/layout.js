@@ -124,6 +124,7 @@ export default async function RootLayout({ children }) {
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', 'G-KEPXR00JYF');
+            gtag('config', 'AW-18107551498');
           `}
         </Script>
         <Script id="google-gtag-conversion-helper" strategy="afterInteractive">
