@@ -13,6 +13,7 @@ import {
   isPkceOrOAuthStateError,
   isSessionDecryptionError,
 } from "@/lib/authSessionCookies";
+import { getAuthSecret } from "@/lib/authSecret";
 
 // Force dynamic so env vars are read at request time (avoids stale/empty secret)
 export const dynamic = "force-dynamic";
@@ -21,30 +22,6 @@ export const runtime = "nodejs";
 
 // Required in production: AUTH_SECRET or NEXTAUTH_SECRET; optional GOOGLE_* for Google sign-in
 const isDev = process.env.NODE_ENV === "development";
-
-// Secret must be a non-empty string; undefined causes "Configuration" error
-function getSecret() {
-  const authSecret = (process.env.AUTH_SECRET || "").trim();
-  const nextAuthSecret = (process.env.NEXTAUTH_SECRET || "").trim();
-  if (
-    authSecret &&
-    nextAuthSecret &&
-    authSecret !== nextAuthSecret &&
-    isDev
-  ) {
-    console.warn(
-      "[auth] AUTH_SECRET and NEXTAUTH_SECRET differ — using AUTH_SECRET. Keep only one in .env.local to avoid broken sessions."
-    );
-  }
-  const secret = authSecret || nextAuthSecret;
-  if (secret.length > 0) return secret;
-  if (isDev) {
-    const fallback = "dev-secret-min-32-chars-required-for-auth";
-    console.warn("[auth] NEXTAUTH_SECRET / AUTH_SECRET missing; using dev fallback. Set in .env.local for production.");
-    return fallback;
-  }
-  throw new Error("NEXTAUTH_SECRET or AUTH_SECRET must be set in production.");
-}
 
 const googleClientId = (
   process.env.AUTH_GOOGLE_ID ||
@@ -64,7 +41,7 @@ const useSecureCookies =
 export const authOptions = {
   trustHost: true,
   basePath: "/api/auth",
-  secret: getSecret(),
+  secret: getAuthSecret(),
   useSecureCookies,
   adapter: createLazyPrismaAdapter(),
   logger: {

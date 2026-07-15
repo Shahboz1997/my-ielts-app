@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getAuthSecret } from '@/lib/authSecret';
 
 /** One demo essay check per IP before registration (server-enforced). */
 export const GUEST_CHECK_LIMIT = 1;
@@ -15,12 +16,7 @@ export const AI_RATE_LIMITS = {
 };
 
 export function getAuthSecretMaterial() {
-  const secret = (process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || '').trim();
-  if (secret.length > 0) return secret;
-  if (process.env.NODE_ENV === 'development') {
-    return 'dev-secret-min-32-chars-required-for-auth';
-  }
-  return undefined;
+  return getAuthSecret({ required: false });
 }
 
 /** Client IP from Vercel/proxy headers. */

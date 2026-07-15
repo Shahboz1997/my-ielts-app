@@ -1,13 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
-
-const isDev = process.env.NODE_ENV === "development";
-
-function getShareSecret() {
-  const secret = (process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "").trim();
-  if (secret.length > 0) return secret;
-  if (isDev) return "dev-secret-min-32-chars-required-for-auth";
-  throw new Error("NEXTAUTH_SECRET or AUTH_SECRET must be set for share links.");
-}
+import { getAuthSecret } from "@/lib/authSecret";
 
 function b64urlEncodeString(str) {
   return Buffer.from(String(str), "utf8").toString("base64url");
@@ -18,7 +10,7 @@ function b64urlDecodeToString(b64url) {
 }
 
 function signPayloadB64(payloadB64) {
-  return createHmac("sha256", getShareSecret()).update(payloadB64).digest("base64url");
+  return createHmac("sha256", getAuthSecret()).update(payloadB64).digest("base64url");
 }
 
 export function createShareToken(payload) {
