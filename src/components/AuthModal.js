@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, User, AlertTriangle } from 'lucide-react';
 import { signIn, getProviders } from 'next-auth/react';
 import { ErrorState } from '@/components/stratum';
-import { clientApiUrl } from '@/lib/clientApiUrl'; 
+import { clientApiUrl } from '@/lib/clientApiUrl';
+import { trackGoogleAdsRegistrationConversion } from '@/lib/googleAdsConversions'; 
 
 const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -149,6 +150,8 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, message: messageProp }) =>
           setError(data.error || 'Registration failed');
           return;
         }
+
+        trackGoogleAdsRegistrationConversion();
 
         if (data.needsVerification === false) {
           const inResult = await signIn('credentials', {
