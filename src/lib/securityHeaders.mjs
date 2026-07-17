@@ -5,30 +5,55 @@
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+/** GA4 + Google Ads (gtag) — required for conversion / Tag Assistant. */
+const GOOGLE_TAG_HOSTS = [
+  'https://www.googletagmanager.com',
+  'https://www.google-analytics.com',
+  'https://analytics.google.com',
+  'https://www.googleadservices.com',
+  'https://www.google.com',
+  'https://google.com',
+  'https://googleads.g.doubleclick.net',
+  'https://pagead2.googlesyndication.com',
+  'https://tagassistant.google.com',
+];
+
+function uniqueJoin(parts) {
+  return [...new Set(parts.filter(Boolean))].join(' ');
+}
+
 function buildContentSecurityPolicy() {
   const directives = [
     "default-src 'self'",
-    [
+    uniqueJoin([
       "script-src 'self' 'unsafe-inline'",
       IS_PROD ? '' : "'unsafe-eval'",
       'https://va.vercel-scripts.com',
       'https://vercel.live',
-    ]
-      .filter(Boolean)
-      .join(' '),
+      ...GOOGLE_TAG_HOSTS,
+    ]),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: data:",
     "font-src 'self' data:",
-    [
+    uniqueJoin([
       "connect-src 'self'",
       'https://va.vercel-scripts.com',
       'https://vitals.vercel-insights.com',
       'https://accounts.google.com',
       'https://oauth2.googleapis.com',
+      'https://region1.google-analytics.com',
+      'https://stats.g.doubleclick.net',
       'wss:',
-    ].join(' '),
-    "frame-src 'self' https://accounts.google.com",
+      ...GOOGLE_TAG_HOSTS,
+    ]),
+    uniqueJoin([
+      "frame-src 'self'",
+      'https://accounts.google.com',
+      'https://www.googletagmanager.com',
+      'https://td.doubleclick.net',
+      'https://www.google.com',
+    ]),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://accounts.google.com",
