@@ -142,7 +142,16 @@ export default function CreditsTopUpModal({
         }
         throw new Error(data?.error || 'Could not submit payment claim');
       }
-      setClaimSuccess(data.deposit);
+      setClaimSuccess({
+        ...data.deposit,
+        notifyOk: data?.notify?.ok !== false,
+      });
+      if (data?.notify && data.notify.ok === false) {
+        // Claim is stored; warn so the user knows admin may need a manual ping.
+        setClaimError(
+          'Claim saved, but the admin email may not have been delivered. Contact support if credits are not added soon.'
+        );
+      }
     } catch (err) {
       setClaimError(err?.message || 'Something went wrong');
     } finally {

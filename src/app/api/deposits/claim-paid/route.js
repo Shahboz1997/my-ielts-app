@@ -10,7 +10,7 @@ import {
   getCreditPackById,
   sanitizeDepositNote,
 } from '@/lib/deposits';
-import { sendDepositPaidAdminEmail, isResendConfigured } from '@/lib/resendMail';
+import { sendDepositPaidAdminEmail, isDepositMailConfigured } from '@/lib/resendMail';
 
 /**
  * User clicked “I paid” after transferring to the published Visa / card.
@@ -94,7 +94,7 @@ export async function POST(request) {
   );
 
   let notify = { ok: false, reason: 'skipped' };
-  if (isResendConfigured()) {
+  if (isDepositMailConfigured()) {
     notify = await sendDepositPaidAdminEmail(deposit);
     if (notify.ok) {
       await withPrismaRetry(() =>
@@ -103,11 +103,17 @@ export async function POST(request) {
           data: { notifySentAt: new Date() },
         })
       );
+    } else {
+      console.error(
+        '[deposits/claim-paid] admin email failed after deposit save',
+        deposit.id,
+        notify.reason
+      );
     }
   } else {
-    notify = { ok: false, reason: 'no_resend' };
+    notify = { ok: false, reason: 'no_mail' };
     console.warn(
-      '[deposits/claim-paid] RESEND_API_KEY not set; deposit saved but admin email skipped',
+      '[deposits/claim-paid] RESEND_API_KEY and EMAIL_USER/EMAIL_PASS missing; deposit saved but admin email skipped',
       deposit.id
     );
   }

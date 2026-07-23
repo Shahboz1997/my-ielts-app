@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { EMAIL_LEGAL_FOOTER, SUPPORT_EMAIL } from '@/lib/support';
 import { parseAdminEmails } from '@/lib/admin';
+
+const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
 function getResendClient() {
   const key = (process.env.RESEND_API_KEY || '').trim();
@@ -15,26 +18,85 @@ function getFromAddress() {
   return 'STRATUM.ai <onboarding@resend.dev>';
 }
 
+function isSmtpConfigured() {
+  return Boolean(
+    (process.env.EMAIL_USER || '').trim() && (process.env.EMAIL_PASS || '').trim()
+  );
+}
+
+function normalizeRecipients(to) {
+  const list = Array.isArray(to)
+    ? to
+    : typeof to === 'string'
+      ? [to]
+      : [];
+  return [
+    ...new Set(
+      list
+        .map((e) => String(e || '').trim().toLowerCase())
+        .filter((e) => EMAIL_RE.test(e))
+    ),
+  ];
+}
+
 function footerHtml() {
   return `<p style="margin:16px 0 0;color:#6b7280;font-size:12px">${EMAIL_LEGAL_FOOTER}</p>`;
 }
 
-/**
- * Low-level Resend send. Returns { ok, reason?, id? }.
- */
-export async function sendResendEmail({ to, subject, html, replyTo }) {
-  const resend = getResendClient();
-  if (!resend) {
-    console.warn('[resendMail] RESEND_API_KEY missing; skip send');
-    return { ok: false, reason: 'no_resend' };
+function extractResendTestingOwner(message) {
+  const m = String(message || '').match(
+    /your own email address\s*\(([^)]+)\)/i
+  );
+  const email = m?.[1]?.trim().toLowerCase();
+  return email && EMAIL_RE.test(email) ? email : null;
+}
+
+async function sendViaSmtp({ to, subject, html, replyTo }) {
+  const user = (process.env.EMAIL_USER || '').trim();
+  const pass = (process.env.EMAIL_PASS || '').trim();
+  if (!user || !pass) {
+    return { ok: false, reason: 'no_smtp' };
   }
 
-  const recipients = Array.isArray(to)
-    ? to.filter((e) => typeof e === 'string' && e.includes('@'))
-    : typeof to === 'string' && to.includes('@')
-      ? [to]
-      : [];
+  try {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user, pass },
+    });
+    const info = await transporter.sendMail({
+      from: `STRATUM.ai <${user}>`,
+      to: to.join(', '),
+      subject,
+      html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+    return { ok: true, id: info.messageId, via: 'smtp' };
+  } catch (err) {
+    console.error('[resendMail/smtp]', err?.message || err);
+    return { ok: false, reason: err?.message || 'smtp_failed' };
+  }
+}
 
+async function sendViaResend(resend, { to, subject, html, replyTo }) {
+  const { data, error } = await resend.emails.send({
+    from: getFromAddress(),
+    to,
+    subject,
+    html,
+    ...(replyTo ? { replyTo } : {}),
+  });
+  if (error) {
+    return { ok: false, reason: error.message || 'send_failed', error };
+  }
+  return { ok: true, id: data?.id, via: 'resend' };
+}
+
+/**
+ * Prefer Resend; if onboarding@resend.dev blocks non-owner recipients,
+ * retry to the Resend account owner; then fall back to Gmail SMTP.
+ */
+export async function sendResendEmail({ to, subject, html, replyTo }) {
+  const recipients = normalizeRecipients(to);
   if (recipients.length === 0) {
     return { ok: false, reason: 'bad_to' };
   }
@@ -42,34 +104,92 @@ export async function sendResendEmail({ to, subject, html, replyTo }) {
     return { ok: false, reason: 'bad_input' };
   }
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: getFromAddress(),
-      to: recipients,
-      subject,
-      html,
-      ...(replyTo ? { replyTo } : {}),
-    });
-    if (error) {
-      console.error('[resendMail]', error);
-      return { ok: false, reason: error.message || 'send_failed' };
+  const payload = { subject, html, replyTo };
+  const resend = getResendClient();
+  let lastReason = resend ? null : 'no_resend';
+  let delivered = null;
+  let testingOwner = null;
+
+  if (resend) {
+    try {
+      const primary = await sendViaResend(resend, { ...payload, to: recipients });
+      if (primary.ok) {
+        delivered = primary;
+      } else {
+        lastReason = primary.reason;
+        console.error('[resendMail]', primary.error || primary.reason);
+
+        testingOwner = extractResendTestingOwner(primary.reason);
+        if (testingOwner) {
+          const retry = await sendViaResend(resend, {
+            ...payload,
+            to: [testingOwner],
+          });
+          if (retry.ok) {
+            console.warn(
+              `[resendMail] Resend testing domain: notified account owner ${testingOwner} (requested: ${recipients.join(', ')})`
+            );
+            delivered = { ...retry, via: 'resend_testing_owner' };
+          } else {
+            lastReason = retry.reason || lastReason;
+            console.error(
+              '[resendMail] owner retry failed',
+              retry.error || retry.reason
+            );
+          }
+        }
+      }
+    } catch (err) {
+      lastReason = err?.message || 'send_failed';
+      console.error('[resendMail]', lastReason);
     }
-    return { ok: true, id: data?.id };
-  } catch (err) {
-    console.error('[resendMail]', err?.message || err);
-    return { ok: false, reason: err?.message || 'send_failed' };
   }
+
+  // SMTP: full delivery, or secondary inbox when Resend only reached the account owner.
+  if (isSmtpConfigured() && (!delivered || delivered.via === 'resend_testing_owner')) {
+    const smtp = await sendViaSmtp({ ...payload, to: recipients });
+    if (smtp.ok) {
+      if (delivered) {
+        return {
+          ok: true,
+          id: delivered.id,
+          via: 'resend_and_smtp',
+          smtpId: smtp.id,
+        };
+      }
+      console.warn('[resendMail] delivered via SMTP fallback:', lastReason);
+      return smtp;
+    }
+    if (!delivered) {
+      return {
+        ok: false,
+        reason: smtp.reason || lastReason || 'send_failed',
+      };
+    }
+    console.warn(
+      '[resendMail/smtp] secondary delivery to ADMIN_EMAILS failed:',
+      smtp.reason
+    );
+  }
+
+  if (delivered) return delivered;
+  return { ok: false, reason: lastReason || 'no_mail' };
 }
 
 export function isResendConfigured() {
   return Boolean((process.env.RESEND_API_KEY || '').trim());
 }
 
+/** True when either Resend or Gmail SMTP can deliver deposit emails. */
+export function isDepositMailConfigured() {
+  return isResendConfigured() || isSmtpConfigured();
+}
+
 /**
  * Notify admins that a user claimed they paid for a credit pack.
  */
 export async function sendDepositPaidAdminEmail(deposit) {
-  const admins = parseAdminEmails();
+  const admins = parseAdminEmails().filter((e) => EMAIL_RE.test(e));
   const to = admins.length > 0 ? admins : [SUPPORT_EMAIL];
 
   const subject = `[STRATUM] Deposit claimed — ${deposit.packName} (${deposit.credits} credits) · ${deposit.userEmail}`;
