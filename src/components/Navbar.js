@@ -5,7 +5,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useTheme } from '@wrksz/themes/client';
 import { 
   Zap, Sun, Moon, Menu, X, 
-  ChevronDown, LogOut,
+  ChevronDown, LogOut, UserRound,
 } from 'lucide-react';
 const Navbar = ({ 
   activeTab, setActiveTab, darkMode: darkModeProp, setDarkMode: setDarkModeProp, 
@@ -224,7 +224,7 @@ const Navbar = ({
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center min-h-[44px] px-4 py-2 text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600"
                     >
-                      Profile
+                      Account
                     </Link>
                     {typeof onCreditsClick === 'function' && (
                       <button
@@ -281,18 +281,34 @@ const Navbar = ({
               </button>
             </div>
 
-            {/* Mobile: credits + burger */}
+            {/* Mobile: credits + account + burger */}
             <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
             {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={() => onCreditsClick?.()}
-                className="flex items-center gap-1 font-semibold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full ring-1 ring-indigo-500/15 tracking-tight whitespace-nowrap hover:bg-indigo-500/15 transition-colors"
-                title={onCreditsClick ? 'View credit packages' : 'Account credits'}
-                aria-label={onCreditsClick ? 'View credit packages' : 'Account credits'}
-              >
-                {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={2} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => onCreditsClick?.()}
+                  className="flex items-center gap-1 font-semibold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full ring-1 ring-indigo-500/15 tracking-tight whitespace-nowrap hover:bg-indigo-500/15 transition-colors"
+                  title={onCreditsClick ? 'View credit packages' : 'Account credits'}
+                  aria-label={onCreditsClick ? 'View credit packages' : 'Account credits'}
+                >
+                  {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={2} />
+                </button>
+                <Link
+                  href="/settings"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-[11px] font-bold text-white ring-1 ring-indigo-500/30 transition-transform active:scale-95"
+                  aria-label="Account settings"
+                  title="Account"
+                >
+                  {session?.user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={session.user.image} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    session?.user?.name?.charAt(0) || 'U'
+                  )}
+                </Link>
+              </>
             ) : (
               typeof guestQuotaRemaining === 'number' && guestQuotaRemaining > 0 && (
                 <button
@@ -324,6 +340,31 @@ const Navbar = ({
           {isMenuOpen && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden overflow-hidden bg-inherit">
               <div className="flex flex-col p-4 space-y-4 border-t dark:border-slate-800 mt-4">
+
+                {isLoggedIn ? (
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-3 dark:border-slate-700 dark:bg-slate-900/70"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-sm font-bold text-white">
+                      {session?.user?.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={session.user.image} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        session?.user?.name?.charAt(0) || <UserRound className="h-5 w-5" strokeWidth={1.75} />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-slate-900 dark:text-white">
+                        {session?.user?.name || 'Account'}
+                      </span>
+                      <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
+                        Account settings
+                      </span>
+                    </span>
+                  </Link>
+                ) : null}
                 
                 {/* 1. Навигация */}
                 <div className="grid grid-cols-2 gap-2">

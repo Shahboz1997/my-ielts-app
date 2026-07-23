@@ -26,11 +26,37 @@ model User {
   /// Comma-separated JS weekday numbers 0=Sun … 6=Sat (e.g. "1,2,3,4,5" Mon–Fri)
   practiceReminderDays     String   @default("1,2,3,4,5")
   practiceReminderLastSent DateTime?
-  accounts      Account[]
-  sessions      Session[]
-  checks          Check[]
+  accounts          Account[]
+  sessions          Session[]
+  checks            Check[]
   wordListItems     WordListItem[]
   favoriteTemplates FavoriteTemplate[]
+  depositRequests   DepositRequest[]
+}
+
+/// Manual top-up claims (Visa P2P / bank transfer). Admin credits after verification.
+model DepositRequest {
+  id          String    @id @default(cuid())
+  userId      String
+  userEmail   String
+  packId      String
+  packName    String
+  credits     Int
+  amountUsd   Float
+  currency    String    @default("USD")
+  /// pending | paid_claimed | credited | rejected
+  status      String    @default("paid_claimed")
+  note        String?   @db.Text
+  adminNote   String?   @db.Text
+  notifySentAt DateTime?
+  creditedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([userEmail])
 }
 
 model Account {

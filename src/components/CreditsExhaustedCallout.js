@@ -31,7 +31,7 @@ export default function CreditsExhaustedCallout({
           </h3>
           <p className="text-sm sm:text-base font-medium leading-relaxed text-slate-600 dark:text-slate-300">
             You’ve used your included Task&nbsp;1 and Task&nbsp;2 checks. Top up with a credit pack —
-            payments are manual via email until YooKassa / Stripe go live.
+            pay by Visa transfer, then tap “I paid” in the packages dialog.
             {popular ? (
               <>
                 {' '}

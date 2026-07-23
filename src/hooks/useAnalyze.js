@@ -160,7 +160,7 @@ export function useAnalyze({
           msg =
             typeof dataError === 'string' && dataError
               ? dataError
-              : 'You have no credits left. Choose a pack to top up — YooKassa and Stripe are not connected yet; email support after payment.';
+              : 'You have no credits left. Choose a pack to top up — pay by Visa, then tap “I paid” in the packages dialog.';
           if (apiCode === CREDITS_EXHAUSTED_CODE) {
             setCredits(0);
             if (typeof onCreditsExhausted === 'function') onCreditsExhausted();

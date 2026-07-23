@@ -3,6 +3,8 @@
 import { UserCircle, Mail, Bell, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { formatPackPrice } from "@/lib/creditPacks";
+import { formatDepositDate, getDepositStatusMeta } from "@/lib/deposits";
 
 const TZ_OPTIONS = [
   "UTC",
@@ -36,7 +38,13 @@ function parseDaysString(s) {
     .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 6);
 }
 
-export default function SettingsClient({ user, reminders }) {
+function statusToneClass(tone) {
+  if (tone === "success") return "text-emerald-600 dark:text-emerald-400";
+  if (tone === "danger") return "text-red-600 dark:text-red-400";
+  return "text-orange-500 dark:text-orange-400";
+}
+
+export default function SettingsClient({ user, reminders, deposits = [] }) {
   const isRu = user?.language === "ru";
   const [emailEnabled, setEmailEnabled] = useState(Boolean(reminders?.practiceRemindersEnabled));
   const [hour, setHour] = useState(reminders?.practiceReminderHour ?? 19);
@@ -104,7 +112,7 @@ export default function SettingsClient({ user, reminders }) {
   };
 
   return (
-    <div className="space-y-6 w-full max-w-xl mx-auto">
+    <div className="space-y-6 w-full max-w-2xl mx-auto">
       <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-sm">
         <h2 className="text-sm font-semibold tracking-tight text-slate-600 dark:text-slate-400 mb-4">
           Profile
@@ -129,6 +137,11 @@ export default function SettingsClient({ user, reminders }) {
               <Mail className="w-4 h-4 shrink-0" strokeWidth={1.5} />
               {user?.email ?? "—"}
             </p>
+            {typeof user?.credits === "number" ? (
+              <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-200">
+                {isRu ? "Кредиты" : "Credits"}: {user.credits}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -229,6 +242,55 @@ export default function SettingsClient({ user, reminders }) {
             ? "Тема оформления — переключатель Sun/Moon в шапке."
             : "Theme: use the Sun/Moon toggle in the navigation bar."}
         </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-6 shadow-sm">
+        <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-white mb-4">
+          {isRu ? "История начислений" : "Top-up history"}
+        </h2>
+
+        {deposits.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {isRu
+              ? "Пока нет заявок на пополнение. После «I paid» они появятся здесь."
+              : "No top-ups yet. After you tap “I paid”, claims show up here."}
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {deposits.map((d) => {
+              const meta = getDepositStatusMeta(d.status, isRu);
+              return (
+                <li
+                  key={d.id}
+                  className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-950/50 px-4 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold text-slate-900 dark:text-white truncate">
+                      {d.packName}
+                    </p>
+                    <p className="shrink-0 font-semibold tabular-nums text-slate-900 dark:text-white">
+                      {formatPackPrice(d.amountUsd)}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {formatDepositDate(d.createdAt, isRu ? "ru" : "en")}
+                    </p>
+                    <p
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium ${statusToneClass(meta.tone)}`}
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-current"
+                        aria-hidden
+                      />
+                      {meta.label}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </div>
   );

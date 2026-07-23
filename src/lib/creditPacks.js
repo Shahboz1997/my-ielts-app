@@ -1,6 +1,6 @@
-import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '@/lib/support';
+import { SUPPORT_MAILTO } from '@/lib/support';
 
-/** Manual top-up packs (Stripe / YooKassa not live yet). */
+/** Manual top-up packs (Visa transfer → claim paid → admin credits). */
 export const CREDIT_PACKS = [
   {
     id: 'starter',
@@ -28,11 +28,40 @@ export const CREDIT_PACKS = [
   },
 ];
 
-export function formatPackPrice(priceUsd) {
-  return `$${Number(priceUsd).toFixed(2)}`;
+/** Display-only regions for pack prices (settlement stays USD). */
+export const DISPLAY_CURRENCIES = [
+  { id: 'RUB', label: '₽ RU', symbol: '₽', rateFromUsd: 90 },
+  { id: 'USD', label: '$ EN', symbol: '$', rateFromUsd: 1 },
+  { id: 'UZS', label: "so'm UZ", symbol: "so'm", rateFromUsd: 12700 },
+  { id: 'TJS', label: 'с. TG', symbol: 'с.', rateFromUsd: 10.8 },
+];
+
+export function getDisplayCurrency(id = 'USD') {
+  return DISPLAY_CURRENCIES.find((c) => c.id === id) || DISPLAY_CURRENCIES[1];
 }
 
-/** Prefill mail for support after choosing a pack. */
+export function formatPackPrice(priceUsd, currencyId = 'USD') {
+  const currency = getDisplayCurrency(currencyId);
+  const amount = Number(priceUsd) * currency.rateFromUsd;
+  if (currency.id === 'USD') return `$${amount.toFixed(2)}`;
+  if (currency.id === 'RUB') return `₽${Math.round(amount).toLocaleString('ru-RU')}`;
+  if (currency.id === 'UZS') return `${Math.round(amount).toLocaleString('uz-UZ')} so'm`;
+  if (currency.id === 'TJS') return `${amount.toFixed(2)} с.`;
+  return `${currency.symbol}${amount.toFixed(2)}`;
+}
+
+export function formatPerCreditPrice(pack, currencyId = 'USD') {
+  const credits = Math.max(1, Number(pack?.credits) || 1);
+  const per = Number(pack?.priceUsd || 0) / credits;
+  return `≈ ${formatPackPrice(per, currencyId)} / generation`;
+}
+
+export function getCreditPackById(packId) {
+  if (typeof packId !== 'string' || !packId.trim()) return null;
+  return CREDIT_PACKS.find((p) => p.id === packId.trim()) || null;
+}
+
+/** Prefill mail for support (fallback if claim flow unavailable). */
 export function buildCreditPackMailto(pack, accountEmail = '') {
   const subject = `[STRATUM.ai] Credit pack: ${pack.name} (${pack.credits} credits)`;
   const body = [
@@ -45,8 +74,8 @@ export function buildCreditPackMailto(pack, accountEmail = '') {
     `Price: ${formatPackPrice(pack.priceUsd)}`,
     `Account email: ${accountEmail || '(your login email)'}`,
     ``,
-    `I will pay manually (YooKassa / Stripe checkout not connected yet).`,
-    `Please reply with payment instructions, then top up my credits.`,
+    `I will pay by Visa / card transfer, then use “I paid” in the app (or reply here).`,
+    `Please top up my credits after you confirm the transfer.`,
     ``,
     `Thanks!`,
   ].join('\n');
@@ -58,7 +87,10 @@ export function buildCreditPackMailto(pack, accountEmail = '') {
 }
 
 export const CREDITS_TOP_UP_NOTICE =
-  `Automated payments via YooKassa and Stripe are not connected yet. After you pay, email ${SUPPORT_EMAIL} with your account email and the package name — we credit you manually.`;
+  'Choose a pack — invoice with Visa card details. Credits after payment check.';
 
 export const CREDITS_TOP_UP_FOOTER =
-  'After payment, credits are usually added within a few hours (often sooner).';
+  'Keep the receipt until credits appear in your account.';
+
+export const CREDITS_INVOICE_HINT =
+  'Transfer the exact amount using the details below. Include your STRATUM.ai email in the payment comment.';
