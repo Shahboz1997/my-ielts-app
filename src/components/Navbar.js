@@ -8,7 +8,7 @@ import {
   ChevronDown, LogOut, UserRound,
 } from 'lucide-react';
 const Navbar = ({ 
-  activeTab, setActiveTab, darkMode: darkModeProp, setDarkMode: setDarkModeProp, 
+  activeTab, setActiveTab,
   isMenuOpen, setIsMenuOpen, onLoginClick,
   credits: creditsProp,
   guestQuotaRemaining = null,
@@ -16,11 +16,11 @@ const Navbar = ({
 }) => {
   const { data: session, status } = useSession();
   const { resolvedTheme, setTheme } = useTheme();
-  const [themeMounted, setThemeMounted] = useState(false);
-  useEffect(() => { setThemeMounted(true); }, []);
-  const darkMode = darkModeProp !== undefined ? darkModeProp : (themeMounted && resolvedTheme === 'dark');
+  // Defer theme-dependent icons + auth chrome until after mount so SSR HTML matches the first client paint.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
-  const isLoggedIn = status === "authenticated";
+  const isLoggedIn = mounted && status === "authenticated";
   const credits =
     typeof creditsProp === 'number'
       ? creditsProp
@@ -36,17 +36,16 @@ const Navbar = ({
   const secondaryItems = ['Home', 'Archive'];
   const menuItems = ['Home', ...primaryItems, 'Archive'];
   const handleThemeToggle = () => {
-    if (!themeMounted) return;
+    if (!mounted) return;
     setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
   };
   
   return (
     <>
-      <nav className={`sticky top-0 z-50 border-b backdrop-blur-xl transition-all duration-300 ${
-        darkMode
-          ? 'bg-[#050505]/80 border-white/[0.06] shadow-[0_1px_0_rgba(255,255,255,0.04)]'
-          : 'bg-white/80 border-slate-200/60 shadow-[0_1px_3px_rgba(15,23,42,0.04)]'
-      }`}>
+      <nav
+        suppressHydrationWarning
+        className="sticky top-0 z-50 border-b backdrop-blur-xl transition-all duration-300 bg-white/80 border-slate-200/60 shadow-[0_1px_3px_rgba(15,23,42,0.04)] dark:bg-[#050505]/80 dark:border-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)]"
+      >
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-5 md:px-6 lg:px-8">
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 min-[400px]:gap-3 sm:gap-4 md:flex md:justify-between min-h-[52px] md:min-h-[56px] py-2 md:py-2.5">
 
@@ -61,7 +60,7 @@ const Navbar = ({
               <span className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 ring-1 ring-indigo-500/20 transition-all duration-200 group-hover:bg-indigo-500/15 group-hover:ring-indigo-500/30 group-active:scale-95">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400 shrink-0 transition-transform duration-200 group-hover:scale-110" strokeWidth={2} />
               </span>
-              <span className={`inline truncate normal-case text-[10px] min-[400px]:text-base sm:text-xl md:text-2xl tracking-[0.1em] min-[400px]:tracking-[0.12em] sm:tracking-[0.15em] ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              <span className="inline truncate normal-case text-[10px] min-[400px]:text-base sm:text-xl md:text-2xl tracking-[0.1em] min-[400px]:tracking-[0.12em] sm:tracking-[0.15em] text-slate-900 dark:text-white">
                 STRATUM
               </span>
             </button>
@@ -71,11 +70,7 @@ const Navbar = ({
           <div className="flex flex-row min-w-0 items-center justify-center justify-self-center md:flex-none md:justify-start">
             {/* Task 1 / Task 2 — mobile segmented control */}
             <div
-              className={`md:hidden relative flex flex-row items-center justify-center gap-1 min-[400px]:gap-2 p-1 rounded-full shrink-0 ${
-                darkMode
-                  ? 'bg-slate-800/80 ring-1 ring-white/[0.06]'
-                  : 'bg-slate-100/90 ring-1 ring-slate-200/80 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)]'
-              }`}
+              className="md:hidden relative flex flex-row items-center justify-center gap-1 min-[400px]:gap-2 p-1 rounded-full shrink-0 bg-slate-100/90 ring-1 ring-slate-200/80 shadow-[inset_0_1px_2px_rgba(15,23,42,0.04)] dark:bg-slate-800/80 dark:ring-white/[0.06] dark:shadow-none"
               role="tablist"
               aria-label="Task selection"
             >
@@ -92,9 +87,7 @@ const Navbar = ({
                     className={`relative z-10 flex-1 basis-0 min-w-[3.25rem] max-w-[5.5rem] px-3 py-1 rounded-full font-bold text-[10px] min-[400px]:text-[11px] uppercase tracking-wide text-center whitespace-nowrap transition-all duration-200 ${
                       isActive
                         ? 'text-white'
-                        : darkMode
-                          ? 'text-slate-400 hover:text-slate-200'
-                          : 'text-slate-500 hover:text-slate-700'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                     }`}
                   >
                     {isActive && (
@@ -114,7 +107,7 @@ const Navbar = ({
 
             {/* Desktop navigation */}
             <div className="hidden md:flex items-center">
-            <div className={`flex p-1 rounded-full gap-0.5 ${darkMode ? 'bg-slate-800/80 ring-1 ring-white/[0.06]' : 'bg-slate-100/90 ring-1 ring-slate-200/80'}`}>
+            <div className="flex p-1 rounded-full gap-0.5 bg-slate-100/90 ring-1 ring-slate-200/80 dark:bg-slate-800/80 dark:ring-white/[0.06]">
               {menuItems.map((item) => {
                 const isActive = activeTab === item;
                 const baseClass = `relative px-4 py-2 rounded-full font-bold text-[11px] uppercase tracking-wide transition-all duration-200 ${
@@ -273,11 +266,11 @@ const Navbar = ({
               <button
                 type="button"
                 onClick={handleThemeToggle}
-                disabled={!themeMounted}
+                disabled={!mounted}
                 className="group flex items-center justify-center min-h-[44px] min-w-[44px] p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors"
-                aria-label={themeMounted && resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                aria-label={mounted && resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               >
-                {themeMounted && resolvedTheme === 'dark' ? <Sun className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} /> : <Moon className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} />}
+                {mounted && resolvedTheme === 'dark' ? <Sun className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} /> : <Moon className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" strokeWidth={1.5} />}
               </button>
             </div>
 
@@ -412,10 +405,10 @@ const Navbar = ({
                    <button
                      type="button"
                      onClick={handleThemeToggle}
-                     disabled={!themeMounted}
+                     disabled={!mounted}
                      className="flex-1 min-h-[44px] p-4 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center gap-3 font-semibold tracking-tight text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 transition-colors"
                    >
-                     {themeMounted && resolvedTheme === 'dark' ? <><Sun className="w-5 h-5" strokeWidth={1.5} /> Day</> : <><Moon className="w-5 h-5" strokeWidth={1.5} /> Night</>}
+                     {mounted && resolvedTheme === 'dark' ? <><Sun className="w-5 h-5" strokeWidth={1.5} /> Day</> : <><Moon className="w-5 h-5" strokeWidth={1.5} /> Night</>}
                    </button>
                    {!isLoggedIn ? (
                      <button type="button" onClick={() => onLoginClick()} data-testid="open-auth-login" className="btn-stratum flex-1 min-h-[44px] p-4 rounded-xl hover:shadow-[0_0_25px_rgba(79,70,229,0.3)]">
