@@ -274,34 +274,18 @@ const Navbar = ({
               </button>
             </div>
 
-            {/* Mobile: credits + account + burger */}
+            {/* Mobile: credits + burger */}
             <div className="md:hidden flex items-center gap-1.5 sm:gap-2">
             {isLoggedIn ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onCreditsClick?.()}
-                  className="flex items-center gap-1 font-semibold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full ring-1 ring-indigo-500/15 tracking-tight whitespace-nowrap hover:bg-indigo-500/15 transition-colors"
-                  title={onCreditsClick ? 'View credit packages' : 'Account credits'}
-                  aria-label={onCreditsClick ? 'View credit packages' : 'Account credits'}
-                >
-                  {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={2} />
-                </button>
-                <Link
-                  href="/settings"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-[11px] font-bold text-white ring-1 ring-indigo-500/30 transition-transform active:scale-95"
-                  aria-label="Account settings"
-                  title="Account"
-                >
-                  {session?.user?.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={session.user.image} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    session?.user?.name?.charAt(0) || 'U'
-                  )}
-                </Link>
-              </>
+              <button
+                type="button"
+                onClick={() => onCreditsClick?.()}
+                className="flex items-center gap-1 font-semibold text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-1 rounded-full ring-1 ring-indigo-500/15 tracking-tight whitespace-nowrap hover:bg-indigo-500/15 transition-colors"
+                title={onCreditsClick ? 'View credit packages' : 'Account credits'}
+                aria-label={onCreditsClick ? 'View credit packages' : 'Account credits'}
+              >
+                {credits} <Zap className="w-3 h-3 inline-block" strokeWidth={2} />
+              </button>
             ) : (
               typeof guestQuotaRemaining === 'number' && guestQuotaRemaining > 0 && (
                 <button
